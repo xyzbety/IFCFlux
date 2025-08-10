@@ -1,0 +1,42 @@
+{
+  "name": "@myfront/desktop-ifc-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^8.22.2",
+    "@babylonjs/gui": "^8.22.2",
+    "@babylonjs/materials": "^8.22.2",
+    "@blockly/field-colour": "^6.0.4",
+    "@jscad/modeling": "^2.12.5",
+    "@myfront/bimflux": "~0.0.22",
+    "@tauri-apps/api": "^2.7.0",
+    "@tauri-apps/plugin-dialog": "^2.3.2",
+    "@tauri-apps/plugin-fs": "^2.4.1",
+    "blockly": "^12.2.0",
+    "pinia": "^3.0.3",
+    "reflect-metadata": "^0.2.2",
+    "tdesign-icons-vue-next": "^0.3.7",
+    "tdesign-vue-next": "^1.15.2",
+    "vue": "^3.5.18",
+    "smart-webcomponents": "~23.1.1",
+    "web-ifc": "~0.0.68"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.7.1",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "less": "^4.4.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.1",
+    "vue-tsc": "^3.0.5"
+  },
+  "peerDependencies": {
+    "@turf/turf": "^7.2.0"
+  }
+}

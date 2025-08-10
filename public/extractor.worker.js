@@ -1,0 +1,609 @@
+self.onmessage = async (e) => {
+    const name = e.data.name
+    if (name == 'start') {
+        const result = await ifcsgExtractor(e.data.file, e.data.mapping)
+        self.postMessage({
+            complete: true,
+            result: result
+        })
+    }
+}
+
+async function ifcsgExtractor(file, mapping) {
+    const t0 = performance.now()
+    console.log('Starting worker');
+    const bim_entity = mapping.bim_entity
+    const entities = []
+    for (const [entity, _] of Object.entries(bim_entity)) {
+        entities.push(entity)
+    }
+
+    let entityCount = 0
+    let relDefCount = 0
+    let psetCount = 0
+    let valueCount = 0
+
+    const numberDataTypes = ['IFCVOLUMEMEASURE', 'IFCREAL', 'IFCTHERMALTRANSMITTANCEMEASURE', 'IFCINTEGER', 'IFCLENGTHMEASURE', 'IFCCOUNTMEASURE', 'IFCPOSITIVELENGTHMEASURE', 'IFCPLANEANGLEMEASURE', 'IFCNUMERICMEASURE', 'IFCAREAMEASURE', 'IFCQUANTITYLENGTH', 'IFCMASSMEASURE']
+    const stringDataTypes = ['IFCIDENTIFIER', 'IFCLABEL', 'IFCTEXT']
+
+    const entitiesRegex = entities.toString().toUpperCase().replace(/,/g, '|')
+
+    const regexEnt = new RegExp(`=[\\s]?(${entitiesRegex})\\(`)
+    //scehema = #(id)=(entity),(guid),geometry,name,description,(objecttype),placement,shape,(tag),(userdefined)
+    const regexEntityCatpture = `(.*)=[\\s]?(${entitiesRegex})\\([^;](.*?)'[^;]+?,(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),(?:.+?),(?:.+?),(\w+|'.*?'|[$])(?:,(.*?))?[\\)|,]`
+
+    const regexRel = new RegExp(/=[\s]?IFCRELDEFINESBYPROPERTIES/)
+
+     
+      
+      
+    const regexRelCapture = new RegExp(/IFCRELDEFINESBYPROPERTIES[^;]*\((.*)\),(.*)\)/)
+
+    const regexPset = new RegExp(/=[\s]?(IFCPROPERTYSET|IFCELEMENTQUANTITY)/)
+    const regexPsetIgnore = new RegExp(/ArchiCADProperties|ArchiCADQuantities|AC_Pset|AC_Equantity|ARCHICAD|Component Properties/)
+    const regexPsetCapture = new RegExp(/(.*)\=[\s]?(?:IFCPROPERTYSET|IFCELEMENTQUANTITY)[^;]*?,'(.*?)'[^;]*\((.*?)\)/)
+
+    const regexValue = new RegExp(/=[\s]?IFCPROPERTYSINGLEVALUE|IFCPROPERTYENUMERATEDVALUE/)
+    const regexValueCapture = new RegExp(/(.*)\=[\s]?(?:IFCPROPERTYSINGLEVALUE|IFCPROPERTYENUMERATEDVALUE)\('(.*?)'[^;]\$,(.*?)\((.*)\),/)
+    const regexValueNumeric = new RegExp(/(.*)\=[\s]?(?:IFCQUANTITYVOLUME|IFCQUANTITYLENGTH|IFCQUANTITYAREA|IFCQUANTITYWEIGHT)\('(.+?)',[^;]+?,[^;]+?,(\w+|.*?|[$]),/)
+
+    const relMap = new Map();
+    const entityMap = new Map()
+    const psetMap = new Map()
+    const valueMap = new Map()
+    const lineMap = new Map()
+    const ifcResult = []
+
+    async function firstPass() {
+        // let totalLines = 0
+        await readFile(file, line => {
+            processline(line);
+            // totalLines++;
+        });
+
+        function processline(line) {
+            if (regexEnt.test(line)) {
+                const match = line.match(regexEntityCatpture) || []
+                if (match.length) {
+                    //scehema = #(id)=(entity),(guid),geometry,(name),(description),(objecttype),placement,shape,(tag),(userdefined)
+                    entityMap.set(match[1], {
+                        Entity: match[2],
+                        Guid: match[3],
+                        Name: match[4].replace(/\'/g, ""),
+                        Description: match[5] == '$' ? null : match[5].replace(/\'/g, ""),
+                        ObjectType: match[6] == '$' ? null : match[6].replace(/\'/g, ""),
+                        Tag: match[7] == '$' ? null : match[7].replace(/\'/g, ""),
+                        PredefinedType: match[8] ? match[8].replace(/\./g, "") : null
+                    })
+                } else {
+                    const exceptionString = `IFCBUILDINGSYSTEM`
+                    //scehema = #(id)=(entity),(guid),geometry,(name),(description),(objecttype),??,??
+                    const exceptionCapture = `(.*)=[\\s]?(${exceptionString})\\([^;](.*?)'[^;]+?,(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),`
+                    const match = line.match(exceptionCapture) || []
+                    if (match.length) {
+                        entityMap.set(match[1], {
+                            Entity: match[2],
+                            Guid: match[3],
+                            Name: match[4].replace(/\'/g, ""),
+                            Description: match[5].replace(/\'/g, ""),
+                            ObjectType: match[6].replace(/\'/g, ""),
+                        })
+                    }
+                }
+                entityCount++
+                return;
+            }
+
+            if (regexRel.test(line)) {
+                const match = line.match(regexRelCapture) || []
+                if (match.length) {
+
+                    if (relMap.has(match[1])) {
+                        relMap.get(match[1]).push(match[2]);
+                    } else {
+                        relMap.set(match[1], [match[2]]);
+                    }
+                }
+                relDefCount++
+                return;
+            }
+
+            if (regexPset.test(line) && !regexPsetIgnore.test(line)) {
+                const match = line.match(regexPsetCapture) || []
+                if (match.length) {
+                    psetMap.set(match[1], {
+                        pset: match[2],
+                        array: match[3].split(',')
+                    })
+
+                    match[3].split(',').map(x => {
+                        lineMap.set(x, true)
+                    })
+                }
+                psetCount++
+                return;
+            }
+        }
+        // console.log(totalLines);
+    }
+
+
+    async function secondPass() {
+        await readFile(file, line => {
+            processline(line);
+        });
+
+        function processline(line) {
+            //get id
+            let thisLine = false
+            const id = line.match(/(.*)=/) || []
+
+            if (lineMap.has(id[1])) {
+                valueCount++
+                //match according to datatype
+                if (regexValue.test(line)) {
+                    if (id[1] == '#5018') {
+                        console.log('here2');
+                    }
+                    const match = line.match(regexValueCapture) || []
+                    if (match.length) {
+                        const index = match[1]
+                        const property = match[2]
+                        let dataType = match[3]
+                        let rawValue = match[4]
+                        let value;
+
+                        if (!dataType) {
+                            const propertyFromEnum = rawValue.match(new RegExp(/(\w+)\('([^']+)'\)/))
+                            dataType = propertyFromEnum[1]
+                            rawValue = propertyFromEnum[2]
+                        }
+
+
+
+                        if (dataType == 'IFCBOOLEAN') {
+                            if (rawValue == '.T.') {
+                                value = true;
+                            } else if (rawValue == '.F.') {
+                                value = false;
+                            } else {
+                                value = rawValue;
+                            }
+                        } else if (dataType == 'IFCLOGICAL') {
+                            if (rawValue == '.U.') {
+                                value = 'UNKNOWN'
+                            } else {
+                                if (rawValue == '.T.') {
+                                    value = true;
+                                } else if (rawValue == '.F.') {
+                                    value = false;
+                                } else {
+                                    value = rawValue;
+                                }
+                            }
+                        } else if (numberDataTypes.includes(dataType)) {
+                            value = parseFloat(rawValue)
+                        } else if (stringDataTypes.includes(dataType)) {
+                            value = rawValue.slice(1, -1)
+                        }
+
+                        valueMap.set(index, {
+                            property: property,
+                            value: value
+                        })
+                    }
+
+                    lineMap.delete(id[1]);
+                    return;
+                }
+
+                //match as numbers
+                if (regexValueNumeric.test(line)) {
+
+                    const matchNumeric = line.match(regexValueNumeric) || []
+                    if (matchNumeric.length) {
+                        const index = matchNumeric[1]
+                        const property = matchNumeric[2]
+                        const value = matchNumeric[3]
+                        valueMap.set(index, {
+                            property: property,
+                            value: convertScientificToDecimal(value)
+                        })
+                    }
+
+                    lineMap.delete(id[1]);
+                    return;
+                }
+
+
+            }
+            if (lineMap.size === 0) {
+                return
+            }
+
+        }
+    }
+
+    await firstPass()
+    await secondPass()
+
+    console.log('Entity', entityCount, entityMap.size);
+    console.log('RelDef', relDefCount, relMap.size);
+    console.log('Pset', psetCount, psetMap.size);
+    console.log('Value', valueCount, valueMap.size);
+
+
+    const t1 = performance.now()
+    console.log('map in:', convertToFloat((t1 - t0) / 1000), 's');
+
+
+    const logs = {
+        psets: [],
+        pset: [],
+        prop: []
+    }
+    for (const [key, obj] of entityMap) {
+        const pascalCaseEntity = entities.filter(x => x.toUpperCase() == obj.Entity)
+        obj.Entity = pascalCaseEntity[0]
+        const psets = relMap.get(key)
+
+        if (!psets) {
+            logs.psets.push(`${key},${obj.Entity}`)
+            continue;
+        }
+
+        for (const psetID of psets) {
+            const pset = psetMap.get(psetID)
+            if (!pset) {
+                logs.pset.push(`${key}, ${psetID}`)
+                continue;
+            }
+
+            const pset_result = {}
+            for (const propID of pset.array) {
+                const map = valueMap.get(propID);
+                if (!map || map.value == undefined) {
+                    const d = {
+                        propid: propID,
+                        array: pset.array,
+                        psetid: psetID
+                    }
+                    logs.prop.push(d)
+                    continue;
+                }
+
+                pset_result[map.property] = map.value
+            }
+            obj[pset.pset] = pset_result
+        }
+        ifcResult.push(obj)
+    }
+
+    const t2 = performance.now()
+    console.log('completed in:', convertToFloat((t2 - t0) / 1000), 's');
+
+
+    const checkResult = {}
+
+    for (const item of ifcResult) {
+
+
+
+        const nweItem = {
+            Entity: item.Entity,
+            Guid: item.Guid,
+            Name: typeof item.name == 'string' && item.name.startsWith("\\X2\\", 0) ? ifcToText(item.name) : item.name,
+            PredefinedType: typeof item.PredefinedType == 'string' && item.PredefinedType.startsWith("\\X2\\", 0) ? ifcToText(item.PredefinedType) : item.PredefinedType,
+            ObjectType: typeof item.ObjectType == 'string' && item.ObjectType.startsWith("\\X2\\", 0) ? ifcToText(item.ObjectType) : item.ObjectType,
+            Tag: typeof item.Tag == 'string' && item.Tag.startsWith("\\X2\\", 0) ? ifcToText(item.Tag) : item.Tag,
+        }
+        const new_bim_entity = JSON.parse(JSON.stringify(bim_entity[item.Entity]))
+        for (const [pset, value] of Object.entries(new_bim_entity)) {
+            const psetName = pset.split('Pset_')[1]
+            const bName = textToIfc(psetName)
+            const hName = `Pset_${bName}`
+            const psetItem = item[hName]
+            if (psetItem) {
+                for (const [k, v] of Object.entries(value)) {
+                    const p_b = textToIfc(k)
+                    const p_item = psetItem[p_b]
+                    if (p_item) {
+                        if (checkIfcType(p_item, v)) {
+                            value[k] = [0, p_item, v]
+                        } else {
+                            value[k] = [3, p_item, v]
+                        }
+                        // 解码
+                        if (typeof p_item == 'string' && p_item.startsWith("\\X2\\")) {
+                            value[k][1] = ifcToText(p_item)
+                        }
+                    } else {
+                        if (p_item === null) {
+                            value[k] = [2, p_item, v]
+                        } else {
+                            value[k] = [1, p_item, v]
+                        }
+                    }
+                }
+                
+            } else {
+                for (const [k, v] of Object.entries(value)) {
+                    value[k] = [1, null, v]
+                }
+            }
+            
+            nweItem[pset] = value
+        }
+
+
+        if (!checkResult[item.Entity]) {
+            checkResult[item.Entity] = [nweItem]
+        } else {
+            checkResult[item.Entity].push(nweItem)
+        }
+    }
+
+    const result = {
+        metadata: {
+            name: file.name,
+            version: 3.0
+        },
+        data: checkResult,
+    };
+
+    return result
+}
+
+
+/**
+ * Converts the input to a float with the specified number of decimal places or an integer, if possible.
+ *
+ * @param {*} input - The input value to convert to a float or integer.
+ * @param {number} [dp=2] - The number of decimal places to include in the output (default is 2).
+ * @returns {number|string|*} - The input value as a float with the specified number of decimal places or an integer, if possible. If the input cannot be converted, the function returns the original input value.
+ *
+ * @example
+ * // Returns 12.346
+ * convertToFloat("12.3456", 3);
+ */
+function convertToFloat(input, dp) {
+    const floatValue = parseFloat(input);
+    const intValue = parseInt(input);
+    if (!dp) {
+        dp = 2
+    }
+
+    if (isNaN(floatValue) || !Number.isInteger(intValue)) {
+        return input;
+    } else if (Number.isInteger(floatValue)) {
+        return intValue;
+    } else {
+        return Number(floatValue.toFixed(dp));
+    }
+}
+
+
+/**
+ * Converts a number in scientific notation to a decimal.
+ *
+ * @param {string | number} value - The input value to convert.
+ * @returns {string | number} The converted value if it was in scientific notation, or the original value if not.
+ *
+ * @example
+ * // returns "123.45"
+ * convertScientificToDecimal('1.2345e+2');
+ *
+ * @example
+ * // returns "1.36915"
+ * convertScientificToDecimal('1.36915000000007E+00');
+ */
+function convertScientificToDecimal(value) {
+    if (typeof value !== 'string') {
+        return value; // return the input if it's not a string
+    }
+
+    if (/^([0-9.]+)?([eE][-+]?[0-9]+)$/.test(value)) {
+        // if the value is in scientific notation, convert it to a decimal
+        return Number.parseFloat(value);
+    } else {
+        return value; // otherwise return the input unchanged
+    }
+}
+
+async function readFile(file, processline) {
+    return new Promise((resolve, reject) => {
+        const CHUNK_SIZE = 1024 * 1024; // 1MB chunk size
+        const decoder = new TextDecoder();
+        let offset = 0;
+        let line = '';
+
+        const readChunk = () => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const chunk = new Uint8Array(reader.result);
+                const chunkStr = decoder.decode(chunk);
+                const lines = chunkStr.split('\n');
+
+                // If there is a partial line at the end of the previous chunk, prepend it to the first line in this chunk
+                if (line) {
+                    lines[0] = line + lines[0];
+                    line = '';
+                }
+
+                // If the last line in this chunk is not complete, store it for the next chunk
+                if (chunkStr[chunkStr.length - 1] !== '\n') {
+                    line = lines.pop();
+                }
+
+                // Process each line in this chunk
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    processline(line);
+                }
+
+                offset += CHUNK_SIZE;
+                if (offset < file.size) {
+                    readChunk();
+                } else {
+                    resolve();
+                }
+            };
+
+            reader.onerror = () => {
+                reject(reader.error);
+            };
+
+            const chunk = file.slice(offset, offset + CHUNK_SIZE);
+            reader.readAsArrayBuffer(chunk);
+        };
+
+        readChunk();
+    });
+}
+
+// 将 IFC 编码转换为中文
+function ifcToText(ifcString) {
+    // 检查有效性
+    if (!ifcString.startsWith("\\X2\\") || !ifcString.endsWith("\\X0\\")) {
+        return "无效的 IFC 编码格式";
+    }
+    
+    // 提取十六进制部分
+    const hexPart = ifcString.substring(4, ifcString.length - 4);
+    
+    // 创建字节数组
+    const bytes = [];
+    for (let i = 0; i < hexPart.length; i += 2) {
+        bytes.push(parseInt(hexPart.substr(i, 2), 16));
+    }
+    
+    // 尝试不同的编码方式
+    const encodings = ['utf-16be', 'utf-8', 'utf-16le', 'gbk', 'gb18030'];
+    
+    // 首先尝试浏览器的原生解码
+    for (const encoding of encodings) {
+        try {
+            if (typeof TextDecoder !== 'undefined') {
+                const decoder = new TextDecoder(encoding);
+                const text = decoder.decode(new Uint8Array(bytes));
+                if (text && !/^\s*$/.test(text) && !/[\uFFFD]/.test(text)) {
+                    return text;
+                }
+            }
+        } catch (e) {
+            // 继续尝试下一种编码
+        }
+    }
+    
+    // 手动处理 UTF-16BE
+    try {
+        if (bytes.length % 2 === 0) {
+            let resultUtf16BE = '';
+            for (let i = 0; i < bytes.length; i += 2) {
+                const charCode = (bytes[i] << 8) | bytes[i + 1];
+                resultUtf16BE += String.fromCharCode(charCode);
+            }
+            if (resultUtf16BE && !/^\s*$/.test(resultUtf16BE)) {
+                return resultUtf16BE;
+            }
+        }
+    } catch (e) {
+        // 忽略错误
+    }
+    
+    // 最后的尝试：假设是单字节编码（适用于非Unicode编码的情况）
+    let result = '';
+    for (let i = 0; i < bytes.length; i++) {
+        result += String.fromCharCode(bytes[i]);
+    }
+    
+    return result;
+}
+
+// 将中文转换为 IFC 编码
+function textToIfc(text) {
+    let hexString = "";
+    
+    // 将每个字符转换为十六进制
+    for (let i = 0; i < text.length; i++) {
+        const charCode = text.charCodeAt(i);
+        // 转换为十六进制并确保是两位数（不足两位前面补0）
+        hexString += charCode.toString(16).toUpperCase();
+    }
+    
+    // 添加 IFC 编码的前缀和后缀
+    return "\\X2\\" + hexString + "\\X0\\";
+}
+
+
+/**
+ * 检查值是否符合指定的 IFC 类型
+ * @param {any} value - 需要检查的值
+ * @param {string} ifcType - IFC 类型标识符
+ * @returns {boolean} 如果值符合指定的 IFC 类型则返回 true，否则返回 false
+ */
+function checkIfcType(value, ifcType) {
+  // 定义 IFC 数据类型分类
+  const numberDataTypes = [
+    'IFCVOLUMEMEASURE', 'IFCREAL', 'IFCTHERMALTRANSMITTANCEMEASURE', 
+    'IFCINTEGER', 'IFCLENGTHMEASURE', 'IFCCOUNTMEASURE', 
+    'IFCPOSITIVELENGTHMEASURE', 'IFCPLANEANGLEMEASURE', 'IFCNUMERICMEASURE', 
+    'IFCAREAMEASURE', 'IFCQUANTITYLENGTH', 'IFCMASSMEASURE'
+  ];
+  
+  const stringDataTypes = ['IFCIDENTIFIER', 'IFCLABEL', 'IFCTEXT'];
+
+  const booleanDataTypes = ['IFCBOOLEAN'];
+  
+  // 标准化 ifcType 为大写形式进行比较
+  const normalizedType = ifcType.toString().toUpperCase();
+  
+  // 检查数字类型
+  if (numberDataTypes.includes(normalizedType)) {
+    // 检查是否为数字
+    if (typeof value !== 'number' || isNaN(value)) {
+      return false;
+    }
+    
+    // 特殊检查 IFCINTEGER
+    if (normalizedType === 'IFCINTEGER' && !Number.isInteger(value)) {
+      return false;
+    }
+    
+    // 特殊检查 IFCPOSITIVELENGTHMEASURE
+    if (normalizedType === 'IFCPOSITIVELENGTHMEASURE' && value <= 0) {
+      return false;
+    }
+    
+    // 其他数字类型通用检查已通过
+    return true;
+  }
+  
+  // 检查字符串类型
+  if (stringDataTypes.includes(normalizedType)) {
+    // 检查是否为字符串
+    if (typeof value !== 'string') {
+      return false;
+    } 
+    // 所有字符串类型通用检查已通过
+    return true;
+  }
+
+  // 检查布尔类型
+  if (booleanDataTypes.includes(normalizedType)) {
+    // 检查是否为布尔值
+    if (typeof value !== 'boolean') {
+      return false;
+    }
+
+    // 所有布尔类型通用检查已通过
+    return true;
+  }
+  
+  // 如果传入未定义的 IFC 类型，返回 false
+  return false;
+}
+
+
+
+
