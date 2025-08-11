@@ -1,0 +1,804 @@
+@font-face {
+  font-family: 'SarasaUiSC';
+  /* 所有字重都使用相同的字体家族名称 */
+  src: url('/fonts/SarasaUiSC-Regular.woff2') format('woff2');
+  /* 请确保路径正确 */
+  font-weight: normal;
+  /* 或 400 */
+  font-style: normal;
+  font-display: swap;
+  /* 优化字体加载体验 */
+}
+
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/SarasaUiSC-Regular.woff2') format('woff2');
+}
+
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: inherit;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+.material-icons::after {
+  font-size: 20px;
+}
+
+/* 页面加载的loading样式 */
+.loader-container {
+  width: 100%;
+  height: calc(100% - 130px);
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  top: 130px;
+  left: 0;
+  background: rgba(255, 255, 255, 0.5);
+  z-index: 999;
+  text-align: center;
+}
+
+.label {
+  margin-top: 5px;
+  display: inline-block;
+  font-size: 12.5px;
+  width: 356px;
+  text-align: left;
+}
+
+/* 进度条样式 */
+:root {
+  --smart-border-radius: 0px;
+  --smart-font-family: 'SarasaUiSC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'WenQuanYi Zen Hei', sans-serif !important;
+}
+
+smart-progress-bar>.smart-container {
+  border-color: rgb(227, 222, 222);
+}
+
+smart-progress-bar {
+  height: 16px;
+  width: 360px;
+}
+
+smart-progress-bar .smart-value {
+  background: rgb(105, 137, 218);
+}
+
+smart-progress-bar .smart-label {
+  color: var(--td-text-color-secondary);
+  font-size: 13px;
+}
+
+
+#watermark {
+  /* 隐藏水印 */
+  display: none !important;
+}
+
+/* 灯光控制滑块样式 */
+.smart-slider .smart-thumb:before {
+  background-color: transparent;
+}
+
+smart-slider {
+  position: relative;
+  padding-left: 15px;
+  margin-right: 10px;
+  width: 120px;
+}
+
+smart-slider span {
+  position: absolute;
+  top: -10px;
+  left: 0;
+}
+
+.smart-tooltip .smart-tooltip-content {
+  overflow: visible;
+}
+
+.smart-slider .smart-thumb {
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+}
+
+.smart-ribbon-group-item-control {
+  height: 25px;
+}
+
+/* 光照强度控制输入框样式 */
+#inputIndensity {
+  width: 55px;
+}
+
+smart-number-input {
+  position: relative;
+  margin-left: 60px;
+  width: 60%;
+}
+
+.smart-input[drop-down-button-position=right] .smart-input {
+  width: 40px;
+}
+
+.smart-number-input .nav {
+  width: 15px;
+}
+
+smart-number-input,
+smart-number-input.smart-element,
+.smart-toggle-box.smart-element {
+  margin-top: 0;
+}
+
+smart-number-input span {
+  position: absolute;
+  top: 0;
+  left: -60px;
+  margin-top: 5px;
+}
+
+/* 阴影开关复选框样式 */
+#checkboxShadow {
+  width: 120px;
+}
+
+smart-check-box {
+  position: relative;
+  padding-left: 75px;
+  margin-top: 0px;
+}
+
+smart-check-box span {
+  position: absolute;
+  top: 5px;
+  left: 0px;
+}
+
+smart-check-box .smart-container {
+  height: 25px;
+  width: 35px;
+}
+
+/* 阴影大小输入框样式 */
+smart-input,
+smart-input.smart-element {
+  width: 150px;
+  height: 20px;
+  margin-top: 20px;
+  margin-left: 25px;
+}
+
+.smart-toggle-box .smart-overlay {
+  background-color: transparent;
+}
+
+/* 拖动速度滑块样式 */
+#horizontalSliderSpeed {
+  margin-left: 65px;
+  position: relative;
+}
+
+#horizontalSliderSpeed span {
+  position: absolute;
+  top: -10px;
+  left: -60px
+}
+
+#checkboxFocus {
+  margin-top: -8px !important;
+  margin-left: -20px;
+  position: relative;
+}
+
+#checkboxFocus .smart-input {
+  margin-left: -60px;
+}
+
+#checkboxFocus .smart-ribbon-group-item-label {
+  position: absolute;
+  top: 5px;
+  left: 40px;
+}
+
+smart-color-picker {
+  width: 65px;
+  height: 25px !important;
+  margin-top: -3px !important;
+  margin-left: -5px;
+}
+
+.smart-color-picker .smart-color-box {
+  width: 18px;
+  height: 18px;
+}
+
+/* ribbon组件header整体样式 */
+#ribbon .smart-ribbon-header {
+  --smart-primary-rgb: rgb(255, 255, 255);
+  --smart-primary: white;
+  --smart-surface-color: white;
+  --smart-ui-state-color-active: var(--smart-primary);
+  --smart-ui-state-selected: var(--smart-primary);
+  --smart-ui-state-border-active: var(--smart-surface);
+  --smart-ui-state-color-selected: var(--smart-surface);
+  --smart-ui-state-color-hover: var(--smart-primary);
+  --smart-border-width: 0px;
+}
+
+/* header,文件下拉框样式 */
+.smart-ribbon .smart-ribbon-header,
+.smart-ribbon-file-container .smart-drop-down-button {
+  height: 25px;
+  border: none;
+}
+
+.smart-ribbon-file-container smart-drop-down-button {
+  min-width: 60px
+}
+
+.smart-ribbon-header-tabs .smart-ribbon-header-tab {
+  max-width: 60px;
+}
+
+.smart-drop-down {
+  --smart-ribbon-border-color: #e7eaed;
+}
+
+.smart-drop-down-box .smart-action-button {
+  display: flex;
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: center;
+  /* 水平居中 */
+  height: 100%;
+  /* 占满父容器高度 */
+  font-size: 15px;
+}
+
+/* ribbon中间每个tab样式（主操作栏） */
+.smart-ribbon-tabs .smart-ribbon-tab {
+  height: 105px;
+}
+
+smart-ribbon-tab smart-ribbon-group[root] {
+  padding-top: 0;
+}
+
+smart-ribbon-group[root]>.smart-ribbon-group-items {
+  padding-top: 5px;
+}
+
+/* 隐藏ribbon折叠按钮 */
+.smart-ribbon-group-dialog-launcher-icon,
+.smart-ribbon-tab-collapse-button,
+.smart-ribbon-tab-side-container .smart-ribbon-tab-collapse-icon {
+  display: none !important;
+}
+
+/* ribbpn顶部菜单栏文字样式 */
+.smart-ribbon-header .smart-ribbon-header-tabs .smart-ribbon-header-tab {
+  font-size: 15px;
+}
+
+/* ribbon主操作栏文字样式 */
+.smart-ribbon-group-item-label {
+  padding: 0 2px;
+  font-size: 11.5px;
+  letter-spacing: 0px;
+}
+
+/* ribbon主操作栏每个item组样式 */
+smart-ribbon-tab smart-ribbon-group[root] {
+  padding-top: 5px;
+}
+
+smart-ribbon-group[root]>.smart-ribbon-group-items {
+  padding-left: 3px;
+  padding-right: 3px;
+}
+
+/* ribbon底部分类文字样式 */
+.smart-ribbon-tab-groups .smart-ribbon-group .smart-ribbon-group-header-label {
+  padding: 0;
+  padding-top: 0;
+  font-size: 12px;
+}
+
+.smart-drop-down-box {
+  background-color: transparent;
+}
+
+.smart-drop-down-box:focus {
+  background-color: transparent;
+}
+
+.smart-drop-down-box:not([drop-down-open-mode=dropDownButton]) .smart-action-button,
+.smart-drop-down-box .smart-drop-down-button {
+  background-color: transparent;
+}
+
+.smart-drop-down-box[opened]>.smart-container>.smart-content>.smart-buttons-container:not([drop-down-open-mode=dropDownButton]):not(.outlined):not(.underlined) .smart-action-button,
+.smart-drop-down-box[opened]>.smart-container>.smart-content>.smart-buttons-container:not(.outlined):not(.underlined) .smart-drop-down-button {
+  background-color: #ebebeb;
+  color: black;
+}
+
+.smart-ribbon-group-drop-down[role=dialog] .smart-ribbon-group-drop-down-element {
+  border-radius: 6px;
+  border: 1px solid black;
+}
+
+
+/* 按钮 */
+button.smart-button {
+  padding: 0 0px;
+  text-transform: none;
+  min-width: 50px;
+  max-width: 60px;
+  border-radius: 4px;
+}
+
+smart-drop-down-button.smart-ribbon-group-drop-down[drop-down-button-position=bottom],
+.smart-ribbon-group-drop-down-container {
+  height: 77px;
+  margin-top: 5px;
+}
+
+.smart-button:focus,
+.smart-button:focus-visible {
+  background-color: transparent !important;
+}
+
+.smart-button:active {
+  background-color: #e0e0e0 !important;
+  color: #5a5a5a !important;
+}
+
+smart-button span {
+  transition: none !important;
+}
+
+smart-button.selected {
+  background-color: #f5f5f5 !important;
+}
+
+
+.smart-button:hover,
+.smart-button:hover-visible {
+  background-color: #f5f5f5 !important;
+}
+
+/* Ribbon分组和下拉按钮去除边框 */
+.smart-drop-down-button,
+.smart-action-button {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+smart-button.flat[focus],
+.smart-drop-down-box {
+  border-color: transparent;
+}
+
+smart-drop-down-button.smart-ribbon-group-drop-down .smart-buttons-container>.smart-action-button {
+  padding-top: 15px;
+  height: 80%;
+}
+
+smart-drop-down-button.smart-ribbon-group-drop-down .smart-buttons-container>.smart-drop-down-button {
+  height: 20%;
+}
+
+/* 所有size为normal的按钮样式 */
+.normal {
+  margin-top: 0px;
+}
+
+.tree {
+  margin-right: 2px;
+}
+
+/* 所有size为verySmall的按钮样式  */
+.smart-button-element.very-small button,
+smart-button.very-small button,
+smart-repeat-button.very-small button,
+smart-toggle-button.very-small button {
+  padding: 0 5px;
+  height: 20px;
+  font-size: 0;
+}
+
+.smart-button.very-small.hide {
+  width: 85px;
+}
+
+/* ribbon主操作栏按钮图标与按钮文字中间div样式 */
+.smart-ribbon-group-drop-down .smart-ribbon-group-item-flex-break,
+smart-ribbon-item[size=normal] .smart-ribbon-group-item-flex-break,
+smart-ribbon-item[size=large] .smart-ribbon-group-item-flex-break {
+  height: 0px;
+}
+
+smart-ribbon-group[grouped] smart-drop-down-button {
+  min-width: 60px;
+  max-width: 60px;
+}
+
+.select:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/选择.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.pan_tool:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/平移.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.rotate:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/旋转.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.rotate_left:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/向左旋转.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.rotate_right:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/向右旋转.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.zoom_out_map:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/放大.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.zoom_in_map:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/缩小.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.view:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/视图.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.default_view:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/默认视图.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(2.0);
+}
+
+.top_view:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/顶视图.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.front_view:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/前视图.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.left_view:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/左视图.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.bottom_view:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/底视图.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.back_view:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/后视图.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.right_view:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/右视图.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.hide_selected:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/隐藏选中.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.isolate-selected:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/隔离选中.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.transprent_other:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/半透明选中.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.visible:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/可见性.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.show_all:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/显示全部.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.measure:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/测量.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.measure_distance:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/距离.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.measure_angle:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/角度.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.measure_area:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/面积.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.measure_coordinate:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/坐标.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.measure_clear:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/清除测量.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+
+.x_axis:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/yz剖面.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.y_axis:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/xz剖面.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.z_axis:after {
+  width: 15px;
+  height: 15px;
+  content: "";
+  display: block;
+  background-image: url(/icons/xy剖面.svg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+}
+
+.slice_display:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/剖面显隐.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.slice_reset:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/结束剖切.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.slice:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/剖切.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.object:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/对象.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.build_tree:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/结构.svg);
+  background-size: cover;
+  background-position: center;
+}
+
+.properties_table:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/属性.svg);
+  background-size: cover;
+  background-position: center;
+}

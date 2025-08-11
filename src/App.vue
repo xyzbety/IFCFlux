@@ -1,60 +1,28 @@
 <template>
-  <div class="container-title" data-tauri-drag-region>
+    <FileMenuSidebar :visible="isFileMenuVisible" @update:visible="isFileMenuVisible = $event" @request-open-file="handleOpenFile" />
+  <div class="container-title" data-tauri-drag-region :style="themeStyle">
     <div class="title-left">
       <img src="/logo.png" alt="logo" style="padding: 0 5px;margin-left: 0px;" />
       <span>IFCFlux</span>
-      <svg t="1753933831537" class="icon" viewBox="0 0 2048 2048" version="1.1" xmlns="http://www.w3.org/2000/svg"
-        p-id="8526" width="32" height="32" @click="handleOpenFile">
-        <title>打开文件</title>
-        <path transform="translate(512, 512) scale(0.95)"
-          d="M950.857143 394.971429l-124.342857 438.857142c-7.314286 21.942857-36.571429 43.885714-58.514286 43.885715h-658.285714c-7.314286 0-14.628571 0-21.942857-7.314286 0-7.314286-7.314286-14.628571 0-21.942857l124.342857-438.857143c7.314286-21.942857 36.571429-43.885714 58.514285-43.885714h658.285715c7.314286 0 14.628571 0 14.628571 7.314285 7.314286 0 7.314286 7.314286 7.314286 21.942858zM73.142857 109.714286c0-21.942857 14.628571-36.571429 36.571429-36.571429h234.057143l65.828571 124.342857c0 14.628571 14.628571 21.942857 29.257143 21.942857h402.285714c21.942857 0 36.571429 14.628571 36.571429 36.571429V292.571429H270.628571C219.428571 292.571429 160.914286 336.457143 146.285714 394.971429L73.142857 643.657143V109.714286z m936.228572 219.428571c-14.628571-21.942857-36.571429-29.257143-58.514286-36.571428v-36.571429c0-58.514286-51.2-109.714286-109.714286-109.714286H460.8L394.971429 21.942857C394.971429 7.314286 380.342857 0 365.714286 0H109.714286C51.2 0 0 51.2 0 109.714286v731.428571c0 36.571429 21.942857 73.142857 43.885714 87.771429h7.314286c14.628571 14.628571 36.571429 21.942857 58.514286 21.942857h658.285714c58.514286 0 109.714286-43.885714 131.657143-102.4l124.342857-438.857143c7.314286-29.257143 0-58.514286-14.628571-80.457143z"
-          p-id="8527" fill="#ffffff"></path>
-      </svg>
-      <svg t="1753934091588" class="icon" viewBox="0 0 2048 2048" version="1.1" xmlns="http://www.w3.org/2000/svg"
-        p-id="12151" width="32" height="32" @click="handleReplay">
-        <title>撤销</title>
-        <path transform="translate(512, 512) scale(0.95)"
-          d="M608.256 159.232l124.416-71.168c19.456-11.264 26.624-36.352 15.36-55.808-11.264-19.456-36.352-26.624-55.808-15.36L467.456 145.408c-9.216 5.632-16.384 14.336-18.944 24.576s-1.536 21.504 4.096 31.232l128.512 224.256c7.68 13.312 21.504 20.48 35.328 20.48 6.656 0 13.824-1.536 20.48-5.632 19.456-11.264 26.624-36.352 15.36-55.808l-86.016-150.016c168.96 25.6 298.496 171.52 298.496 347.136 0 193.536-157.696 351.232-351.232 351.232s-351.232-157.696-351.232-351.232c0-22.528-18.432-40.96-40.96-40.96s-40.96 18.432-40.96 40.96c0 238.592 194.048 433.152 433.152 433.152 238.592 0 433.152-194.048 433.152-433.152-0.512-206.336-145.408-379.392-338.432-422.4z"
-          fill="#ffffff" p-id="12152"></path>
-      </svg>
-      <svg t="1753933446689" class="icon" viewBox="0 0 2048 2048" version="1.1" xmlns="http://www.w3.org/2000/svg"
-        p-id="7455" width="32" height="32" @click="handleRedo">
-        <title>重做</title>
-        <path transform="translate(512, 512) scale(0.95)"
-          d="M516.9 186.1c3.9-0.1 7.7 0.1 11.6 0.1V94.8c0-25.1 28-39.9 48.8-25.8l328.2 222.9c14.3 9.7 18 29.1 8.3 43.4-2.2 3.3-5 6.1-8.3 8.3L577.2 566.4c-20.7 14.1-48.8-0.8-48.8-25.8v-92.5c-158.1-1.9-289.6 108.5-296 251.2-4.9 109.5 65.4 206.6 169.5 251.4 1.9 0.8 3.9 2.4 3.7 5.6-0.1 2.7-2.8 3.4-5.2 2.7-166.6-49-289.3-193-293.9-366.3-5.9-218.3 177.9-400.3 410.4-406.6z"
-          fill="#ffffff" p-id="7456"></path>
-      </svg>
+      <img src="/icons/open-file.svg" class="icon" @click="handleOpenFile" />
+      <img src="/icons/undo.svg" class="icon" @click="handleReplay" />
+      <img src="/icons/redo.svg" class="icon" @click="handleRedo" />
     </div>
     <div class="title-right">
-      <svg width="40" height="40" viewBox="0 0 32 32" @click="minimize">
-        <title>最小化</title>
-        <line x1="11" y1="16" x2="21" y2="16" stroke="white" stroke-width="1.0" />
-      </svg>
-      <svg t="1754358258901" class="icon" viewBox="0 0 2048 2048" version="1.1" xmlns="http://www.w3.org/2000/svg"
-        p-id="4577" width="40" height="40" v-if="isMaximized" @click="maximize">
-        <title>还原</title>
-        <path transform="translate(682, 682) scale(0.65)"
-          d="M982.4 32H216v193.6H41.6V992h766.4V798.4h172.8V32zM713.6 897.6h-576v-576h576v576z m172.8-195.2h-78.4V225.6H310.4V126.4h576v576z"
-          fill="#ffffff" p-id="4578"></path>
-      </svg>
-      <svg width="40" height="40" viewBox="0 0 32 32" @click="maximize" v-if="!isMaximized">
-        <title>最大化</title>
-        <rect x="12" y="12" width="8" height="8" fill="none" stroke="white" stroke-width="1.0" />
-      </svg>
-      <svg width="40" height="40" viewBox="0 0 32 32" @click="close">
-        <title>关闭</title>
-        <line x1="12" y1="12" x2="20" y2="20" stroke="white" stroke-width="1.0" />
-        <line x1="20" y1="12" x2="12" y2="20" stroke="white" stroke-width="1.0" />
-      </svg>
+      <img src="/icons/minimize.svg" class="icon" @click="minimize" />
+      <img src="/icons/restore.svg" class="icon" v-if="isMaximized" @click="maximize" />
+      <img src="/icons/maximize.svg" class="icon" v-if="!isMaximized" @click="maximize" />
+      <img src="/icons/close.svg" class="icon" @click="close" />
     </div>
   </div>
-  <div class="container-ribbon">
+  <div class="container-ribbon" :style="themeStyle" @click="handleRibbonInteraction">
     <ribbon @navigate-event="handleNavigate" @change-view="handleView" @visible-control="handleVisibility"
       @measure-event="handleMeasure" @slice-event='handleSlice' @build-tree="handleBuildTree"
       @explosion-event="handleExplosion" @properties-table="handlePropertiesTable" @file-uploaded="handleFileUploaded"
       @space-generate="handleSpaceGenerate" @light-settings="handleLightSettings" @inspect-click="handleInspectClick"
       @light-settings-reset="handleLightSettingsReset" @scene-settings="handleChangeScene"
-      @animation-event="handleAnimationEvent" @animation-click="handleAnimationClick"></ribbon>
+      @animation-event="handleAnimationEvent" @animation-click="handleAnimationClick"
+      @toggle-file-menu="toggleFileMenu"></ribbon>
   </div>
   <div class=" container-canvas">
     <div class="canvas-left" :style="{
@@ -76,7 +44,7 @@
         />
       </Dialog>
     </div>
-    <div class="drag-bar drag-bar-left" @mousedown="startDrag('left')" v-if="pageState.structureDialogVisible"></div>
+    <div class="drag-bar drag-bar-left" @mousedown="startDrag('left', $event)" v-if="pageState.structureDialogVisible"></div>
     <div id="canvas-middle">
       <div id="codePanel" v-show="isAnimationsVisible === true">
         <div id="blocklyDiv"></div>
@@ -90,7 +58,7 @@
         <div id="codeInspect" style="flex: 1 1 0;">
           <Check :visible="isCheckVisible" :should-init="shouldInitCheckData" @update:visible="onCheckVisibleChange" />
         </div>
-        <div class="drag-bar drag-bar-check" @mousedown="startDrag('check')"></div>
+        <div class="drag-bar drag-bar-check" @mousedown="startDrag('check', $event)"></div>
       </div>
 
       <div id="rightArea">
@@ -99,7 +67,7 @@
         </div>
       </div>
     </div>
-    <div class="drag-bar drag-bar-right" @mousedown="startDrag('right')" v-if="pageState.propertyDialogVisible"></div>
+    <div class="drag-bar drag-bar-right" @mousedown="startDrag('right', $event)" v-if="pageState.propertyDialogVisible"></div>
     <div class="canvas-right" :style="{
       width: rightWidth + 'px',
       minWidth: rightWidth === 0 ? '0' : '350px',
@@ -123,13 +91,21 @@
 </template>
 
 <script setup lang="ts">
+declare global {
+  interface Window {
+    isAnimationStopped: boolean;
+    [key: string]: any;
+  }
+}
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '@tauri-apps/api/core';
 
 // 检查是否在Tauri环境中运行
 const isTauriEnv = isTauri();
 console.log('是否在Tauri环境中运行:', isTauriEnv);
-import { onMounted, reactive, ref, shallowRef, watch, markRaw, nextTick } from 'vue'
+import { onMounted, reactive, ref, shallowRef, watch, markRaw, nextTick, computed, defineComponent, DefineComponent } from 'vue'
+import { themeColors } from './styles/themes';
+import './styles/app.css';
 import * as BABYLON from '@babylonjs/core'
 import * as GUI from '@babylonjs/gui';
 import { Core } from '@myfront/bimflux/dist/base/core/core';
@@ -138,6 +114,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 
 import Ribbon from "./components/Ribbon.vue"
+import FileMenuSidebar from './components/FileMenuSidebar.vue';
 import Dialog from './components/Dialog.vue';
 import DialogR from './components/DialogR.vue';
 import Check from './components/Check.vue';
@@ -146,6 +123,7 @@ import PropertyTable from './components/PropertyTable.vue';
 import ArrowDown from '/icons/arrow-down.svg'
 import ArrowRight from '/icons/arrow-right.svg'
 import { useModelStore, useSceneStore } from './store';
+import { useSettingsStore } from './store/settings';
 import { SlicePlane } from './utils/slice/slicePlane'
 import { Measure } from './utils/measure/measure'
 import { ifcStructureColumns, ifcPropertyColumns } from './utils/config'
@@ -165,26 +143,45 @@ import { animatables } from './blockly/animation.ts';
 import * as animationFns from './blockly/animation.ts';
 
 // 批量挂载所有导出函数到 window
-Object.keys(animationFns).forEach(key => {
+Object.keys(animationFns).forEach((key: keyof typeof animationFns) => {
   // 只挂载函数
-  if (typeof animationFns[key] === 'function') {
-    window[key] = animationFns[key];
+  if (typeof (animationFns as any)[key] === 'function') {
+    window[key] = (animationFns as any)[key];
   }
 });
 window.isAnimationStopped = false;
 
 let isMaximized = ref(true); // 窗口是否最大化
-let isAnimationsVisible = ref(null); // 是否显示动画面板
+let isAnimationsVisible = ref<boolean | null>(null); // 是否显示动画面板
 const isCheckVisible = ref(false);
 const sceneStore = useSceneStore()
+const settingsStore = useSettingsStore();
+const isFileMenuVisible = ref(false);
 
-const KhanonViewer = shallowRef(null)
+const themeStyle = computed(() => {
+  const currentTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
+  return {
+    '--theme-color': currentTheme.value,
+    '--theme-hover-color': currentTheme.hover,
+  };
+});
+
+watch(() => settingsStore.themeColor, (newColor) => {
+  const currentTheme = themeColors.find(t => t.value === newColor) || themeColors[0];
+  const ribbonElement = document.querySelector('#ribbon .smart-ribbon-header');
+  if (ribbonElement) {
+    (ribbonElement as HTMLElement).style.setProperty('--smart-surface', currentTheme.value);
+    (ribbonElement as HTMLElement).style.setProperty('--smart-ui-state-hover', currentTheme.hover);
+  }
+});
+
+const KhanonViewer = shallowRef<DefineComponent | null>(null)
 const structureTreeRef = ref()
 const propertyTableRef = ref()
 const ifcPropertyColumn = shallowRef(markRaw(ifcPropertyColumns[0]))
 
 // 过滤掉描述列的构件树列配置
-const ifcStructureColumnsFiltered = ifcStructureColumns.filter(col => col.colKey !== 'description')
+const ifcStructureColumnsFiltered = ifcStructureColumns.filter((col: any) => col.colKey !== 'description')
 
 console.log('ifcPropertyColumn', ifcPropertyColumn.value)
 const activeTab = ref('property')
@@ -220,24 +217,24 @@ let transparentMeshIds = new Set<string>(); // 存储已半透明的mesh ID
 let selectedMeshIds = new Set<string>(); // 当前选中的mesh
 // 添加一个映射来存储原始材质属性
 let originalMaterialProperties = new Map<string, { alpha: number }>(); // 存储原始材质属性
-let isClickVisible = ref(false); // 是否通过点击选择可见
+let isClickVisible = ref(true); // 是否通过点击选择可见
 let shouldInitCheckData = ref(false);
 let lastClickedMeshId: string | null = null; // 记录上次点击的mesh ID
 
 const pageState = reactive({
   structureDialogVisible: false,  // 场景目录
   propertyDialogVisible: false,  // 构件特性
-  treeData: [] as any,
-  ifcExpressIds: [] as any,
+  treeData: [] as any[],
+  ifcExpressIds: [] as any[],
   sceneStructureTree: { //场景目录
-    selectedRowKeys: [],  //多选
-    activeRowKeys: [], // 激活
-    expandedIds: [],   // 展开
-    ids: [],  // id 集合
+    selectedRowKeys: [] as (string | number)[],  //多选
+    activeRowKeys: [] as (string | number)[], // 激活
+    expandedIds: [] as (string | number)[],   // 展开
+    ids: [] as (string | number)[],  // id 集合
   },
-  propertyAll: [] as any,
-  property: [] as any, // 构件特性
-  propertyExpandIds: [] as any,  // 构件特性 节点展开
+  propertyAll: [] as any[],
+  property: [] as any[], // 构件特性
+  propertyExpandIds: [] as any[],  // 构件特性 节点展开
 })
 
 const leftWidth = ref(350);
@@ -249,7 +246,7 @@ let startX = 0;
 let startWidth = 0;
 const showTreeTable = ref(true);
 const showPropertyTable = ref(true);
-function startDrag(side) {
+function startDrag(side: 'left' | 'right' | 'check', event: MouseEvent) {
   dragging = true;
   dragSide = side;
   document.body.style.cursor = 'ew-resize';
@@ -265,9 +262,11 @@ function startDrag(side) {
   window.addEventListener('mouseup', stopDrag);
 }
 
-function onDrag(event) {
+function onDrag(event: MouseEvent) {
   if (!dragging) return;
-  const totalWidth = document.querySelector('.container-canvas').clientWidth;
+  const container = document.querySelector('.container-canvas');
+  if (!container) return;
+  const totalWidth = container.clientWidth;
   const maxWidth = totalWidth;
   let newWidth =
     startWidth +
@@ -292,7 +291,7 @@ function stopDrag() {
   window.removeEventListener('mousemove', onDrag);
   window.removeEventListener('mouseup', stopDrag);
 }
-function onCheckVisibleChange(val) {
+function onCheckVisibleChange(val: boolean) {
   isCheckVisible.value = val;
   if (!val) {
     checkWidth.value = 0;
@@ -302,6 +301,16 @@ function onCheckVisibleChange(val) {
   }
   console.log('checkVisibleChange', checkWidth.value, isCheckVisible.value);
 }
+
+const toggleFileMenu = () => {
+  isFileMenuVisible.value = !isFileMenuVisible.value;
+};
+
+const handleRibbonInteraction = () => {
+  if (isFileMenuVisible.value) {
+    isFileMenuVisible.value = false;
+  }
+};
 // 导航控制
 const handleNavigate = (action: 'pan' | 'rotate' | 'zoomIn' | 'zoomOut' | 'rotateRight' | 'rotateLeft') => {
   isHightlight = true;
@@ -376,7 +385,7 @@ const handleVisibility = (mode: 'showAll' | 'hideSelected' | 'isolateSelected' |
   restoreMaterials(scene);
 
   if (mode === 'showAll') {
-    isClickVisible = true;
+    isClickVisible.value = true;
     // 显示所有mesh并清空所有集合
     hiddenMeshIds.clear();
     isolatedMeshIds.clear();
@@ -400,7 +409,7 @@ const handleVisibility = (mode: 'showAll' | 'hideSelected' | 'isolateSelected' |
     });
     return;
   } else {
-    isClickVisible = false;
+    isClickVisible.value = false;
   }
 
   // 根据模式将选中的mesh添加到对应的集合中
@@ -458,18 +467,23 @@ const handleVisibility = (mode: 'showAll' | 'hideSelected' | 'isolateSelected' |
     if (meshTransparent) {
       // 为半透明mesh设置材质
       if (mesh.material && mesh.material.getClassName && mesh.material.getClassName() === "StandardMaterial") {
-        if (!mesh.material._isClonedForTransparent) {
+        if (!(mesh.material as any)._isClonedForTransparent) {
           const newMat = mesh.material.clone(mesh.material.name + "_transparent");
-          newMat.alpha = 0.5;
-          newMat._isClonedForTransparent = true;
-          mesh.material = newMat;
+          if (newMat) {
+            newMat.alpha = 0.5;
+            (newMat as any)._isClonedForTransparent = true;
+            mesh.material = newMat;
+          }
         } else {
           mesh.material.alpha = 0.5;
         }
       } else if (mesh.material) {
-        mesh.material = mesh.material.clone(mesh.material.name + "_transparent");
-        mesh.material.alpha = 0.5;
-        mesh.material._isClonedForTransparent = true;
+        const newMat = mesh.material.clone(mesh.material.name + "_transparent");
+        if (newMat) {
+          newMat.alpha = 0.5;
+          (newMat as any)._isClonedForTransparent = true;
+          mesh.material = newMat;
+        }
       }
     } else {
       // 还原非半透明mesh的透明度到原始值
@@ -594,7 +608,7 @@ const handleBuildTree = () => {
   const ribbonItem = document.querySelectorAll('.smart-ribbon-item');
   if (ribbonItem) {
     ribbonItem.forEach(item => {
-      if (item.label === "构件树") {
+      if ((item as any).label === "构件树") {
         const smartButton = item.querySelector('smart-button');
         if (pageState.structureDialogVisible)
           smartButton?.classList.add("selected")
@@ -622,7 +636,7 @@ const handlePropertiesTable = () => {
   const ribbonItem = document.querySelectorAll('.smart-ribbon-item');
   if (ribbonItem) {
     ribbonItem.forEach(item => {
-      if (item.label === "属性表") {
+      if ((item as any).label === "属性表") {
         const smartButton = item.querySelector('smart-button');
         if (pageState.propertyDialogVisible)
           smartButton?.classList.add("selected")
@@ -665,19 +679,19 @@ const handleLightSettings = (data: any) => {
 }
 const handleLightSettingsReset = () => {
   isHightlight = true
-  const handleSliderX = document.getElementById("horizontalSliderX");
-  const handleSliderY = document.getElementById("horizontalSliderY");
-  const handleSliderZ = document.getElementById("horizontalSliderZ");
-  const inputIndensity = document.getElementById("inputIndensity");
-  const checkboxShadow = document.getElementById("checkboxShadow");
+  const handleSliderX = document.getElementById("horizontalSliderX") as any;
+  const handleSliderY = document.getElementById("horizontalSliderY") as any;
+  const handleSliderZ = document.getElementById("horizontalSliderZ") as any;
+  const inputIndensity = document.getElementById("inputIndensity") as HTMLInputElement;
+  const checkboxShadow = document.getElementById("checkboxShadow") as HTMLInputElement;
   light.direction = new BABYLON.Vector3(1, -0.5, 0.5)
   light.intensity = 0.75
   light.shadowEnabled = true
-  handleSliderX.val(light.direction.x)
-  handleSliderY.val(light.direction.y)
-  handleSliderZ.val(light.direction.z)
-  inputIndensity.value = light.intensity
-  checkboxShadow.checked = true
+  if (handleSliderX) handleSliderX.val(light.direction.x)
+  if (handleSliderY) handleSliderY.val(light.direction.y)
+  if (handleSliderZ) handleSliderZ.val(light.direction.z)
+  if (inputIndensity) inputIndensity.value = light.intensity.toString()
+  if (checkboxShadow) checkboxShadow.checked = true
 }
 
 // 修改场景背景色
@@ -728,12 +742,12 @@ function clear() {
       measure.destroy();
       measure = null;
     }
-    const explosionSliderX = document.getElementById("explosionSliderX");
-    const explosionSliderY = document.getElementById("explosionSliderY");
-    const explosionSliderZ = document.getElementById("explosionSliderZ");
-    explosionSliderX.val(0)
-    explosionSliderY.val(0)
-    explosionSliderZ.val(0)
+    const explosionSliderX = document.getElementById("explosionSliderX") as any;
+    const explosionSliderY = document.getElementById("explosionSliderY") as any;
+    const explosionSliderZ = document.getElementById("explosionSliderZ") as any;
+    if (explosionSliderX) explosionSliderX.val(0)
+    if (explosionSliderY) explosionSliderY.val(0)
+    if (explosionSliderZ) explosionSliderZ.val(0)
   }
 }
 function resetGlobalVariables() {
@@ -742,7 +756,7 @@ function resetGlobalVariables() {
   transparentMeshIds.clear();
   selectedMeshIds.clear();
   originalMaterialProperties.clear();
-  isClickVisible = true;
+  isClickVisible.value = true;
   lastClickedMeshId = null;
   selectedMeshId = null;
   isHightlight = true;
@@ -785,7 +799,7 @@ const handleFileUploaded = () => {
     if (workspace) {
       workspace.clear();
     }
-    if (!workspace || workspace.getAllBlocks().length === 0) {
+    if (!workspace || (workspace as any).getAllBlocks().length === 0) {
       initBlocks(scene)
     }
 
@@ -841,7 +855,7 @@ const handleFileUploaded = () => {
     });
     pageState.treeData = modelData.tree
     console.log("构件树数据", pageState.treeData);
-    pageState.property = ''
+    pageState.property = []
     pageState.ifcExpressIds = modelData.ifcExpressIds
     
     // 结构目录默认展开到第三层级
@@ -875,6 +889,23 @@ const handleFileUploaded = () => {
     
     // 设置展开状态
     pageState.sceneStructureTree.expandedIds = expandedKeys;
+
+    // 文件加载后，显示构件树和属性表
+    pageState.structureDialogVisible = true;
+    pageState.propertyDialogVisible = true;
+    leftWidth.value = 350;
+    rightWidth.value = 350;
+
+    // 更新Ribbon中按钮的状态
+    const ribbonItem = document.querySelectorAll('.smart-ribbon-item');
+    if (ribbonItem) {
+      ribbonItem.forEach(item => {
+        if ((item as any).label === "构件树" || (item as any).label === "属性表") {
+          const smartButton = item.querySelector('smart-button');
+          smartButton?.classList.add("selected")
+        }
+      })
+    }
   }
 };
 
@@ -889,13 +920,8 @@ const handleAnimationEvent = async (action: 'start' | 'pause' | 'stop' | 'reset'
       const blocklyToolbox = document.getElementsByClassName("blocklyToolbox")[0];
 
       if (blocklyToolbox) {
-        if (toolboxVisible) {
-          blocklyToolbox.style.display = 'none';
-          toolboxVisible = false;
-        } else {
-          blocklyToolbox.style.display = 'block';
-          toolboxVisible = true;
-        }
+        (blocklyToolbox as HTMLElement).style.display = toolboxVisible ? 'none' : 'block';
+        toolboxVisible = !toolboxVisible;
       }
     } finally {
       // 延迟重置，防止快速点击
@@ -955,7 +981,7 @@ const handleAnimationEvent = async (action: 'start' | 'pause' | 'stop' | 'reset'
 const handleAnimationClick = (event: string) => {
   console.log("handleAnimationClick", event);
   if (event === 'click') {
-    if (!workspace || workspace.getAllBlocks().length === 0) {
+    if (!workspace || (workspace as any).getAllBlocks().length === 0) {
       initBlocks(scene)
       console.log('initBlocks')
     }
@@ -969,8 +995,8 @@ const handleAnimationClick = (event: string) => {
     codePanel.style.borderRight = '1px solid #ccc';
     setTimeout(() => {
       if (workspace) {
-        workspace.getToolbox()?.refreshSelection();
-        Blockly.svgResize(workspace);
+        (workspace as any).getToolbox()?.refreshSelection();
+        Blockly.svgResize(workspace as any);
       }
     }, 100);
   } else if (event === 'unclick') {
@@ -1064,27 +1090,31 @@ async function handleInspectClick(event: string) {
     checkWidth.value = 800;
 }
 // 构件特性 节点展开
-const treeNodesChange = (value: any) => {
+const treeNodesChange = (value: (string | number)[]) => {
   console.log('treeNodesChange', value);
   pageState.propertyExpandIds = value
 }
 
 // 构件树展开状态变化处理
-const onExpandedRowKeysChange = (expandedRowKeys: string[]) => {
+const onExpandedRowKeysChange = (expandedRowKeys: (string | number)[]) => {
   console.log('构件树展开状态变化:', expandedRowKeys);
   pageState.sceneStructureTree.expandedIds = expandedRowKeys;
 }
 
 // 表格选中状态变化处理
-const onTableSelectChange = (selectedRowKeys, { selectedRowData }) => {
+const onTableSelectChange = (selectedRowKeys: (string | number)[], { selectedRowData }: { selectedRowData: any[] }) => {
   console.log('表格选中状态变化:', selectedRowKeys, selectedRowData);
   pageState.sceneStructureTree.selectedRowKeys = selectedRowKeys;
 };
 
 // 结构目录 行 点击
 const tableRowClick = async (event: any) => {
-  let expressID: string
-  let globalId: string
+  if (!scene) {
+    console.warn('tableRowClick called, but scene is not initialized yet.');
+    return;
+  }
+  let expressID: string | null = null;
+  let globalId: string | null = null;
   
   // 统一处理 expressID（来自表格点击或场景点击）
   
@@ -1124,13 +1154,18 @@ const tableRowClick = async (event: any) => {
     return;
   }
   
-  if (!isClickVisible) {
-    expressID = lastClickedMeshId
+  if (!isClickVisible.value) {
+    expressID = lastClickedMeshId;
+  }
+
+  if (!expressID) {
+    console.warn('tableRowClick: expressID is null');
+    return;
   }
 
   selectedMeshId = expressID
-  const colorPicker = document.getElementById("colorPicker") as HTMLInputElement;
-  if (expressID === '') {
+  const colorPicker = document.getElementById("colorPicker") as any;
+  if (expressID === '' && colorPicker) {
     colorPicker.opened = false
   }
 
@@ -1156,7 +1191,7 @@ const tableRowClick = async (event: any) => {
     return expressIdSet.has(mesh.metadata?.globalId) || expressIdSet.has(mesh.id);
   });
   
-  if (exactMatches.length === 1 && exactMatches[0].name === 'skyBox')
+  if (exactMatches.length === 1 && exactMatches[0]?.name === 'skyBox')
     return;
   // 高亮mesh
   let isVisibleMesHighlight = true;
@@ -1271,7 +1306,7 @@ const selectChange = (event: any) => {
 };
 
 // 属性表tab切换
-const handleTabChange = (event) => {
+const handleTabChange = (event: any) => {
   activeTab.value = event
   const newValue =
     event === 'location' ? ifcPropertyColumns[1] :
@@ -1283,12 +1318,19 @@ const handleTabChange = (event) => {
 }
 
 onMounted(async () => {
+  // Set initial theme for ribbon after a delay to ensure it's rendered
+  setTimeout(() => {
+    const initialTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
+    const ribbonElement = document.querySelector('#ribbon .smart-ribbon-header');
+    if (ribbonElement) {
+      (ribbonElement as HTMLElement).style.setProperty('--smart-surface', initialTheme.value);
+      (ribbonElement as HTMLElement).style.setProperty('--smart-ui-state-hover', initialTheme.hover);
+    }
+  }, 550); // Wait for the ribbon component to initialize
 
   // 动态导入组件
   const module = await import('./components/KhanonViewer.vue')
   KhanonViewer.value = module.default
-  pageState.structureDialogVisible = true
-  pageState.propertyDialogVisible = true
   window.addEventListener('mesh-clicked', tableRowClick);
   window.addEventListener("mouse-down", handleHisBefore)
   window.addEventListener("mouse-up", handleHisAfter)
@@ -1325,19 +1367,10 @@ onMounted(async () => {
     },
     { deep: true }
   )
-  const ribbonItem = document.querySelectorAll('.smart-ribbon-item');
-  if (ribbonItem) {
-    ribbonItem.forEach(item => {
-      if (item.label === "构件树" || item.label === "属性表") {
-        const smartButton = item.querySelector('smart-button');
-        smartButton?.classList.add("selected")
-      }
-    })
-  }
 })
 
 // 记录历史状态前
-const handleHisBefore = (event) => {
+const handleHisBefore = (event: any) => {
   // console.log('handleHisBefore', event);
   if (!event.detail) return;
 
@@ -1364,7 +1397,7 @@ const handleHisBefore = (event) => {
 }
 
 // 记录历史状态后
-const handleHisAfter = (event) => {
+const handleHisAfter = (event: any) => {
   if (!event.detail) return;
 
   const newState = {
@@ -1422,176 +1455,37 @@ const handleRedo = () => {
 
 // 最大化窗口
 const maximize = async () => {
-  const maximized = await getCurrentWindow().isMaximized();
-  if (maximized) {
-    await getCurrentWindow().unmaximize();
-  }
-  else {
-    await getCurrentWindow().maximize();
+  if (isTauriEnv) {
+    const maximized = await getCurrentWindow().isMaximized();
+    if (maximized) {
+      await getCurrentWindow().unmaximize();
+    } else {
+      await getCurrentWindow().maximize();
+    }
+  } else {
+    console.log("Maximize action is only available in Tauri environment.");
   }
 };
 
 // 最小化窗口
 const minimize = async () => {
-  await getCurrentWindow().minimize();
+  if (isTauriEnv) {
+    await getCurrentWindow().minimize();
+  } else {
+    console.log("Minimize action is only available in Tauri environment.");
+  }
 };
 
 // 关闭窗口
 const close = async () => {
-  await getCurrentWindow().close();
+  if (isTauriEnv) {
+    await getCurrentWindow().close();
+  } else {
+    console.log("Close action is only available in Tauri environment.");
+  }
 };
 
 
 
 </script>
 
-<style>
-.container-title {
-  background-color: #185abd;
-  color: white;
-}
-
-.container-title,
-.title-left,
-.title-right {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 40px;
-  font-size: 40px;
-}
-
-.title-left img {
-  height: 15px;
-  padding: 0 5px;
-}
-
-.title-left span {
-  height: 40px;
-  line-height: 40px;
-  font-size: 16px;
-  padding: 0 5px;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-.title-left span:hover {
-  background-color: #1651aa;
-}
-
-.title-left svg:hover,
-.title-right svg:hover {
-  background-color: #1651aa;
-  cursor: pointer;
-}
-
-.title-right svg:last-child:hover {
-  cursor: pointer;
-  background-color: #e81123;
-}
-
-.container-ribbon {
-  height: 130px;
-}
-
-smart-ribbon:focus>div.smart-ribbon {
-  outline: none !important;
-
-}
-
-.container-canvas {
-  position: relative;
-  height: calc(100vh - 170px);
-  display: flex;
-  background-color: rgb(240, 240, 240);
-  border-top: 1px solid rgb(175, 176, 182);
-}
-
-.canvas-left,
-.canvas-right {
-  min-width: 350px;
-  position: relative;
-  background: #f8f8f8;
-  transition: width 0.1s;
-  z-index: 1;
-  margin: 15px;
-}
-
-#canvas-middle {
-  flex: 1 1 0;
-  min-width: 0;
-  position: relative;
-  background: white;
-  display: flex;
-  height: 100%;
-}
-
-.drag-bar {
-  width: 1px;
-  cursor: ew-resize;
-  background: #e0e0e0;
-  z-index: 10;
-  position: relative;
-  transition: background 0.2s;
-}
-
-.drag-bar:hover {
-  background: #b0b0b0;
-}
-
-.check-wrapper {
-  display: flex;
-  height: 100%;
-}
-#codeInspect {
-  height: 100%;
-  flex: 1 1 0;
-}
-.drag-bar-check {
-  width: 1px;
-  flex: none; /* 关键：防止被flex挤压 */
-  cursor: ew-resize;
-  background: #e0e0e0;
-  z-index: 10;
-  height: 100%;
-  transition: background 0.2s;
-}
-
-.drag-bar-check:hover {
-  background: #b0b0b0;
-}
-
-#codePanel {
-  flex: 0 1 0;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-#rightArea {
-  flex: 1 1 0;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-#blocklyDiv {
-  width: 100%;
-  height: 100%;
-}
-
-.blocklyMainBackground {
-  stroke-width: 0;
-}
-
-#khanonjs {
-  width: 100%;
-  height: 100%;
-  background: white;
-}
-
-#khanonjs-canvas {
-  outline: none;
-}
-
-</style>

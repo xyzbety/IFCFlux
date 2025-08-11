@@ -504,9 +504,9 @@ export default {
     label: '文件',
     type: 'dropDown',
     items: [
-      {
-        label: '打开',
-      },
+      // {
+      //   label: '打开',
+      // },
       // {
       //   label: '附加',
       // }
