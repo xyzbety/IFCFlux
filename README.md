@@ -1,6 +1,20 @@
-# IFC查看器
+# IFCFlux
 
 专为查看和分析IFC文件设计。本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理BIM模型数据
+
+## 技术栈
+
+- **前端框架**: Vue 3 Composition API
+- **构建工具**: Vite 6
+- **类型系统**: TypeScript 5
+- **3D渲染引擎**: Babylon.js
+- **桌面应用框架**: Tauri 2
+- **UI组件库**: Smart Web Components
+- **状态管理**: Vue内置响应式系统
+- **样式预处理**: Less
+- **BIM数据处理**: web-ifc
+
+
 
 ## 功能特性
 
@@ -33,7 +47,7 @@ pnpm install
 // 启动前端开发模式
 pnpm dev
 ```
-此命令将启动Vite开发服务器，默认监听 http://localhost:1420
+此命令将启动Vite开发服务器，默认监听 http://localhost:5000
 
 ```bash
 // 启动桌面应用开发模式
@@ -58,39 +72,102 @@ pnpm tauri build
 ## 项目结构
 
 ```
-├── README.md               # 项目说明文档
-├── app-icon.png            # 应用图标
+ifc-viewer/
+├── .gitignore              # Git忽略文件配置
+├── .npmrc                  # npm配置文件
 ├── index.html              # 入口HTML文件
 ├── package.json            # 前端依赖配置
 ├── pnpm-lock.yaml          # pnpm依赖锁文件
-├── public/                 # 静态资源
-│   ├── extractor.worker.js # Web Worker文件
-│   ├── fonts/              # 字体文件
-│   ├── textures/           # 纹理资源
-│   └── web-ifc.wasm        # WebAssembly模块
-├── src/                    # 前端源代码
-│   ├── App.vue             # 根组件
-│   ├── assets/             # 静态资源
-│   ├── blockly/            # Blockly相关代码
-│   ├── components/         # 自定义组件
-│   ├── main.ts             # 主入口文件
-│   ├── store/              # 状态管理
-│   ├── style/              # 样式文件
-│   ├── types.ts            # 类型定义
-│   ├── utils/              # 工具函数
-│   └── vite-env.d.ts       # Vite环境声明
-├── src-tauri/              # Tauri桌面应用代码
-│   ├── .gitignore
-│   ├── Cargo.lock          # Rust依赖锁文件
-│   ├── Cargo.toml          # Rust依赖配置
-│   ├── build.rs            # 构建脚本
-│   ├── capabilities/       # Tauri权限配置
-│   ├── icons/              # 应用图标
-│   ├── src/                # Rust源代码
-│   └── tauri.conf.json     # Tauri配置文件
+├── README.md               # 项目说明文档
 ├── tsconfig.json           # TypeScript配置
 ├── tsconfig.node.json      # Node.js TypeScript配置
 ├── vite.config.ts          # Vite配置
+├── public/                 # 静态资源
+│   ├── extractor.worker.js # Web Worker文件
+│   ├── favicon.png         # 网站图标
+│   ├── logo.png            # 应用Logo
+│   ├── fonts/              # 字体文件
+│   │   ├── SarasaUiSC-Bold.woff2
+│   │   └── SarasaUiSC-Regular.woff2
+│   ├── icons/              # SVG图标文件
+│   │   ├── 测量.svg
+│   │   ├── 视图.svg
+│   │   ├── 属性.svg
+│   │   ├── 结构.svg
+│   │   ├── arrow-down.svg
+│   │   ├── arrow-right.svg
+│   │   └── ... (更多功能图标)
+│   └── textures/           # 纹理资源
+│       └── tex_1.png
+├── src/                    # 前端源代码
+│   ├── App.vue             # 主应用组件
+│   ├── main.ts             # 应用入口文件
+│   ├── types.ts            # TypeScript类型定义
+│   ├── vite-env.d.ts       # Vite环境类型声明
+│   ├── blockly/            # Blockly可视化编程
+│   │   ├── animation.ts    # 动画相关
+│   │   ├── blocks.ts       # 自定义块定义
+│   │   ├── generator.ts    # 代码生成器
+│   │   └── toolbox.ts      # 工具箱配置
+│   ├── components/         # Vue组件
+│   │   ├── Check.vue       # 检查结果组件
+│   │   ├── Dialog.vue      # 通用对话框组件
+│   │   ├── DialogR.vue     # 右侧对话框组件
+│   │   ├── KhanonViewer.vue # 3D查看器组件
+│   │   ├── PropertyTable.vue # 属性表组件
+│   │   ├── Ribbon.vue      # 功能区组件
+│   │   ├── StructureTree.vue # 构件树组件
+│   │   └── check/          # 检查相关子组件
+│   │       ├── circleProgress.vue # 圆形进度条
+│   │       ├── demo.vue    # 演示组件
+│   │       ├── info.vue    # 信息展示
+│   │       ├── ruleDetail.vue # 规则详情
+│   │       └── ruleTree.vue # 规则树
+│   ├── store/              # Pinia状态管理
+│   │   └── index.ts        # 主状态存储
+│   ├── style/              # 样式文件
+│   │   ├── font-family.less # 字体样式
+│   │   ├── index.less      # 主样式文件
+│   │   ├── layout.less     # 布局样式
+│   │   ├── reset.less      # 重置样式
+│   │   └── variables.less  # 样式变量
+│   └── utils/              # 工具函数
+│       ├── camera.ts       # 相机控制
+│       ├── config.ts       # 表格配置
+│       ├── default.config.ts # 默认配置
+│       ├── ifc-api.ts      # IFC API封装
+│       ├── ifcMap.ts       # IFC类型映射表
+│       ├── ifcspacegen.ts  # IFC空间生成
+│       ├── scene.ts        # 场景管理
+│       ├── ifcLoader/      # IFC文件加载器
+│       │   ├── IfcExplosion.ts # 爆炸视图
+│       │   └── IfcLoader.js # 主加载器
+│       ├── measure/        # 测量工具
+│       │   ├── measure.d.ts # 类型定义
+│       │   └── measure.js  # 测量实现
+│       └── slice/          # 剖切工具
+│           ├── sliceBox.ts # 盒式剖切
+│           ├── slicePlane.ts # 平面剖切
+│           ├── type.ts     # 类型定义
+│           └── utils.ts    # 工具函数
+└── src-tauri/              # Tauri桌面应用代码
+    ├── .gitignore          # Tauri Git忽略配置
+    ├── build.rs            # 构建脚本
+    ├── Cargo.lock          # Rust依赖锁文件
+    ├── Cargo.toml          # Rust依赖配置
+    ├── tauri.conf.json     # Tauri配置文件
+    ├── capabilities/       # Tauri权限配置
+    │   └── default.json    # 默认权限
+    ├── icons/              # 应用图标
+    │   ├── 32x32.png
+    │   ├── 128x128.png
+    │   ├── icon.ico
+    │   ├── icon.png
+    │   ├── android/        # Android平台图标
+    │   └── ios/            # iOS平台图标
+    └── src/                # Rust源代码
+        ├── lib.rs          # 库文件
+        └── main.rs         # 主程序入口
 ```
 
 ## ⚙️ 配置
@@ -104,84 +181,3 @@ pnpm tauri build
 ### 应用配置
 应用的默认设置和主题配置可以在 `src/utils/config.ts` 和 `src/utils/default.config.ts` 中修改。
 
-## 📦 技术栈
-
-- **前端框架**: Vue 3 Composition API
-- **构建工具**: Vite 6
-- **类型系统**: TypeScript 5
-- **3D渲染引擎**: Babylon.js
-- **桌面应用框架**: Tauri 2
-- **UI组件库**: Smart Web Components
-- **状态管理**: Vue内置响应式系统
-- **样式预处理**: Less
-- **BIM数据处理**: web-ifc
-
-## 📖 使用指南
-
-### 打开IFC文件
-1. 点击菜单栏中的「文件」->「打开」
-2. 在文件选择对话框中选择IFC文件
-3. 等待文件加载完成后即可查看模型
-
-### 模型操作
-- **旋转**: 按住鼠标左键并拖动
-- **平移**: 按住鼠标中键或Shift+鼠标左键并拖动
-- **缩放**: 使用鼠标滚轮或按住Ctrl+鼠标左键并拖动
-- **选择元素**: 点击模型中的元素
-
-### 查看属性
-1. 选择模型中的元素
-2. 属性面板会自动显示该元素的详细信息
-
-### 导出功能
-1. 点击菜单栏中的「文件」->「导出」
-2. 选择导出格式和保存位置
-3. 点击「确定」完成导出
-
-## 🤝 开发指南
-
-### 代码规范
-- 使用ESLint和Prettier保持代码风格一致
-- 遵循Vue 3的最佳实践
-- 为组件和函数添加适当的TypeScript类型注释
-- 提交代码前运行`pnpm lint`检查代码规范
-
-### 提交规范
-- 使用语义化版本控制
-- 提交消息格式: `type(scope): description`
-  - type: feat, fix, docs, style, refactor, test, chore
-  - scope: 可选，指定修改的范围
-  - description: 简洁明了的描述
-
-### 贡献指南
-1. Fork本仓库
-2. 创建特性分支: `git checkout -b feature/my-feature`
-3. 提交修改: `git commit -am 'feat: add new feature'`
-4. 推送到分支: `git push origin feature/my-feature`
-5. 创建Pull Request
-
-## ❗ 故障排除
-
-### 常见问题
-1. **Vite开发服务器启动失败**
-   - 确保端口1420未被占用
-   - 运行`pnpm install`重新安装依赖
-
-2. **Tauri构建失败**
-   - 确保已安装Rust和必要的构建工具
-   - 检查`src-tauri/tauri.conf.json`配置是否正确
-
-3. **IFC文件加载失败**
-   - 确保文件格式正确
-   - 尝试使用较小的IFC文件测试
-   - 检查浏览器控制台是否有错误信息
-
-## 📄 许可证
-
-本项目采用MIT许可证。详情请见 [LICENSE](LICENSE) 文件。
-
-## 📞 联系我们
-
-如有问题或建议，请通过以下方式联系我们:
-- 邮箱: contact@example.com
-- GitHub: [https://github.com/your-username/ifc-viewer](https://github.com/your-username/ifc-viewer)
