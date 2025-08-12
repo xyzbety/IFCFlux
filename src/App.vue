@@ -75,16 +75,16 @@
       <div id="codePanel" v-show="isAnimationsVisible === true">
         <div id="blocklyDiv"></div>
       </div>
-      <div class="check-wrapper" v-show="isAnimationsVisible === false && isCheckVisible" :style="{
-        width: checkWidth + 'px',
-        minWidth: checkWidth === 0 ? '0' : '800px',
+      <div class="inspect-wrapper" v-show="isAnimationsVisible === false && isInspectVisible" :style="{
+        width: inspectWidth + 'px',
+        minWidth: inspectWidth === 0 ? '0' : '800px',
         display: 'flex',
         height: '100%'
       }">
         <div id="codeInspect" style="flex: 1 1 0;">
-          <Check :visible="isCheckVisible" :should-init="shouldInitCheckData" @update:visible="onCheckVisibleChange" />
+          <Inspect :visible="isInspectVisible" :should-init="shouldInitInspectData" @update:visible="onInspectVisibleChange" />
         </div>
-        <div class="drag-bar drag-bar-check" @mousedown="startDrag('check')"></div>
+        <div class="drag-bar drag-bar-inspect" @mousedown="startDrag('inspect')"></div>
       </div>
 
       <div id="rightArea">
@@ -128,7 +128,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import Ribbon from "./components/Ribbon.vue"
 import Dialog from './components/Dialog.vue';
 import DialogR from './components/DialogR.vue';
-import Check from './components/Check.vue';
+import Inspect from './components/Inspect.vue';
 import StructureTree from './components/StructureTree.vue';
 import PropertyTable from './components/PropertyTable.vue';
 import ArrowDown from '/icons/arrow-down.svg'
@@ -163,7 +163,7 @@ window.isAnimationStopped = false;
 
 let isMaximized = ref(true); // 窗口是否最大化
 let isAnimationsVisible = ref(null); // 是否显示动画面板
-const isCheckVisible = ref(false);
+const isInspectVisible = ref(false);
 const sceneStore = useSceneStore()
 
 const KhanonViewer = shallowRef(null)
@@ -209,7 +209,7 @@ let selectedMeshIds = new Set<string>(); // 当前选中的mesh
 // 添加一个映射来存储原始材质属性
 let originalMaterialProperties = new Map<string, { alpha: number }>(); // 存储原始材质属性
 let isClickVisible = ref(false); // 是否通过点击选择可见
-let shouldInitCheckData = ref(false);
+let shouldInitInspectData = ref(false);
 let lastClickedMeshId: string | null = null; // 记录上次点击的mesh ID
 
 const pageState = reactive({
@@ -230,7 +230,7 @@ const pageState = reactive({
 
 const leftWidth = ref(350);
 const rightWidth = ref(350);
-const checkWidth = ref(800); // 默认宽度
+const inspectWidth = ref(800); // 默认宽度
 let dragging = false;
 let dragSide = '';
 let startX = 0;
@@ -247,7 +247,7 @@ function startDrag(side) {
       ? leftWidth.value
       : side === 'right'
         ? rightWidth.value
-        : checkWidth.value;
+        : inspectWidth.value;
 
   window.addEventListener('mousemove', onDrag);
   window.addEventListener('mouseup', stopDrag);
@@ -269,8 +269,8 @@ function onDrag(event) {
     leftWidth.value = newWidth;
   } else if (dragSide === 'right') {
     rightWidth.value = newWidth;
-  } else if (dragSide === 'check') {
-    checkWidth.value = newWidth;
+  } else if (dragSide === 'inspect') {
+    inspectWidth.value = newWidth;
   }
 }
 
@@ -280,15 +280,15 @@ function stopDrag() {
   window.removeEventListener('mousemove', onDrag);
   window.removeEventListener('mouseup', stopDrag);
 }
-function onCheckVisibleChange(val) {
-  isCheckVisible.value = val;
+function onInspectVisibleChange(val) {
+  isInspectVisible.value = val;
   if (!val) {
-    checkWidth.value = 0;
+    inspectWidth.value = 0;
   } else {
     // 重新打开时恢复默认宽度
-    checkWidth.value = 800;
+    inspectWidth.value = 800;
   }
-  console.log('checkVisibleChange', checkWidth.value, isCheckVisible.value);
+  console.log('checkVisibleChange', inspectWidth.value, isInspectVisible.value);
 }
 // 导航控制
 const handleNavigate = (action: 'pan' | 'rotate' | 'zoomIn' | 'zoomOut' | 'rotateRight' | 'rotateLeft') => {
@@ -754,7 +754,7 @@ function resetGlobalVariables() {
   animatables.forEach(anim => anim.stop());
   animatables.length = 0;
   window.isAnimationStopped = false;
-  shouldInitCheckData.value = false;
+  shouldInitInspectData.value = false;
 }
 
 // 文件上传事件
@@ -792,8 +792,8 @@ const handleFileUploaded = () => {
     linkMesh.position = initialCameraState.target;
     linkMesh.setEnabled(false); // 不显示链接点
 
-    const handleCheckboxFocus = document.getElementById("checkboxFocus") as HTMLInputElement;
-    if (handleCheckboxFocus.checked) {
+    const handleInspectboxFocus = document.getElementById("checkboxFocus") as HTMLInputElement;
+    if (handleInspectboxFocus.checked) {
       createGround(scene, bbox, isGrid);
     }
 
@@ -1042,14 +1042,14 @@ const handleSpaceGenerate = async (action: 'generate' | 'export') => {
 async function handleInspectClick(event: string) {
   console.log("handleInspectClick", event);
   if (event === 'show') {
-    isCheckVisible.value = true; // 先隐藏
-    shouldInitCheckData.value = false; // 只显示，不初始化数据
+    isInspectVisible.value = true; // 先隐藏
+    shouldInitInspectData.value = false; // 只显示，不初始化数据
     await nextTick(); // 等待DOM更新
   } else if (event === 'inspect') {
-    isCheckVisible.value = true;
-    shouldInitCheckData.value = true; // 
+    isInspectVisible.value = true;
+    shouldInitInspectData.value = true; // 
   }
-  checkWidth.value = 800;
+  inspectWidth.value = 800;
 }
 // 构件特性 节点展开
 const treeNodesChange = (value: any) => {
@@ -1640,7 +1640,7 @@ smart-ribbon:focus>div.smart-ribbon {
   background: #b0b0b0;
 }
 
-.check-wrapper {
+.inspect-wrapper {
   display: flex;
   height: 100%;
 }
@@ -1650,7 +1650,7 @@ smart-ribbon:focus>div.smart-ribbon {
   flex: 1 1 0;
 }
 
-.drag-bar-check {
+.drag-bar-inspect {
   width: 1px;
   flex: none;
   /* 关键：防止被flex挤压 */
@@ -1661,7 +1661,7 @@ smart-ribbon:focus>div.smart-ribbon {
   transition: background 0.2s;
 }
 
-.drag-bar-check:hover {
+.drag-bar-inspect:hover {
   background: #b0b0b0;
 }
 

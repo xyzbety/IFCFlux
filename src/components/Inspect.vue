@@ -1,3 +1,61 @@
+<template>
+    <div class="check-root" v-show="props.visible">
+        <!-- 顶部栏 -->
+        <div class="header-bar">
+            <span class="header-title">检查结果</span>
+            <span class="header-close" @click="handleClose">
+                <svg width="18" height="18" viewBox="0 0 1024 1024" fill="#888" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M512 460.8l256-256a36.57 36.57 0 1 1 51.73 51.73l-256 256 256 256a36.57 36.57 0 1 1-51.73 51.73l-256-256-256 256a36.57 36.57 0 1 1-51.73-51.73l256-256-256-256A36.57 36.57 0 1 1 256 204.8l256 256z" />
+                </svg>
+            </span>
+        </div>
+        <!-- 搜索区域 -->
+        <div id="search-container">
+            <t-input v-model="searchText" placeholder="搜索Guid或Tag" @enter="handleSearch"
+                style="width: 35%;margin-left: 15px;">
+                <template #suffix>
+                    <t-button @click="handleSearch" class="search-btn" size="small" theme="default"
+                        style="background: transparent; border: none; box-shadow: none; margin-right: -5px; padding: 0 4px;">
+                        <svg width="16" height="16" viewBox="0 0 1024 1024" fill="#888"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M768 704l192 192-64 64-192-192v-32l-16-16A352 352 0 1 1 704 704l16 16h32zM448 736a288 288 0 1 0 0-576 288 288 0 0 0 0 576z" />
+                        </svg>
+                    </t-button>
+                </template>
+            </t-input>
+        </div>
+        <!-- 内容区域 -->
+        <div class="content-area">
+            <div class="list-area">
+                <t-list :split="true" header="IFC实体" size="small">
+                    <t-list-item v-for="(desc, idx) in descriptions" :key="idx"
+                        :class="{ 'selected-item': selectedKey === desc }" @click="handleListClick(desc)"
+                        style="cursor:pointer;">
+                        <t-list-item-meta :description="desc" />
+                    </t-list-item>
+                </t-list>
+            </div>
+            <div class="table-area">
+                <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
+                    :table-layout="'auto'" :row-class-name="getRowClassName" rowKey="guid" />
+            </div>
+        </div>
+        <!-- 弹框 -->
+        <t-dialog v-model:visible="dialogVisible" header="属性赋值详情" width="400px" :showOverlay="false" :footer="null">
+            <div style="max-height: 400px; overflow: auto;">
+                <div style="max-height: 400px; overflow: auto;">
+                    <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
+                        size="small" :tree="{ childrenKey: 'children', indent: 0 }"
+                        :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false" @row-click="handleRowClick"
+                        :expandedTreeNodes="expandedKeys" @expanded-tree-nodes-change="onExpandedTreeNodesChange" />
+                </div>
+            </div>
+        </t-dialog>
+    </div>
+</template>
+
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
 import { useModelStore } from '../store';
@@ -96,7 +154,7 @@ const dialogTableColumns = [
                 const color = colorMap[params.row.state] || '#d9d9d9';
                 children.push(
                     h('span', {
-                        style: `display:inline-block;width:14px;height:14px;border-radius:3px;background:${color};position:absolute;right:10px;`
+                        style: `display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};position:absolute;right:10px;`
                     })
                 );
             }
@@ -340,7 +398,7 @@ function handleSearch() {
 }
 function handleClose() {
     console.log("handleClose");
-    emit('update:visible', false); // 通知父组件隐藏Check
+    emit('update:visible', false); // 通知父组件隐藏Inspect
 }
 function onExpandedTreeNodesChange(keys: string[]) {
     expandedKeys.value = keys;
@@ -352,63 +410,7 @@ function getRowClassName({ row }) {
 }
 </script>
 
-<template>
-    <div class="check-root" v-show="props.visible">
-        <!-- 顶部栏 -->
-        <div class="header-bar">
-            <span class="header-title">检查结果</span>
-            <span class="header-close" @click="handleClose">
-                <svg width="18" height="18" viewBox="0 0 1024 1024" fill="#888" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                        d="M512 460.8l256-256a36.57 36.57 0 1 1 51.73 51.73l-256 256 256 256a36.57 36.57 0 1 1-51.73 51.73l-256-256-256 256a36.57 36.57 0 1 1-51.73-51.73l256-256-256-256A36.57 36.57 0 1 1 256 204.8l256 256z" />
-                </svg>
-            </span>
-        </div>
-        <!-- 搜索区域 -->
-        <div id="search-container">
-            <t-input v-model="searchText" placeholder="搜索Guid或Tag" @enter="handleSearch"
-                style="width: 35%;margin-left: 15px;">
-                <template #suffix>
-                    <t-button @click="handleSearch" class="search-btn" size="small" theme="default"
-                        style="background: transparent; border: none; box-shadow: none; margin-right: -5px; padding: 0 4px;">
-                        <svg width="16" height="16" viewBox="0 0 1024 1024" fill="#888"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M768 704l192 192-64 64-192-192v-32l-16-16A352 352 0 1 1 704 704l16 16h32zM448 736a288 288 0 1 0 0-576 288 288 0 0 0 0 576z" />
-                        </svg>
-                    </t-button>
-                </template>
-            </t-input>
-        </div>
-        <!-- 内容区域 -->
-        <div class="content-area">
-            <div class="list-area">
-                <t-list :split="true" header="IFC实体" size="small">
-                    <t-list-item v-for="(desc, idx) in descriptions" :key="idx"
-                        :class="{ 'selected-item': selectedKey === desc }" @click="handleListClick(desc)"
-                        style="cursor:pointer;">
-                        <t-list-item-meta :description="desc" />
-                    </t-list-item>
-                </t-list>
-            </div>
-            <div class="table-area">
-                <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
-                    :table-layout="'auto'" :row-class-name="getRowClassName" rowKey="guid" />
-            </div>
-        </div>
-        <!-- 弹框 -->
-        <t-dialog v-model:visible="dialogVisible" header="属性赋值详情" width="400px" :showOverlay="false" :footer="null">
-            <div style="max-height: 400px; overflow: auto;">
-                <div style="max-height: 400px; overflow: auto;">
-                    <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
-                        size="small" :tree="{ childrenKey: 'children', indent: 0 }"
-                        :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false"
-                        :expandedTreeNodes="expandedKeys" @expanded-tree-nodes-change="onExpandedTreeNodesChange" />
-                </div>
-            </div>
-        </t-dialog>
-    </div>
-</template>
+
 
 <style>
 .check-root {
@@ -483,7 +485,7 @@ function getRowClassName({ row }) {
 .list-area {
     width: 25%;
     height: calc(100% - 15px);
-    overflow: auto;
+    overflow: hidden;
     border-right: 1px solid #eee;
     box-sizing: border-box;
 }
@@ -491,7 +493,7 @@ function getRowClassName({ row }) {
 .table-area {
     width: 75%;
     height: calc(100% - 30px);
-    overflow: auto;
+    overflow: visible;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -504,7 +506,7 @@ function getRowClassName({ row }) {
 }
 
 .t-list {
-    overflow: hidden;
+    overflow: visible;
 }
 
 .t-list__inner {
@@ -530,6 +532,7 @@ function getRowClassName({ row }) {
     display: flex !important;
     flex-direction: row-reverse !important;
     justify-content: flex-end !important;
+    font-size: 11.5px !important;
 }
 
 .t-table thead th {
@@ -553,12 +556,18 @@ function getRowClassName({ row }) {
     white-space: nowrap !important;
 }
 
-.table-area .t-table__body tr.red-border {
-    border-left: 2px solid red;
+/* 在第一个单元格上添加边框 */
+.check-root .table-area .t-table__body tr.red-border td:first-child {
+    border-left: 2px solid #ff0000 !important;
 }
 
-.table-area .t-table__body tr.green-border {
-    border-left: 2px solid #52c41a;
+.check-root .table-area .t-table__body tr.green-border td:first-child {
+    border-left: 2px solid #52c41a !important;
+}
+
+
+.check-root .table-area .t-table__body tr.green-border {
+    border-left: 2px solid #52c41a !important;
 }
 
 .t-dialog {
