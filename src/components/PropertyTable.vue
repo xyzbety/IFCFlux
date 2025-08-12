@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, h, markRaw } from 'vue'
 import { ifcPropertyColumns } from '../utils/config'
+import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 
 // Props
 interface Props {
@@ -54,22 +55,10 @@ const showTable = ref(true)
 // 根据 activeTab 计算列配置
 const columns = ref(markRaw(ifcPropertyColumns[0]))
 
-// 展开图标
-const treeExpandIcon = ({ type, row }) => {
-  return h('span', {
-    style: {
-      display: 'inline-block',
-      width: '16px',
-      height: '16px',
-      lineHeight: '16px',
-      textAlign: 'center',
-      cursor: 'pointer',
-      fontSize: '12px',
-      color: '#666',
-      marginRight: '4px',
-      userSelect: 'none'
-    }
-  }, type === 'expand' ? '▶' : '▼');
+const treeExpandIcon = (h: any, { type }) => {
+    return type === 'expand'
+        ? h(ChevronRightIcon)
+        : h(ChevronDownIcon);
 };
 
 // 属性表面板列合并
@@ -128,7 +117,7 @@ watch(() => props.visible, (newVal) => {
 
 .property-table-inner {
   height: 100%;
-  font-size: 12px;
+  font-size: 11.5px;
   -webkit-text-size-adjust: none;
   -moz-text-size-adjust: none;
   text-size-adjust: none;
@@ -136,16 +125,19 @@ watch(() => props.visible, (newVal) => {
 
 .property-table :deep(.t-table__body),
 .property-table :deep(.t-table__header) {
-  font-size: 12px !important;
+  font-size: 11.5px !important;
 }
 
 .property-table :deep(.t-table__body td),
 .property-table :deep(.t-table__header th) {
-  font-size: 12px !important;
+  font-size: 11.5px !important;
 }
 
 /* 属性分组行的灰色背景样式 */
 .property-table :deep(.t-table__body td[colspan="3"]) {
   background-color: #f5f5f5 !important;
+}
+.property-table :deep(.t-table__header--fixed:not(.t-table__header--multiple) > tr > th){
+  background-color: white !important;
 }
 </style>

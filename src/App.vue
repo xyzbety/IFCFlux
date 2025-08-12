@@ -63,17 +63,11 @@
       margin: leftWidth === 0 ? '0' : '15px'
     }">
       <Dialog :title="'构件树'" :visible="pageState.structureDialogVisible" @close="handleBuildTree">
-        <StructureTree
-          v-if="pageState.structureDialogVisible"
-          ref="structureTreeRef"
-          :tree-data="pageState.treeData"
+        <StructureTree v-if="pageState.structureDialogVisible" ref="structureTreeRef" :tree-data="pageState.treeData"
+          :active-row-key="pageState.sceneStructureTree.activeRowKey"
           :expanded-ids="pageState.sceneStructureTree.expandedIds"
-          :selected-row-keys="pageState.sceneStructureTree.selectedRowKeys"
-          :visible="pageState.structureDialogVisible"
-          @row-click="tableRowClick"
-          @expanded-change="onExpandedRowKeysChange"
-          @select-change="onTableSelectChange"
-        />
+          :selected-row-keys="pageState.sceneStructureTree.selectedRowKeys" :visible="pageState.structureDialogVisible"
+          @row-click="tableRowClick" @expanded-change="onExpandedRowKeysChange" @select-change="onTableSelectChange" />
       </Dialog>
     </div>
     <div class="drag-bar drag-bar-left" @mousedown="startDrag('left')" v-if="pageState.structureDialogVisible"></div>
@@ -107,15 +101,9 @@
     }">
       <Dialog-r :title="'属性表'" :visible="pageState.propertyDialogVisible" @close=handlePropertiesTable
         @tab-change="handleTabChange" :activeTab="activeTab">
-        <PropertyTable
-          v-if="pageState.propertyDialogVisible"
-          ref="propertyTableRef"
-          :property-data="pageState.property"
-          :expanded-ids="pageState.propertyExpandIds"
-          :active-tab="activeTab"
-          :visible="pageState.propertyDialogVisible"
-          @expanded-change="treeNodesChange"
-        />
+        <PropertyTable v-if="pageState.propertyDialogVisible" ref="propertyTableRef" :property-data="pageState.property"
+          :expanded-ids="pageState.propertyExpandIds" :active-tab="activeTab" :visible="pageState.propertyDialogVisible"
+          @expanded-change="treeNodesChange" />
       </Dialog-r>
     </div>
   </div>
@@ -231,7 +219,7 @@ const pageState = reactive({
   ifcExpressIds: [] as any,
   sceneStructureTree: { //场景目录
     selectedRowKeys: [],  //多选
-    activeRowKeys: [], // 激活
+    activeRowKey: [] as string[], // 激活
     expandedIds: [],   // 展开
     ids: [],  // id 集合
   },
@@ -728,12 +716,12 @@ function clear() {
       measure.destroy();
       measure = null;
     }
-    const explosionSliderX = document.getElementById("explosionSliderX");
-    const explosionSliderY = document.getElementById("explosionSliderY");
-    const explosionSliderZ = document.getElementById("explosionSliderZ");
-    explosionSliderX.val(0)
-    explosionSliderY.val(0)
-    explosionSliderZ.val(0)
+    // const explosionSliderX = document.getElementById("explosionSliderX");
+    // const explosionSliderY = document.getElementById("explosionSliderY");
+    // const explosionSliderZ = document.getElementById("explosionSliderZ");
+    // explosionSliderX.val(0)
+    // explosionSliderY.val(0)
+    // explosionSliderZ.val(0)
   }
 }
 function resetGlobalVariables() {
@@ -843,38 +831,38 @@ const handleFileUploaded = () => {
     console.log("构件树数据", pageState.treeData);
     pageState.property = ''
     pageState.ifcExpressIds = modelData.ifcExpressIds
-    
+
     // 结构目录默认展开到第三层级
     const expandedKeys = findNodesUpToLevel(modelData.tree, 5); // 增加展开层级到5层
+
+    // **新增：获取所有节点的 expressId 并设置为默认选中**
+    const getAllExpressIds = (nodes) => {
+      let ids = [];
+      nodes.forEach(node => {
+        if (node.expressId) {
+          ids.push(String(node.expressId)); // 确保是字符串类型
+        }
+        if (node.children && node.children.length > 0) {
+          ids = ids.concat(getAllExpressIds(node.children));
+        }
+      });
+      return ids;
+    };
     
-    console.log("展开的节点IDs:", expandedKeys);
-    console.log("树形数据结构:", modelData.tree);
-    console.log("树形数据第一个节点:", modelData.tree[0]);
-    console.log("树形数据第一个节点的children:", modelData.tree[0]?.children);
-    console.log("树形数据第一个节点的children长度:", modelData.tree[0]?.children?.length);
+    // 设置默认全选
+    const allExpressIds = getAllExpressIds(modelData.tree);
+    pageState.sceneStructureTree.selectedRowKeys = allExpressIds;
     
-    // 检查数据结构是否正确
-    if (modelData.tree[0]?.children) {
-      console.log("第二层节点:", modelData.tree[0].children.map(child => ({
-        expressId: child.expressId,
-        name: child.name,
-        type: child.type,
-        hasChildren: child.children?.length > 0
-      })));
-    }
-    
-    // 确保包含根节点的 expressId
-    const rootExpressId = modelData.tree[0]?.expressId;
-    if (rootExpressId && !expandedKeys.includes(rootExpressId)) {
-      expandedKeys.unshift(rootExpressId);
-    }
-    
-    console.log("最终展开的节点IDs:", expandedKeys);
+    console.log("默认选中的节点IDs:", allExpressIds);
     pageState.sceneStructureTree.expandedIds = expandedKeys
     pageState.propertyAll = modelData.properties
-    
+
     // 设置展开状态
     pageState.sceneStructureTree.expandedIds = expandedKeys;
+    // **新增：确保默认全选时所有模型可见**
+    nextTick(() => {
+      updateModelVisibility(allExpressIds);
+    });
   }
 };
 
@@ -1061,7 +1049,7 @@ async function handleInspectClick(event: string) {
     isCheckVisible.value = true;
     shouldInitCheckData.value = true; // 
   }
-    checkWidth.value = 800;
+  checkWidth.value = 800;
 }
 // 构件特性 节点展开
 const treeNodesChange = (value: any) => {
@@ -1079,18 +1067,116 @@ const onExpandedRowKeysChange = (expandedRowKeys: string[]) => {
 const onTableSelectChange = (selectedRowKeys, { selectedRowData }) => {
   console.log('表格选中状态变化:', selectedRowKeys, selectedRowData);
   pageState.sceneStructureTree.selectedRowKeys = selectedRowKeys;
+   // 更新模型可见性
+  updateModelVisibility(selectedRowKeys);
+};
+// 递归获取节点及其所有子节点的 expressId
+const getAllChildrenExpressIds = (nodes, parentExpressId) => {
+  let allIds = [];
+  
+  const findNode = (nodeList, targetId) => {
+    for (const node of nodeList) {
+      if (String(node.expressId) === String(targetId)) {
+        return node;
+      }
+      if (node.children && node.children.length > 0) {
+        const found = findNode(node.children, targetId);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  
+  const collectAllChildren = (node) => {
+    if (node.expressId) {
+      allIds.push(String(node.expressId));
+    }
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => collectAllChildren(child));
+    }
+  };
+  
+  const targetNode = findNode(nodes, parentExpressId);
+  if (targetNode) {
+    collectAllChildren(targetNode);
+  }
+  
+  return allIds;
 };
 
+// 更新模型可见性
+const updateModelVisibility = (selectedRowKeys) => {
+  if (!scene) return;
+  
+  // 获取所有选中节点及其子节点的 expressId
+  const allVisibleIds = new Set();
+  
+  selectedRowKeys.forEach(expressId => {
+    const childrenIds = getAllChildrenExpressIds(pageState.treeData, expressId);
+    childrenIds.forEach(id => allVisibleIds.add(String(id)));
+  });
+  
+  console.log('应该可见的节点IDs:', Array.from(allVisibleIds));
+  
+  // 更新场景中所有 mesh 的可见性
+  scene.meshes.forEach(mesh => {
+    // 跳过特殊 mesh（天空盒、地面、网格等）
+    if (mesh.name === 'skyBox' || 
+        mesh.name === 'ground' || 
+        mesh.name === 'infiniteGrid' ||
+        mesh.name === 'measureLine' ||
+        mesh.name === 'tempLine' ||
+        mesh.name === 'measureRectangle' ||
+        mesh.name === 'tempRectangle' ||
+        mesh.name === 'rectangleMesh' ||
+        mesh.name === 'pointMarker') {
+      return;
+    }
+    
+    // 根据 expressId 或 globalId 判断是否应该可见
+    const meshExpressId = mesh.metadata?.globalId || mesh.id;
+    const shouldBeVisible = allVisibleIds.has(String(meshExpressId));
+    
+    // 设置可见性
+    mesh.isVisible = shouldBeVisible;
+    
+    // 可选：打印调试信息
+    if (!shouldBeVisible && mesh.isVisible !== shouldBeVisible) {
+      console.log(`隐藏模型: ${meshExpressId}`);
+    }
+  });
+  
+  // 清除其他状态集合，避免冲突
+  hiddenMeshIds.clear();
+  isolatedMeshIds.clear();
+  transparentMeshIds.clear();
+  
+  console.log(`可见模型数量: ${Array.from(allVisibleIds).length}`);
+};
+
+function findParentIds(tree, targetId, path = []) {
+  for (const node of tree) {
+    if (String(node.expressId) === String(targetId)) {
+      return path;
+    }
+    if (node.children) {
+      const result = findParentIds(node.children, targetId, [...path, String(node.expressId)]);
+      if (result) return result;
+    }
+  }
+  return null;
+}
 // 结构目录 行 点击
 const tableRowClick = async (event: any) => {
+  console.log('表格行点击', event);
   let expressID: string
   let globalId: string
-  
+
   // 统一处理 expressID（来自表格点击或场景点击）
-  
+
   // 处理表格点击事件
-  if (event?.detail?.row?.expressId) {
-    const { row } = event.detail
+  if (event?.row?.expressId) {
+    const { row } = event
     expressID = row.type === 'ifcSiteNode'
       ? row.expressId.replace('ifcSiteNode_', '')
       : row.expressId;
@@ -1098,7 +1184,7 @@ const tableRowClick = async (event: any) => {
     selectedMeshIds.clear()
     selectedMeshIds = new Set(getChildrenExpressIds(row));
     lastClickedMeshId = expressID; // 记录上次点击的mesh ID
-  } 
+  }
   // 处理场景点击事件
   else if (event?.detail?.expressID !== undefined) {
     expressID = event.detail.expressID; // 来自场景点击事件
@@ -1123,7 +1209,7 @@ const tableRowClick = async (event: any) => {
     console.warn('tableRowClick: 无法解析事件数据', event);
     return;
   }
-  
+
   if (!isClickVisible) {
     expressID = lastClickedMeshId
   }
@@ -1140,11 +1226,23 @@ const tableRowClick = async (event: any) => {
   console.log('pageState.propertyExpandIds', pageState.propertyExpandIds);
 
   if (pageState.structureDialogVisible && structureTreeRef.value) {
-    // 高亮并定位表格行
-    structureTreeRef.value.setActive(expressID)
-    structureTreeRef.value.gotoRow(expressID)
+    // 1. 找到所有父节点 expressId
+    const parentIds = findParentIds(pageState.treeData, expressID) || [];
+    // 2. 合并到 expandedIds
+    pageState.sceneStructureTree.expandedIds = Array.from(new Set([
+      ...pageState.sceneStructureTree.expandedIds,
+      ...parentIds
+    ]));
+    console.log('parentIds:', parentIds);
+    console.log('expandedIds:', pageState.sceneStructureTree.expandedIds);
+    // 3. 设置高亮并滚动
+    nextTick(() => {
+      pageState.sceneStructureTree.activeRowKey = [String(expressID)];
+      nextTick(() => {
+        structureTreeRef.value.gotoRow(expressID);
+      });
+    });
   }
-
   // 查找当前节点及其所有子节点的expressID
   const allExpressIds = findAllChildExpressIds(pageState.treeData, expressID);
   allExpressIds.push(expressID); // 包含当前节点本身
@@ -1155,7 +1253,7 @@ const tableRowClick = async (event: any) => {
     // 优先使用 GlobalId 匹配，如果没有则使用 expressId
     return expressIdSet.has(mesh.metadata?.globalId) || expressIdSet.has(mesh.id);
   });
-  
+
   if (exactMatches.length === 1 && exactMatches[0].name === 'skyBox')
     return;
   // 高亮mesh
@@ -1169,6 +1267,7 @@ const tableRowClick = async (event: any) => {
     highlightMeshes(exactMatches, scene, isFocus);
   }
 }
+
 // 获取属性
 const getProperty = async (expressID: string) => {
   const showPropertyKey = ['GlobalId', 'Name', 'LongName', 'ObjectType', 'Tag', 'Phase', 'type']
@@ -1545,13 +1644,16 @@ smart-ribbon:focus>div.smart-ribbon {
   display: flex;
   height: 100%;
 }
+
 #codeInspect {
   height: 100%;
   flex: 1 1 0;
 }
+
 .drag-bar-check {
   width: 1px;
-  flex: none; /* 关键：防止被flex挤压 */
+  flex: none;
+  /* 关键：防止被flex挤压 */
   cursor: ew-resize;
   background: #e0e0e0;
   z-index: 10;
@@ -1593,5 +1695,4 @@ smart-ribbon:focus>div.smart-ribbon {
 #khanonjs-canvas {
   outline: none;
 }
-
 </style>
