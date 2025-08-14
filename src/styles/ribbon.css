@@ -40,7 +40,7 @@
 /* 页面加载的loading样式 */
 .loader-container {
   width: 100%;
-  height: calc(100% - 130px);
+  height: 100%;
   position: absolute;
   display: flex;
   flex-direction: column;

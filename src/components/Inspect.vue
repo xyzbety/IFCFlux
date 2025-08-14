@@ -44,8 +44,8 @@
         </div>
         <!-- 弹框 -->
         <t-dialog v-model:visible="dialogVisible" header="属性赋值详情" width="400px" :showOverlay="false" :footer="null">
-            <div style="max-height: 400px; overflow: auto;">
-                <div style="max-height: 400px; overflow: auto;">
+            <div style="max-height:45vh; overflow: auto;">
+                <div style="max-height: 45vh; overflow: auto;">
                     <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
                         size="small" :tree="{ childrenKey: 'children', indent: 0 }"
                         :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false" @row-click="handleRowClick"

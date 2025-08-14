@@ -3,7 +3,7 @@ import * as zh from "blockly/msg/zh-hans";
 import * as BABYLON from "@babylonjs/core";
 import { registerFieldColour } from "@blockly/field-colour";
 import { toolbox } from "./toolbox.ts";
-import { rgbToHex } from "../utils/ifc-api";
+import { rgbToHex } from "../ifc-api";
 import { defineBlocklyCode } from "./generator.ts"
 
 registerFieldColour();

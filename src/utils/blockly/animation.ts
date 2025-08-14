@@ -1,8 +1,8 @@
 import * as BABYLON from '@babylonjs/core';
-import { createAnimatable } from "../utils/ifc-api";
-import { hexToRgb } from "../utils/ifc-api";
+import { createAnimatable } from "../ifc-api";
+import { hexToRgb } from "../ifc-api";
 // animation.ts
-import { useSceneStore } from "../store/index";
+import { useSceneStore } from "../../store/index";
 
 export async function setBgColor(color) {
     const store = useSceneStore();

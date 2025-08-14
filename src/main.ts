@@ -5,10 +5,28 @@ import App from "./App.vue";
 import TDesign from 'tdesign-vue-next';
 
 import 'tdesign-vue-next/es/style/index.css';
-import './style/index.less'
-const app = createApp(App)
+import './styles/index.less'
 
-app.use(createPinia());
-app.use(TDesign);
 
-app.mount('#app');
+function loadUiNext() {
+    return new Promise((resolve) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = 'https://cdn.dtbim.cn/ui-next/latest/theme.css?v=0.0.8'
+        document.head.appendChild(link)
+
+        const script = document.createElement('script')
+        script.type = 'module'
+        script.src = 'https://cdn.dtbim.cn/ui-next/latest/index.js'
+        script.onload = resolve
+        document.body.appendChild(script)
+    })
+}
+loadUiNext().then(() => {
+    const app = createApp(App)
+
+    app.use(createPinia());
+    app.use(TDesign);
+
+    app.mount('#app');
+})

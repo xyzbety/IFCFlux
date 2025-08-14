@@ -50,8 +50,8 @@
                 <TListItem v-for="item in fileHistory" :key="item.id">
                   <TListItemMeta :title="item.name" :description="`打开于: ${formatTimestamp(item.timestamp)}`">
                      <template #image>
-                      <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 100%; margin-right: 12px;">
-                        <img :src="getFileIcon(item.name)" style="width: 32px; height: 32px;" />
+                      <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; margin-right: 12px;">
+                        <img :src="getFileIcon(item.name)" style="width: 45px; height: 45px;" />
                       </div>
                     </template>
                   </TListItemMeta>

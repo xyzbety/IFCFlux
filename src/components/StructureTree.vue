@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
 import { ifcStructureColumns } from '../utils/config'
-import { formatIfcType } from '../utils/ifcMap'
+import { formatIfcType } from '../utils/ifc/ifcMap'
 import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 // Props
 interface Props {

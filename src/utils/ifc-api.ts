@@ -1,51 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 import { GridMaterial } from '@babylonjs/materials';
-let scene: BABYLON.Scene
 
-// 递归查找指定层级节点
-export function findNodesUpToLevel(nodes: any[], maxLevel: number, currentLevel = 1, result: string[] = []) {
-    if (!nodes || currentLevel > maxLevel) return result;
 
-    nodes.forEach(node => {
-        if (currentLevel <= maxLevel) {
-            result.push(node.expressId);
-        }
-        if (node.children && node.children.length > 0) {
-            findNodesUpToLevel(node.children, maxLevel, currentLevel + 1, result);
-        }
-    });
-
-    return result;
-};
-
-// 递归查找所有子节点的expressID
-export function findAllChildExpressIds(nodes: any[], targetExpressId: string, result: string[] = []): string[] {
-    for (const node of nodes) {
-        if (node.expressId === targetExpressId) {
-            // 找到目标节点，递归收集所有子节点
-            if (node.children && node.children.length > 0) {
-                collectChildExpressIds(node.children, result);
-            }
-            break;
-        }
-
-        // 继续搜索子节点
-        if (node.children && node.children.length > 0) {
-            findAllChildExpressIds(node.children, targetExpressId, result);
-        }
-    }
-    return result;
-}
-
-// 辅助函数：收集所有子节点的expressID
-function collectChildExpressIds(nodes: any[], result: string[]) {
-    nodes.forEach(node => {
-        result.push(node.expressId);
-        if (node.children && node.children.length > 0) {
-            collectChildExpressIds(node.children, result);
-        }
-    });
-}
 // 找到最大包围盒
 export function getBoundingBoxForMeshes(meshes: BABYLON.AbstractMesh[]): BABYLON.BoundingBox {
     if (meshes.length === 0) {
@@ -245,37 +201,6 @@ export function restoreMaterials(scene: BABYLON.Scene) {
         }
     });
 }
-// 比较两个相机状态是否相同
-export function isCameraStateEqual(state1, state2) {
-    if (!state1 || !state2) return false;
-
-    return (
-        Math.abs(state1.alpha - state2.alpha) < 0.001 &&
-        Math.abs(state1.beta - state2.beta) < 0.001 &&
-        Math.abs(state1.radius - state2.radius) < 0.001 &&
-        Math.abs(state1.target.x - state2.target.x) < 0.001 &&
-        Math.abs(state1.target.y - state2.target.y) < 0.001 &&
-        Math.abs(state1.target.z - state2.target.z) < 0.001
-    );
-};
-
-export function applyCameraState(state, camera: BABYLON.ArcRotateCamera) {
-    if (!state) return;
-
-    // 使用setPosition方法确保更新
-    camera.target = state.target.clone ? state.target.clone() : new BABYLON.Vector3(state.target.x, state.target.y, state.target.z);
-    // Convert spherical coordinates (radius, beta, alpha) to Cartesian coordinates
-    const x = state.radius * Math.sin(state.beta) * Math.cos(state.alpha);
-    const y = state.radius * Math.cos(state.beta);
-    const z = state.radius * Math.sin(state.beta) * Math.sin(state.alpha);
-    camera.setPosition(
-        new BABYLON.Vector3(x, y, z).addInPlace(camera.target)
-    );
-
-    if (camera instanceof BABYLON.ArcRotateCamera) {
-        camera.rebuildAnglesAndRadius();
-    }
-}
 
 export function createGround(scene: BABYLON.Scene, bbox: any, isGrid: boolean) {
     const gridWidth = (bbox.maximum.x - bbox.minimum.x) * 1.5;
@@ -468,25 +393,6 @@ export function resetModelToInitialState(scene, initialCameraState, camera, orig
     }
 };
 
-export function getChildrenExpressIds(node) {
-    let expressIds: any[] = [];
-
-    function traverse(children) {
-        if (children && Array.isArray(children)) {
-            children.forEach(child => {
-                if (child.expressId) {
-                    expressIds.push(child.expressId);
-                }
-                if (child.children) {
-                    traverse(child.children);
-                }
-            });
-        }
-    }
-
-    traverse(node.children);
-    return expressIds;
-}
 export function updateTempLineLabel(tempLine: BABYLON.AbstractMesh, anchor: BABYLON.Mesh) {
     if (!tempLine) return;
     const points = tempLine.getVerticesData(BABYLON.VertexBuffer.PositionKind);

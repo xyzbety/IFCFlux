@@ -333,79 +333,79 @@ export default {
     label: '转换',
     ribbonGroups: []
   },
-  {
-    label: '分析',
-    ribbonGroups: [{
-      label: '分析',
-      icon: 'select material-icons',
-      ribbonItems: [
-        {
-          label: '生成空间',
-          icon: 'pan_tool material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        },
-        {
-          label: '导出',
-          icon: 'zoom_out_map material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        }]
-    }]
-  },
-  {
-    label: '动画',
-    ribbonGroups: [{
-      label: '动画控制',
-      icon: 'select material-icons',
-      ribbonItems: [
-        {
-          label: '开始',
-          icon: 'pan_tool material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        },
-        {
-          label: '暂停',
-          icon: 'rotate material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        },
+  // {
+  //   label: '分析',
+  //   ribbonGroups: [{
+  //     label: '分析',
+  //     icon: 'select material-icons',
+  //     ribbonItems: [
+  //       {
+  //         label: '生成空间',
+  //         icon: 'pan_tool material-icons',
+  //         type: 'button',
+  //         cssClass: 'flat',
+  //         size: 'normal',
+  //         allowedSizes: ['normal']
+  //       },
+  //       {
+  //         label: '导出',
+  //         icon: 'zoom_out_map material-icons',
+  //         type: 'button',
+  //         cssClass: 'flat',
+  //         size: 'normal',
+  //         allowedSizes: ['normal']
+  //       }]
+  //   }]
+  // },
+  // {
+  //   label: '动画',
+  //   ribbonGroups: [{
+  //     label: '动画控制',
+  //     icon: 'select material-icons',
+  //     ribbonItems: [
+  //       {
+  //         label: '开始',
+  //         icon: 'pan_tool material-icons',
+  //         type: 'button',
+  //         cssClass: 'flat',
+  //         size: 'normal',
+  //         allowedSizes: ['normal']
+  //       },
+  //       {
+  //         label: '暂停',
+  //         icon: 'rotate material-icons',
+  //         type: 'button',
+  //         cssClass: 'flat',
+  //         size: 'normal',
+  //         allowedSizes: ['normal']
+  //       },
 
-        {
-          label: '停止',
-          icon: 'zoom_out_map material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        },
-        {
-          label: '脚本库',
-          icon: 'zoom_in_map material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        },
-        {
-          label: '编辑器',
-          icon: 'rotate_right material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        },]
-    }]
-  },
+  //       {
+  //         label: '停止',
+  //         icon: 'zoom_out_map material-icons',
+  //         type: 'button',
+  //         cssClass: 'flat',
+  //         size: 'normal',
+  //         allowedSizes: ['normal']
+  //       },
+  //       {
+  //         label: '脚本库',
+  //         icon: 'zoom_in_map material-icons',
+  //         type: 'button',
+  //         cssClass: 'flat',
+  //         size: 'normal',
+  //         allowedSizes: ['normal']
+  //       },
+  //       {
+  //         label: '编辑器',
+  //         icon: 'rotate_right material-icons',
+  //         type: 'button',
+  //         cssClass: 'flat',
+  //         size: 'normal',
+  //         allowedSizes: ['normal']
+  //       },]
+  //   }]
+  // },
   {
     label: '设置',
     wrapSize: 'small',
