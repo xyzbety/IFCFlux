@@ -98,7 +98,7 @@ export const useDragResize = (config: DragConfig, callbacks: DragCallbacks) => {
     document.removeEventListener('mousemove', onDrag);
     document.removeEventListener('mouseup', stopDrag);
     document.removeEventListener('mouseleave', stopDrag);
-    
+        
     // 调用拖拽结束回调
     callbacks.onDragEnd?.(side);
   };
@@ -113,6 +113,7 @@ export const useDragResize = (config: DragConfig, callbacks: DragCallbacks) => {
   return {
     dragState,
     startDrag,
+    stopDrag,
     cleanup
   };
 };

@@ -42,6 +42,7 @@ export class Measure {
                 points: this.points,
                 colors: [this.lineColor, this.lineColor]
             }, this.scene);
+            this.line.isPickable = false; // 测量线不参与拾取
             this.line.renderingGroupId = 1;
             this.points = [];
         }
@@ -60,6 +61,7 @@ export class Measure {
                     points: [point, pickResult.pickedPoint],
                     colors: [this.lineColor, this.lineColor]
                 }, this.scene);
+                this.tempLine.isPickable = false;
                 this.tempLine.renderingGroupId = 1;
                 if (this.measureType === 'distance') {
                     this.lineDistance = BABYLON.Vector3.Distance(point, pickResult.pickedPoint);
@@ -150,6 +152,7 @@ export class Measure {
             points: boundaryPoints,
             colors: Array(boundaryPoints.length).fill(this.lineColor)
         }, this.scene);
+        boundaryLine.isPickable = false; // 边界线条不参与拾取
         boundaryLine.renderingGroupId = 1;
         this.areaLines.push(boundaryLine);
     }
@@ -201,6 +204,7 @@ export class Measure {
                         points: [this.areaPoints[0], pickResult.pickedPoint],
                         colors: [this.lineColor, this.lineColor]
                     }, this.scene);
+                    this.tempLine.isPickable = false; // 临时线条不参与拾取
                     this.tempLine.renderingGroupId = 1;
                 } else {
                     // 最后一个点到鼠标的线，以及鼠标到第一个点的线（预览封闭图形）
@@ -213,6 +217,7 @@ export class Measure {
                         points: previewPoints,
                         colors: [this.lineColor, this.lineColor, this.lineColor]
                     }, this.scene);
+                    this.tempLine.isPickable = false; // 临时线条不参与拾取
                     this.tempLine.renderingGroupId = 1;
                 }
             }
@@ -281,6 +286,7 @@ export class Measure {
                 points: this.points,
                 colors: [this.lineColor, this.lineColor]
             }, this.scene);
+            this.line.isPickable = false; // 角度测量线不参与拾取
             this.line.renderingGroupId = 1;
         }
         if (this.points.length === 3) {
@@ -290,6 +296,7 @@ export class Measure {
                 points: [this.points[1], this.points[2]],
                 colors: [this.lineColor, this.lineColor]
             }, this.scene);
+            this.line.isPickable = false; // 角度测量线不参与拾取
             const pointA = this.points[0];
             const pointB = this.points[1];
             const pointC = this.points[2];
@@ -348,6 +355,7 @@ export class Measure {
             diameter: this.markSize,
             segments: 32
         }, this.scene);
+        marker.isPickable = false;
         marker.position = point.clone();
         marker.renderingGroupId = 1;
         const material = new BABYLON.StandardMaterial("areaMarkerMat", this.scene);
@@ -363,6 +371,7 @@ export class Measure {
             diameter: this.markSize,
             segments: 32
         }, this.scene);
+        marker.isPickable = false; // 标记点不参与拾取
         marker.position = point.clone();
         marker.renderingGroupId = 1;
         const material = new BABYLON.StandardMaterial("markerMat", this.scene);

@@ -95,11 +95,13 @@ export class ModelManager {
 
   private setupInspectDataListener(file: File): void {
     const ifcInspect = new IfcInspect(file);
+    console.log("开始监听模型检查数据...",file);
     const checkInterval = setInterval(() => {
       if (ifcInspect.ifcData) {
         clearInterval(checkInterval);
         this.modelStore.clearModelInspectData();
         this.modelStore.setModelInspectData(ifcInspect.ifcData);
+        console.log("模型检查数据已更新", ifcInspect.ifcData, this.modelStore.modelInspectData);
       }
     }, 100);
     setTimeout(() => clearInterval(checkInterval), 100000);

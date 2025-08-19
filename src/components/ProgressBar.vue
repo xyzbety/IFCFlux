@@ -9,7 +9,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, defineProps, defineEmits } from "vue";
+import { watch} from "vue";
 import "smart-webcomponents/source/modules/smart.progressbar.js";
 
 // 定义props

@@ -208,7 +208,6 @@ export class CameraHistoryManager {
   clear(): void {
     this.cameraStates = [];
     this.currentIndex = -1;
-    console.log('CameraHistoryManager: 历史记录已清空');
   }
 
   /**

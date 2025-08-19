@@ -21,15 +21,13 @@
     }">
       <Dialog :title="'构件树'" :visible="layoutState.showStructureTree" @close="toggleStructureTreeDialog">
         <StructureTree v-if="layoutState.showStructureTree" ref="structureTreeRef" :tree-data="pageState.treeData"
-          :active-row-key="pageState.sceneStructureTree.activeRowKey"
-          :expanded-ids="pageState.sceneStructureTree.expandedIds" :style="themeStyle"
-          :selected-row-keys="pageState.sceneStructureTree.selectedRowKeys" :visible="layoutState.showStructureTree"
-          @row-click="tableRowClick" @expanded-change="onExpandedRowKeysChange" @select-change="onTableSelectChange" />
+          :visible="layoutState.showStructureTree" @table-cell-click="tableRowClick"
+          @table-checkbox-click="onTableSelectChange" :style="themeStyle" />
       </Dialog>
     </div>
 
-    <DragBar v-if="layoutState.showStructureTree" side="left" :current-width="layoutState.structureTreeWidth"
-      :show-handle="true" @drag-start="handleDragStart" />
+    <DragBar ref="leftDragBarRef" v-if="layoutState.showStructureTree" side="left"
+      :current-width="layoutState.structureTreeWidth" :show-handle="true" @drag-start="handleDragStart" />
 
     <div id="canvas-middle">
       <!-- 动画控制器组件 -->
@@ -51,8 +49,8 @@
           <Inspect :visible="layoutState.showInspectResult" :should-init="shouldInitInspectData"
             @update:visible="onInspectVisibleChange" />
         </div>
-        <DragBar v-if="layoutState.showInspectResult" side="inspect" :current-width="layoutState.inspectResultWidth"
-          :show-handle="false" @drag-start="handleDragStart" />
+        <DragBar ref="inspectDragBarRef" v-if="layoutState.showInspectResult" side="inspect"
+          :current-width="layoutState.inspectResultWidth" :show-handle="false" @drag-start="handleDragStart" />
       </div>
 
       <!-- 主画布区域 -->
@@ -63,8 +61,8 @@
       </div>
     </div>
 
-    <DragBar v-if="layoutState.showPropertyTable" side="right" :current-width="layoutState.propertyTableWidth"
-      :show-handle="true" @drag-start="handleDragStart" />
+    <DragBar ref="rightDragBarRef" v-if="layoutState.showPropertyTable" side="right"
+      :current-width="layoutState.propertyTableWidth" :show-handle="true" @drag-start="handleDragStart" />
 
     <!-- 属性表区域 -->
     <div class="canvas-right" v-show="layoutState.showPropertyTable" :style="{
@@ -74,9 +72,9 @@
     }">
       <Dialog-r :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
         @tab-change="handleTabChange" :activeTab="activeTab">
-        <PropertyTable v-if="layoutState.showPropertyTable" ref="propertyTableRef" :property-data="pageState.property"
-          :expanded-ids="pageState.propertyExpandIds" :active-tab="activeTab" :visible="layoutState.showPropertyTable"
-          @expanded-change="treeNodesChange" />
+        <PropertyTable v-if="layoutState.showPropertyTable" :property-data="pageState.property"
+          :visible="layoutState.showPropertyTable">
+        </PropertyTable>
       </Dialog-r>
     </div>
   </div>
@@ -96,10 +94,9 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 const isTauriEnv = isTauri();
 console.log('是否在Tauri环境中运行:', isTauriEnv);
 
-import { onMounted, reactive, ref, shallowRef, watch, markRaw, nextTick, computed, DefineComponent, onUnmounted } from 'vue'
+import { onMounted, reactive, ref, shallowRef, watch, markRaw, computed, DefineComponent, onUnmounted } from 'vue'
 import * as BABYLON from '@babylonjs/core'
 import { Core } from '@myfront/bimflux/dist/base/core/core';
-
 import FileMenuSidebar from './components/FileMenuSidebar.vue';
 import TitleBar from './components/TitleBar.vue';
 import DragBar from './components/DragBar.vue';
@@ -128,6 +125,7 @@ import { SceneManager } from './services/scene-manager.ts';
 import { themeColors } from './styles/themes';
 import './styles/app.css';
 
+let initResult: any = null; // 用于存储初始化结果
 // 批量挂载所有导出函数到 window
 Object.keys(animationFns).forEach((key: any) => {
   // 只挂载函数
@@ -138,6 +136,7 @@ Object.keys(animationFns).forEach((key: any) => {
 window.isAnimationStopped = false;
 
 let isMaximized = ref(true); // 窗口是否最大化
+let isFileMenuVisible = ref(false);
 let scene: BABYLON.Scene
 let selectedMeshId: any;
 let isHightlight = true;
@@ -148,11 +147,7 @@ let CoordinateTemp = {
   point: null as { x: number, y: number, z: number } | null
 }
 
-let hiddenMeshIds = new Set<string>(); // 存储已隐藏的mesh ID
-let isolatedMeshIds = new Set<string>(); // 存储已隔离的mesh ID
-let transparentMeshIds = new Set<string>(); // 存储已半透明的mesh ID
 let selectedMeshIds = new Set<string>(); // 当前选中的mesh
-// 添加一个映射来存储原始材质属性
 let originalMaterialProperties = new Map<string, { alpha: number }>(); // 存储原始材质属性
 let isClickVisible = ref(true); // 是否通过点击选择可见
 let shouldInitInspectData = ref(false);
@@ -160,12 +155,14 @@ let lastClickedMeshId: string | null = null; // 记录上次点击的mesh ID
 
 const sceneStore = useSceneStore()
 const settingsStore = useSettingsStore();
-const isFileMenuVisible = ref(false);
 const sceneManager = new SceneManager();
 const KhanonViewer = shallowRef<DefineComponent | null>(null)
 const structureTreeRef = ref()
-const propertyTableRef = ref()
 const animationControllerRef = ref() // 动画控制器引用
+const leftDragBarRef = ref<InstanceType<typeof DragBar> | null>(null)
+const inspectDragBarRef = ref<InstanceType<typeof DragBar> | null>(null)
+const rightDragBarRef = ref<InstanceType<typeof DragBar> | null>(null)
+
 const ifcPropertyColumn = shallowRef(markRaw(ifcPropertyColumns[0]))
 const activeTab = ref('property')
 const pageState = reactive({
@@ -173,28 +170,13 @@ const pageState = reactive({
   propertyDialogVisible: false,  // 构件特性
   treeData: [] as any[],
   ifcExpressIds: [] as any[],
-  sceneStructureTree: { //场景目录
-    selectedRowKeys: [] as string[],  //多选
-    activeRowKey: [] as string[], // 激活
-    expandedIds: [] as string[],   // 展开
-    ids: [] as string[],  // id 集合
-  },
   propertyAll: [] as any[],
   property: [] as any[], // 构件特性
-  propertyExpandIds: [] as any[],  // 构件特性 节点展开
 })
 
 const {
-  layoutState,
-  switchToMode,
-  isMode,
-  toggleStructureTree,
-  togglePropertyTable,
-  canToggleComponents,
-  setStructureTreeWidth,
-  setPropertyTableWidth,
-  setInspectResultWidth,
-  LayoutMode: LM,
+  layoutState, switchToMode, isMode, toggleStructureTree, togglePropertyTable, canToggleComponents,
+  setStructureTreeWidth, setPropertyTableWidth, setInspectResultWidth, LayoutMode: LM,
 } = useLayoutManager();
 
 const themeStyle = computed(() => {
@@ -251,11 +233,7 @@ const handleRibbonTabChange = (tabIndex: number) => {
 
 
 // 设置拖拽配置和回调
-const dragConfig = {
-  minWidth: 300,
-  maxWidthRatio: 0.6,
-  containerSelector: '.container-canvas'
-};
+const dragConfig = { minWidth: 300, maxWidthRatio: 0.6, containerSelector: '.container-canvas' };
 
 const dragCallbacks = {
   onWidthChange: (side: string, newWidth: number) => {
@@ -268,22 +246,42 @@ const dragCallbacks = {
     }
   },
   onDragStart: (side: string) => {
-    console.log(`开始拖拽 ${side} 面板`);
+    const dragBarRef = getDragBarRef(side);
+    if (dragBarRef?.value) {
+      dragBarRef.value.setDragging(true);
+    }
   },
   onDragEnd: (side: string) => {
-    console.log(`结束拖拽 ${side} 面板`);
+    const dragBarRef = getDragBarRef(side);
+    if (dragBarRef?.value) {
+      dragBarRef.value.setDragging(false);
+    }
+  }
+};
+
+// 获取对应的 DragBar 引用
+const getDragBarRef = (side: string) => {
+  switch (side) {
+    case 'left':
+      return leftDragBarRef;
+    case 'right':
+      return rightDragBarRef;
+    case 'inspect':
+      return inspectDragBarRef;
+    default:
+      return null;
   }
 };
 
 // 创建拖拽管理器
 const { startDrag, cleanup } = useDragResize(dragConfig, dragCallbacks);
 
-// 拖拽处理函数
+// 修改拖拽处理函数
 const handleDragStart = (side: string, event: MouseEvent, currentWidth: number) => {
   startDrag(side, event, currentWidth);
 };
+
 const onInspectVisibleChange = (visible: boolean) => {
-  console.log('Inspect visibility changed:', visible);
   if (!visible) {
     // 当检查结果组件被关闭时，切换到画布模式（只显示画布）
     switchToMode(LM.CANVAS_ONLY);
@@ -321,9 +319,6 @@ const handleVisibility = (mode: 'showAll' | 'hideSelected' | 'isolateSelected' |
   isHightlight = true;
   sceneManager.handleVisibility(
     mode,
-    hiddenMeshIds,
-    isolatedMeshIds,
-    transparentMeshIds,
     selectedMeshIds,
     selectedMeshId,
     originalMaterialProperties,
@@ -353,7 +348,6 @@ const handleBuildTree = () => {
 
 // 更新属性表切换方法 - 在画布模式下也允许切换回查看模式
 const handlePropertiesTable = () => {
-  console.log('handlePropertiesTable called');
   // 如果当前是画布模式，切换回查看模式并显示属性表
   if (isMode(LM.CANVAS_ONLY)) {
     switchToMode(LM.VIEW);
@@ -402,9 +396,6 @@ function clear() {
   sceneManager.clear();
 }
 function resetGlobalVariables() {
-  hiddenMeshIds.clear();
-  isolatedMeshIds.clear();
-  transparentMeshIds.clear();
   selectedMeshIds.clear();
   originalMaterialProperties.clear();
   isClickVisible.value = true;
@@ -426,7 +417,6 @@ function resetGlobalVariables() {
   }
   shouldInitInspectData.value = false;
 }
-
 
 // 文件上传事件
 const handleFileUploaded = () => {
@@ -464,27 +454,14 @@ const handleFileUploaded = () => {
     // 保存原始材质属性
     sceneManager.saveOriginalMaterialProperties(originalMaterialProperties);
 
-    const initResult = IfcPropertyUtils.initializeModelData(modelData);
+    initResult = IfcPropertyUtils.initializeModelData(modelData);
 
     pageState.treeData = initResult.treeData;
     pageState.property = [];
     pageState.ifcExpressIds = initResult.ifcExpressIds;
     pageState.propertyAll = initResult.propertyAll;
-    pageState.sceneStructureTree.selectedRowKeys = initResult.allExpressIds;
-    pageState.sceneStructureTree.expandedIds = initResult.expandedKeys;
-    // 确保默认全选时所有模型可见
-    nextTick(() => {
-      IfcPropertyUtils.updateModelVisibility(
-        scene,
-        initResult.allExpressIds,
-        initResult.treeData,
-        () => {
-          hiddenMeshIds.clear();
-          isolatedMeshIds.clear();
-          transparentMeshIds.clear();
-        }
-      );
-    });
+    structureTreeRef.value.scrollToRow(1)
+    structureTreeRef.value.clearSelected();
 
     // 文件加载后，显示构件树和属性表
     pageState.structureDialogVisible = true;
@@ -500,9 +477,6 @@ const handleAnimationEvent = async (action: 'start' | 'pause' | 'stop' | 'reset'
 };
 
 const handleAnimationClick = (event: string) => {
-  console.log("handleAnimationClick", event);
-  // 动画相关操作已经通过 ribbon 标签页切换处理
-  // 这里只处理具体的动画控制逻辑
   if (event === 'click' && animationControllerRef.value) {
     animationControllerRef.value.initializeBlockly();
   }
@@ -586,56 +560,47 @@ const handleSpaceGenerate = async (action: 'generate' | 'export') => {
   }
 }
 
-// 构件特性 节点展开
-const treeNodesChange = (value: (string | number)[]) => {
-  console.log('treeNodesChange', value);
-  pageState.propertyExpandIds = value
-}
+const onTableSelectChange = (event) => {
+  console.log('表格选中状态变化:', event);
 
-// 构件树展开状态变化处理
-const onExpandedRowKeysChange = (expandedRowKeys: (string | number)[]) => {
-  console.log('构件树展开状态变化:', expandedRowKeys);
-  pageState.sceneStructureTree.expandedIds = expandedRowKeys;
-}
+  // 解析事件数据
+  let expressId = event.args[0]?.originData?.expressId;
+  const isChecked = event.selectState; // 
+  if (event.args[0].cellLocation === 'columnHeader') {
+    expressId = IfcPropertyUtils.rootExpressId; // 如果是表头点击，使用根节点
+  }
 
-// 表格选中状态变化处理 - 使用工具类
-const onTableSelectChange = (selectedRowKeys: (string | number)[], { selectedRowData }: { selectedRowData: any[] }) => {
-  pageState.sceneStructureTree.selectedRowKeys = selectedRowKeys;
-
-  // 使用工具类更新模型可见性，传入清理状态集合的回调
-  IfcPropertyUtils.updateModelVisibility(
-    scene,
-    selectedRowKeys,
-    pageState.treeData,
-    () => {
-      // 清除其他状态集合，避免冲突
-      hiddenMeshIds.clear();
-      isolatedMeshIds.clear();
-      transparentMeshIds.clear();
-    }
-  );
+  if (!expressId) {
+    console.warn('未找到expressId');
+    return;
+  }
+  // 使用修改后的工具类更新模型可见性
+  IfcPropertyUtils.updateModelVisibilityByCheckbox(scene, expressId, isChecked, pageState.treeData,);
 };
-
 // 结构目录 行 点击
 const tableRowClick = async (event: any) => {
   if (!scene) {
     console.warn('tableRowClick called, but scene is not initialized yet.');
     return;
   }
+
+  const modelStore = useModelStore();
+  const tree = modelStore.modelData.tree;
+  const mapping = IfcPropertyUtils.getExpressIdToRowMapping(tree);
+
   let expressID: string | null = null;
   let globalId: string | null = null;
 
   // 统一处理 expressID（来自表格点击或场景点击）
 
   // 处理表格点击事件
-  if (event?.row?.expressId) {
-    const { row } = event
-    expressID = row.type === 'ifcSiteNode'
-      ? row.expressId.replace('ifcSiteNode_', '')
-      : row.expressId;
-    globalId = row.globalId || expressID; // 优先使用 GlobalId
+  if (event[0]?.originData?.expressId) {
+    expressID = event[0]?.originData?.type === 'ifcSiteNode'
+      ? event[0]?.originData?.expressId.replace('ifcSiteNode_', '')
+      : event[0]?.originData?.expressId;
+    globalId = event[0]?.originData?.globalId || expressID; // 优先使用 GlobalId
     selectedMeshIds.clear()
-    selectedMeshIds = new Set(IfcPropertyUtils.getChildrenExpressIds(row));
+    selectedMeshIds = new Set(IfcPropertyUtils.getChildrenExpressIds(event[0]?.originData));
     lastClickedMeshId = expressID; // 记录上次点击的mesh ID
   }
   // 处理场景点击事件
@@ -644,19 +609,14 @@ const tableRowClick = async (event: any) => {
     globalId = event.detail.globalId || expressID; // 优先使用 GlobalId
     CoordinateTemp.point = event.detail.point
     console.log('CoordinateTemp:', CoordinateTemp);
-    if (expressID)
+    if (expressID) {
       lastClickedMeshId = expressID; // 记录上次点击的mesh ID
-  }
-  // 处理直接传入的行数据（TDesign表格的row-click事件）
-  else if (event?.expressId) {
-    const row = event
-    expressID = row.type === 'ifcSiteNode'
-      ? row.expressId.replace('ifcSiteNode_', '')
-      : row.expressId;
-    globalId = row.globalId || expressID; // 优先使用 GlobalId
-    selectedMeshIds.clear()
-    selectedMeshIds = new Set(IfcPropertyUtils.getChildrenExpressIds(row));
-    lastClickedMeshId = expressID; // 记录上次点击的mesh ID
+      const row = mapping.get(expressID) || undefined;
+      structureTreeRef.value.scrollToRow(row);
+    }
+    else {
+      structureTreeRef.value.clearSelected();
+    }
   }
   else {
     console.warn('tableRowClick: 无法解析事件数据', event);
@@ -673,12 +633,8 @@ const tableRowClick = async (event: any) => {
     lastClickedMeshId = null;
     selectedMeshIds.clear();
 
-    // 清除表格选中状态
-    pageState.sceneStructureTree.activeRowKey = [];
-
     // 清除属性表数据
     pageState.property = [];
-    pageState.propertyExpandIds = [];
 
     // 清除场景中的高亮
     IfcPropertyUtils.clearAllHighlights(scene)
@@ -691,9 +647,8 @@ const tableRowClick = async (event: any) => {
 
   selectedMeshId = expressID
 
-
-  pageState.property = await IfcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds)
-  pageState.propertyExpandIds = pageState.property.map((item: any) => item.id)
+  let property = await IfcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds)
+  pageState.property = await IfcPropertyUtils.flattenTreeToGroupedItems(property);
 
   const meshConfig = {
     scene,
@@ -707,8 +662,7 @@ const tableRowClick = async (event: any) => {
     treeData: pageState.treeData,
     structureTreeRef: structureTreeRef.value,
     pageState: {
-      structureDialogVisible: pageState.structureDialogVisible,
-      sceneStructureTree: pageState.sceneStructureTree
+      structureDialogVisible: pageState.structureDialogVisible
     }
   };
 
@@ -730,7 +684,8 @@ const handleTabChange = (event: any) => {
 }
 
 onMounted(async () => {
-  // Set initial theme for ribbon after a delay to ensure it's rendered
+  structureTreeRef.value.clearCheckboxState()
+
   setTimeout(() => {
     const initialTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
     const ribbonElement = document.querySelector('#ribbon .smart-ribbon-header');
@@ -748,11 +703,10 @@ onMounted(async () => {
   window.addEventListener("mouse-up", handleHisAfter)
   window.addEventListener("mouse-wheel", handleHisBefore)
   switchToMode(LM.VIEW);
+
   window.addEventListener("resize", async () => {
-    console.log('窗口大小改变');
     if (isTauriEnv) {
       const maximized = await getCurrentWindow().isMaximized();
-      console.log('当前窗口是否最大化:', maximized);
       if (maximized) {
         isMaximized.value = true;
       } else {
@@ -786,12 +740,11 @@ onUnmounted(() => {
   cleanup();
 });
 const handleHisBefore = (event: any) => {
-  // 使用SceneManager的相机历史管理器记录状态
   sceneManager.getCameraHistoryManager().recordState(event);
 }
 
 const handleHisAfter = (event: any) => {
-  // 使用SceneManager的相机历史管理器记录状态
+
   sceneManager.getCameraHistoryManager().recordState(event);
 }
 // 打开文件
@@ -802,7 +755,7 @@ const handleOpenFile = async () => {
     return;
   } fileInput.click();
 }
-// 更新撤销和重做函数
+
 const handleReplay = () => {
   sceneManager.undo();
 }

@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { CubeView } from '@myfront/bimflux/dist';
 import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils/ifc-api';
 import { CameraHistoryManager } from './camera-history-manager';
-import { Measure } from '../utils/analysis/measure';
+import { Measure } from '../utils/analysis/measure.js';
 import * as GUI from '@babylonjs/gui';
 
 
@@ -20,6 +20,9 @@ export class SceneManager {
   private cameraHistoryManager: CameraHistoryManager;
   private slicePlane: any = null; // SlicePlane 类型需要导入
   private ifcExplosion: any = null; // IfcExplosion 类型需要导入
+  private hiddenMeshIds: Set<string> = new Set(); // 存储已隐藏的mesh ID
+  private isolatedMeshIds: Set<string> = new Set(); // 存储已隔离的mesh ID
+  private transparentMeshIds: Set<string> = new Set(); // 存储已半透明的mesh ID
 
   constructor() {
     this.cameraHistoryManager = new CameraHistoryManager();
@@ -250,9 +253,6 @@ export class SceneManager {
  */
   public handleVisibility(
     mode: 'showAll' | 'hideSelected' | 'isolateSelected' | 'transparentSelected',
-    hiddenMeshIds: Set<string>,
-    isolatedMeshIds: Set<string>,
-    transparentMeshIds: Set<string>,
     selectedMeshIds: Set<string>,
     selectedMeshId: string | null,
     originalMaterialProperties: Map<string, { alpha: number }>,
@@ -266,9 +266,9 @@ export class SceneManager {
     if (mode === 'showAll') {
       isClickVisibleRef.value = true;
       // 显示所有mesh并清空所有集合
-      hiddenMeshIds.clear();
-      isolatedMeshIds.clear();
-      transparentMeshIds.clear();
+      this.hiddenMeshIds.clear();
+      this.isolatedMeshIds.clear();
+      this.transparentMeshIds.clear();
       selectedMeshIds.clear();
 
       this.scene.meshes.forEach(mesh => {
@@ -296,11 +296,11 @@ export class SceneManager {
       let targetSet: Set<string>;
 
       if (mode === 'hideSelected') {
-        targetSet = hiddenMeshIds;
+        targetSet = this.hiddenMeshIds;
       } else if (mode === 'isolateSelected') {
-        targetSet = isolatedMeshIds;
+        targetSet = this.isolatedMeshIds;
       } else {
-        targetSet = transparentMeshIds;
+        targetSet = this.transparentMeshIds;
       }
 
       // 添加选中的mesh到对应集合
@@ -325,16 +325,16 @@ export class SceneManager {
       let meshTransparent = false;
 
       // 1. 检查是否被隐藏
-      if (hiddenMeshIds.has(mesh.id)) {
+      if (this.hiddenMeshIds.has(mesh.id)) {
         meshVisible = false;
       }
       // 2. 检查隔离模式（只有隔离的mesh才显示）
-      if (isolatedMeshIds.size > 0) {
-        meshVisible = isolatedMeshIds.has(mesh.id);
+      if (this.isolatedMeshIds.size > 0) {
+        meshVisible = this.isolatedMeshIds.has(mesh.id);
       }
 
       // 3. 检查透明状态（只在可见时生效）
-      if (meshVisible && transparentMeshIds.has(mesh.id)) {
+      if (meshVisible && this.transparentMeshIds.has(mesh.id)) {
         meshTransparent = true;
       }
 

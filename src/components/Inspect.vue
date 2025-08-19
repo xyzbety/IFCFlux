@@ -48,7 +48,7 @@
                 <div style="max-height: 45vh; overflow: auto;">
                     <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
                         size="small" :tree="{ childrenKey: 'children', indent: 0 }"
-                        :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false" @row-click="handleRowClick"
+                        :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false"
                         :expandedTreeNodes="expandedKeys" @expanded-tree-nodes-change="onExpandedTreeNodesChange" />
                 </div>
             </div>
@@ -196,6 +196,7 @@ watch(
                     handleListClick(descriptions.value[0]);
                 }
             } else {
+                searchText.value = '';
                 descriptions.value = [];
                 tableData.value = [];
                 selectedKey.value = null;
@@ -208,6 +209,7 @@ watch(
 watch(dialogTableData, (val) => {
     expandedKeys.value = getAllExpandedKeys(val);
 }, { immediate: true });
+
 
 function getAllExpandedKeys(data: any[], childrenKey = 'children') {
     const keys: string[] = [];
@@ -398,6 +400,10 @@ function handleSearch() {
 }
 function handleClose() {
     console.log("handleClose");
+    searchText.value = '';
+    descriptions.value = [];
+    tableData.value = [];
+    selectedKey.value = null;
     emit('update:visible', false); // 通知父组件隐藏Inspect
 }
 function onExpandedTreeNodesChange(keys: string[]) {
@@ -539,7 +545,7 @@ function getRowClassName({ row }) {
     font-weight: 500 !important;
 }
 
-.t-table td {
+.check-root :deep(.t-table td) {
     color: #00000080 !important;
 }
 

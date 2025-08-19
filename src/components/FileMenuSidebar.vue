@@ -116,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, watch, computed } from 'vue';
+import { ref,watch, computed } from 'vue';
 import { useSettingsStore } from '../store/settings';
 import { getFileHistory } from '../utils/indexedDB';
 import { themeColors, type Theme } from '../styles/themes';

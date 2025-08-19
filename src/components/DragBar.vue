@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 
 interface Props {
   side: 'left' | 'right' | 'inspect';
@@ -66,7 +66,7 @@ defineExpose({
 
 <style scoped>
 .drag-bar {
-  width: 4px;
+  width: 2px;
   cursor: ew-resize;
   background: #e0e0e0;
   z-index: 10;
@@ -80,7 +80,7 @@ defineExpose({
 .drag-bar:hover,
 .drag-bar-dragging {
   background: #b0b0b0;
-  width: 6px;
+  width: 5px;
 }
 
 .drag-bar-left {
@@ -125,8 +125,8 @@ defineExpose({
 
 /* 拖拽时的视觉反馈 */
 .drag-bar-dragging {
-  background: #007acc !important;
-  box-shadow: 0 0 8px rgba(0, 122, 204, 0.3);
+  /* background: #007acc !important; */
+  /* box-shadow: 0 0 8px rgba(0, 122, 204, 0.3); */
 }
 
 /* 响应式设计 */

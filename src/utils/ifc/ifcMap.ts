@@ -342,11 +342,6 @@ export const IFC_TYPE_MAP: Record<string, IfcTypeInfo> = {
     standard: 'IfcStructuralAnalysisModel',
     chinese: '结构分析模型'
   },
-  'IFCZONE': {
-    original: 'IFCZONE',
-    standard: 'IfcZone',
-    chinese: '区域'
-  },
   'IFCINVENTORY': {
     original: 'IFCINVENTORY',
     standard: 'IfcInventory',

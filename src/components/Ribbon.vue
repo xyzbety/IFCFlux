@@ -63,6 +63,7 @@ onMounted(() => {
   const fileInput = document.getElementById('fileInput');
   if (fileInput) {
     fileInput.addEventListener("change", async (event: Event) => {
+      console.log("fileInput", event);
       const files = (event.target as HTMLInputElement).files;
       if (!files || files.length === 0) {
         loading.value = false;

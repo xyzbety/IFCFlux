@@ -19,13 +19,15 @@
     "@tauri-apps/api": "^2.7.0",
     "@tauri-apps/plugin-dialog": "^2.3.2",
     "@tauri-apps/plugin-fs": "^2.4.1",
+    "@visactor/vtable": "^1.19.6",
+    "@visactor/vue-vtable": "^1.19.6",
     "blockly": "^12.2.0",
     "pinia": "^3.0.3",
     "reflect-metadata": "^0.2.2",
+    "smart-webcomponents": "~23.1.1",
     "tdesign-icons-vue-next": "^0.3.7",
     "tdesign-vue-next": "^1.15.2",
     "vue": "^3.5.18",
-    "smart-webcomponents": "~23.1.1",
     "web-ifc": "~0.0.68"
   },
   "devDependencies": {

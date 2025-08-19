@@ -1,7 +1,6 @@
 import { getIfcChineseName } from '../utils/ifc/ifcMap';
 import * as BABYLON from '@babylonjs/core';
-import { nextTick } from 'vue';
-import { highlightMeshes,restoreMaterials } from '../utils/ifc-api';
+import { highlightMeshes, restoreMaterials } from '../utils/ifc-api';
 /**
  * IFC属性处理工具函数
  */
@@ -19,15 +18,13 @@ export interface TreeSyncConfig {
   structureTreeRef?: any;
   pageState: {
     structureDialogVisible: boolean;
-    sceneStructureTree: {
-      expandedIds: (string | number)[];
-      activeRowKey: string[];
-    };
   };
 }
 
 export class IfcPropertyUtils {
 
+  static rootExpressId = '0';
+  static hiddenNodeIds = new Set<string>();
   /**
    * 递归获取节点及其所有子节点的 expressId
    * @param nodes - 节点数组
@@ -127,6 +124,7 @@ export class IfcPropertyUtils {
       const childrenIds = this.getAllChildrenExpressIds(treeData, expressId);
       childrenIds.forEach(id => allVisibleIds.add(String(id)));
     });
+    console.log('所有可见的expressId:', Array.from(allVisibleIds));
 
     // 更新场景中所有 mesh 的可见性
     scene.meshes.forEach(mesh => {
@@ -153,7 +151,61 @@ export class IfcPropertyUtils {
       clearStateSets();
     }
   }
+  /**
+   * 基于复选框状态更新模型可见性
+   * @param scene - Babylon.js场景对象  
+   * @param expressId - 当前操作的节点expressId
+   * @param isChecked - 复选框是否选中
+   * @param treeData - 树形数据
+   **/
+  static updateModelVisibilityByCheckbox(
+    scene: any,
+    expressId: string | number,
+    isChecked: boolean,
+    treeData: any[],
+  ): void {
+    if (!scene) return;
 
+    // 获取当前节点及其所有子节点的 expressId
+    const currentNodeAndChildrenIds = this.getAllChildrenExpressIds(treeData, expressId);
+    console.log(`节点 ${expressId} 及其子节点:`, currentNodeAndChildrenIds);
+
+    if (isChecked) {
+      // 复选框选中：显示当前节点及其子节点
+      currentNodeAndChildrenIds.forEach(id => {
+        this.hiddenNodeIds.delete(String(id));
+      });
+      console.log(`显示节点及子节点: ${expressId}`);
+    } else {
+      // 复选框未选中：隐藏当前节点及其子节点
+      currentNodeAndChildrenIds.forEach(id => {
+        this.hiddenNodeIds.add(String(id));
+      });
+      console.log(`隐藏节点及子节点: ${expressId}`);
+    }
+
+    console.log('当前隐藏的节点集合:', Array.from(this.hiddenNodeIds));
+
+    // 更新场景中所有 mesh 的可见性
+    scene.meshes.forEach(mesh => {
+      // 跳过特殊 mesh
+      if (this.isSpecialMesh(mesh.name)) {
+        return;
+      }
+
+      // 根据 expressId 或 globalId 判断是否应该可见
+      const meshExpressId = mesh.metadata?.globalId || mesh.id;
+      const shouldBeHidden = this.hiddenNodeIds.has(String(meshExpressId));
+
+      // 设置可见性：如果在隐藏集合中则隐藏，否则显示
+      const newVisibility = !shouldBeHidden;
+
+      if (mesh.isVisible !== newVisibility) {
+        mesh.isVisible = newVisibility;
+        console.log(`${newVisibility ? '显示' : '隐藏'}模型: ${meshExpressId}`);
+      }
+    });
+  }
   /**
    * 查找父节点IDs路径
    * @param tree - 树形数据
@@ -273,6 +325,55 @@ export class IfcPropertyUtils {
     return property;
   }
 
+  static async flattenTreeToGroupedItems(treeData) {
+    const result = [];
+
+    treeData.forEach(parentNode => {
+      // 检查是否有子节点
+      if (parentNode.children && Array.isArray(parentNode.children)) {
+        // 遍历子节点，添加 group 字段
+        parentNode.children.forEach(child => {
+          result.push({
+            id: child.id,
+            name: child.name,
+            value: child.value,
+            group: parentNode.name
+          });
+        });
+      }
+    });
+
+    return result;
+  }
+  /**
+   * 简化版本：只返回 expressId 到行号的映射
+   */
+  static getExpressIdToRowMapping(treeData) {
+    const mapping = new Map();
+    let currentRow = 1;
+
+    function traverse(node) {
+      // 记录当前节点的行号
+      if (node.expressId) {
+        mapping.set(node.expressId, currentRow);
+      }
+      currentRow++;
+
+      // 处理子节点
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(child => traverse(child));
+      }
+    }
+
+    if (Array.isArray(treeData)) {
+      treeData.forEach(node => traverse(node));
+    } else {
+      traverse(treeData);
+    }
+
+    return mapping;
+  }
+
   /**
    * 初始化模型数据的通用处理
    * @param modelData - 模型数据
@@ -289,6 +390,7 @@ export class IfcPropertyUtils {
     propertyAll: any[];
   } {
     const treeData = modelData.tree;
+    this.rootExpressId = modelData.tree[0].expressId;
 
     // 结构目录默认展开到第五层级
     const expandedKeys = IfcPropertyUtils.findNodesUpToLevel(treeData, 5);
@@ -325,12 +427,7 @@ export class IfcPropertyUtils {
     }
 
     try {
-      // 1. 同步构件树状态（如果提供了树配置）
-      if (treeConfig) {
-        await this.syncTreeState(expressID, treeConfig);
-      }
 
-      // 2. 高亮对应的mesh
       const highlighted = await this.highlightComponentMesh(expressID, meshConfig, treeConfig?.treeData);
 
       return highlighted;
@@ -340,36 +437,6 @@ export class IfcPropertyUtils {
     }
   }
 
-  /**
-   * 同步构件树状态
-   * @param expressID - 构件的expressID
-   * @param treeConfig - 树同步配置
-   */
-  private static async syncTreeState(expressID: string, treeConfig: TreeSyncConfig): Promise<void> {
-    const { treeData, structureTreeRef, pageState } = treeConfig;
-
-    if (!pageState.structureDialogVisible || !structureTreeRef) {
-      return;
-    }
-
-    // 1. 找到所有父节点 expressId
-    const parentIds = this.findParentIds(treeData, expressID) || [];
-
-    // 2. 合并到 expandedIds
-    pageState.sceneStructureTree.expandedIds = Array.from(new Set([
-      ...pageState.sceneStructureTree.expandedIds,
-      ...parentIds
-    ]));
-
-    // 3. 设置高亮并滚动
-    await nextTick();
-    pageState.sceneStructureTree.activeRowKey = [String(expressID)];
-
-    await nextTick();
-    if (structureTreeRef.gotoRow) {
-      structureTreeRef.gotoRow(expressID);
-    }
-  }
 
   /**
    * 高亮构件对应的mesh

@@ -173,7 +173,6 @@ export class RibbonEventManager {
     }
 
     private handleRibbonClick(event: Event) {
-        console.log("点击了:", event.target);
         const fileMenuButton = event.target && (event.target as Element).closest ?
             (event.target as Element).closest('.smart-ribbon-file-container smart-drop-down-button') : null;
         const fileMenuDropdown = document.querySelector('.smart-drop-down') as HTMLElement | null;
