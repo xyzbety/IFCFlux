@@ -53,8 +53,7 @@ export class IfcLoader {
         this.worldOrigin = EarthTool.worldOrigin;
         this.model = new BABYLON.Mesh('modelMesh', this.scene);
         this.ifcApi = new WEBIFC.IfcAPI();
-        // 设置正确的WebAssembly路径
-this.ifcApi.SetWasmPath('./node_modules/web-ifc/', false);
+        this.ifcApi.SetWasmPath('./', false);
     }
     /**
      * 加载并解析IFC模型
