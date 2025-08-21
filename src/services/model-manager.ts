@@ -8,6 +8,8 @@ import { addFileHistory } from '../utils/indexedDB.ts';
 import { useModelStore } from '../store/index.ts';
 
 export class ModelManager {
+  private static instance: ModelManager | null = null;
+  
   private scene: BABYLON.Scene | null = null;
   private loading: Ref<boolean>;
   private progress: Ref<{
@@ -18,7 +20,7 @@ export class ModelManager {
   }>;
   private modelStore = useModelStore();
 
-  constructor() {
+  private constructor() { // 私有构造函数
     this.loading = ref(false);
     this.progress = ref({
       percent: 0,
@@ -26,6 +28,19 @@ export class ModelManager {
       total: 100,
       text: "打开文件"
     });
+  }
+
+  // 获取单例实例
+  public static getInstance(): ModelManager {
+    if (!ModelManager.instance) {
+      ModelManager.instance = new ModelManager();
+    }
+    return ModelManager.instance;
+  }
+
+  // 重置单例（如果需要）
+  public static resetInstance(): void {
+    ModelManager.instance = null;
   }
 
   public get isLoading() {
@@ -37,18 +52,24 @@ export class ModelManager {
   }
 
   public get currentScene() {
+    console.log("获取当前场景:", this.scene);
     return this.scene;
   }
+
   public async loadModel(file: File, emit: Function): Promise<void> {
     try {
       this.loading.value = true;
       await this.addToFileHistory(file);
+      
+      // 清理现有场景（现在 this.scene 可能不为 null）
       this.clearExistingScene();
       
       console.log("开始加载模型...");
       this.updateProgress(0, 1, "打开文件");
 
       this.scene = this.getActiveScene();
+      console.log("新场景已设置:", this.scene);
+      
       const ifcLoader = new IfcLoader(file, this.scene);
       this.setupInspectDataListener(file);
       
@@ -67,6 +88,7 @@ export class ModelManager {
       await addFileHistory({
         name: file.name,
         path: file.name,
+        file: file,
         timestamp: Date.now()
       });
     } catch (error) {
@@ -75,15 +97,27 @@ export class ModelManager {
   }
 
   private clearExistingScene(): void {
-    if (!this.scene) return;
+    console.log("开始清理现有场景...", this.scene);
+    
+    if (!this.scene) {
+      console.log("当前没有场景需要清理");
+      return;
+    }
 
+    console.log("清理现有场景:", this.scene);
     restoreMaterials(this.scene);
     this.scene.meshes.slice().forEach(mesh => mesh?.dispose());
     this.scene.materials.slice().forEach(mat => mat?.dispose());
     this.scene.textures.slice().forEach(tex => tex?.dispose());
     this.modelStore.clearModel();
     this.modelStore.clearModelInspectData();
+    
+    // 清理完成后将场景设为 null
+    this.scene = null;
+    console.log("场景清理完成");
   }
+
+  // ... 其他方法保持不变 ...
 
   private getActiveScene(): BABYLON.Scene {
     const scenes = Array.from(Core.getActiveScenes());
@@ -95,7 +129,7 @@ export class ModelManager {
 
   private setupInspectDataListener(file: File): void {
     const ifcInspect = new IfcInspect(file);
-    console.log("开始监听模型检查数据...",file);
+    console.log("开始监听模型检查数据...", file);
     const checkInterval = setInterval(() => {
       if (ifcInspect.ifcData) {
         clearInterval(checkInterval);

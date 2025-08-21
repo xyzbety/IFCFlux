@@ -232,13 +232,15 @@ smart-color-picker {
 
 /* ribbon组件header整体样式 */
 #ribbon .smart-ribbon-header {
-  --smart-primary-rgb: rgb(255, 255, 255);
+  --smart-primary-rgb: var(--theme-color);
   --smart-primary: white;
+  --smart-surface: var(--theme-color);
   --smart-surface-color: white;
   --smart-ui-state-color-active: var(--smart-primary);
   --smart-ui-state-selected: var(--smart-primary);
   --smart-ui-state-border-active: var(--smart-surface);
   --smart-ui-state-color-selected: var(--smart-surface);
+  --smart-ui-state-hover: var(--theme-hover-color);
   --smart-ui-state-color-hover: var(--smart-primary);
   --smart-border-width: 0px;
 }

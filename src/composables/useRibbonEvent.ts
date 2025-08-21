@@ -170,6 +170,7 @@ export class RibbonEventManager {
 
         // 绑定爆炸滑块事件
         this.bindExplosionSliderEvents();
+        console.log("绑定成功");
     }
 
     private handleRibbonClick(event: Event) {

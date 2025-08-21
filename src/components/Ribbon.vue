@@ -27,7 +27,7 @@ declare global {
   }
 }
 // 替换原有的加载逻辑
-const modelManager = new ModelManager();
+const modelManager = ModelManager.getInstance();;
 const loading = modelManager.isLoading;
 const progress = modelManager.loadProgress;
 const modelStore = useModelStore();

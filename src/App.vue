@@ -1,6 +1,6 @@
 <template>
   <FileMenuSidebar :visible="isFileMenuVisible" @update:visible="isFileMenuVisible = $event"
-    @request-open-file="handleOpenFile" />
+    @request-open-file="handleOpenFile" @file-uploaded="handleFileUploaded"/>
   <div class="container-title" data-tauri-drag-region :style="themeStyle">
     <TitleBar :is-maximized="isMaximized" @open-file="handleOpenFile" @replay="handleReplay" @redo="handleRedo" />
   </div>
@@ -22,7 +22,7 @@
       <Dialog :title="'构件树'" :visible="layoutState.showStructureTree" @close="toggleStructureTreeDialog">
         <StructureTree v-if="layoutState.showStructureTree" ref="structureTreeRef" :tree-data="pageState.treeData"
           :visible="layoutState.showStructureTree" @table-cell-click="tableRowClick"
-          @table-checkbox-click="onTableSelectChange" :style="themeStyle" />
+          @table-checkbox-click="onTableSelectChange" />
       </Dialog>
     </div>
 
@@ -684,8 +684,6 @@ const handleTabChange = (event: any) => {
 }
 
 onMounted(async () => {
-  structureTreeRef.value.clearCheckboxState()
-
   setTimeout(() => {
     const initialTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
     const ribbonElement = document.querySelector('#ribbon .smart-ribbon-header');

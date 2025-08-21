@@ -1,6 +1,7 @@
 export interface FileHistoryRecord {
   name: string;
   path: string;
+  file?: File; // 可选的 File 对象，用于存储文件引用
   timestamp: number;
 }
 

@@ -42,21 +42,39 @@ onMounted(() => {
         widthMode: "adaptive" as const,
         autoFillWidth: true,
         hierarchyExpandLevel: 5,
+        hierarchyIndent: 2,
+        hierarchyTextStartAlignment: true,
         groupConfig: {
             groupBy: 'group'
+        },
+        select: {
+            highlightMode: 'row' as const,
         },
         defaultRowHeight: 30,
         theme: VTable.themes.DEFAULT.extends({
             bodyStyle: {
-                fontSize: 11.5
+                fontSize: 11.5,
+                padding: 10
             },
             headerStyle: {
                 fontSize: 12,
-                fontWeight: 300
+                fontWeight: 300,
+                padding: 10
+            },
+            selectionStyle: {
+                cellBorderLineWidth: 0
             }
         }),
-        tooltip: {
-            isShowOverflowTextTooltip: true
+        emptyTip: {
+            text: '暂无数据',
+            textStyle: {
+                fontSize: 12,
+                color: '#999'
+            },
+            icon: {
+                width: 0,
+                height: 0
+            },
         }
     })
     treeInstance = new VTable.ListTable(document.getElementById('PropertyTable') as HTMLElement, options)

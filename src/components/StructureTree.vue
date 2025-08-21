@@ -6,6 +6,7 @@ import * as VTable from '@visactor/vtable'
 import { watch, ref, reactive, nextTick, } from 'vue'
 import { useModelStore } from '../store';
 import { onMounted } from 'vue';
+import { EmptyTip } from '@visactor/vtable/es/vrender';
 
 interface Props {
     visible: boolean
@@ -29,15 +30,17 @@ let treeInstance: VTable.ListTable | null = null;
 onMounted(() => {
 
     let treeData = ref([])
+    watch(() => treeData.value, (newValue) => {
+        if (newValue.length > 0 && treeInstance) {
+            treeInstance.setRecords(treeData.value)
+            treeInstance.setCellCheckboxState(0, 0, true);
+        }
+    }, { deep: true, immediate: true });
 
     const modelStore = useModelStore()
     watch(() => modelStore.modelData, (newValue) => {
         if (!newValue) return;
         treeData.value = newValue.tree
-        if (treeInstance) {
-            treeInstance.setRecords(treeData.value)
-            treeInstance.setCellCheckboxState(0, 0, true);
-        }
     }, { deep: true, immediate: true });
 
     let options = reactive({
@@ -47,39 +50,51 @@ onMounted(() => {
                 headerType: 'checkbox' as const, //指定表头单元格显示为复选框
                 cellType: 'checkbox' as const,
                 field: 'check',
-                width: "15%" as const,
+                width: "11%" as const,
             },
             {
                 field: 'typeShow',
                 title: '类型',
                 width: '50%' as const,
                 tree: true,
+
             },
-            { field: 'name', title: '名称', width: '35%' as const },
+            { field: 'name', title: '名称', width: '39%' as const },
         ],
         widthMode: 'adaptive' as const,
         autoFillWidth: true,
         hierarchyExpandLevel: 6,
+        hierarchyIndent: 2,
+        hierarchyTextStartAlignment: true,
         defaultRowHeight: 30,
         select: {
             highlightMode: 'row' as const,
         },
         theme: VTable.themes.DEFAULT.extends({
             bodyStyle: {
-                fontSize: 11.5
+                fontSize: 11.5,
+                padding: 10
             },
             headerStyle: {
                 fontSize: 12,
-                fontWeight: 300
+                fontWeight: 300,
+                padding: 10
             },
             selectionStyle: {
                 cellBorderLineWidth: 0
             }
         }),
-        tooltip: {
-            isShowOverflowTextTooltip: true
+        emptyTip:{
+            text: '暂无数据',
+            textStyle: {
+                fontSize: 12,
+                color: '#999'
+            },
+            icon:{
+                width: 0,
+                height: 0
+            },
         }
-
     })
     const { CLICK_CELL, } = VTable.ListTable.EVENT_TYPE;
     treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
@@ -116,7 +131,6 @@ onMounted(() => {
             }
         }
     });
-    treeInstance.setCellCheckboxState(0, 0, true);
 })
 
 const scrollToRow = (expressId: number) => {
@@ -128,17 +142,11 @@ const clearSelected = () => {
     if (!treeInstance) return;
     treeInstance.clearSelected()
 }
-const clearCheckboxState = () => {
-    if (!treeInstance) return;
-    console.log('clearCheckboxState')
-    treeInstance.setCellCheckboxState(0, 0, false);
 
-}
 // 使用 defineExpose 暴露方法给父组件
 defineExpose({
     scrollToRow,
-    clearSelected,
-    clearCheckboxState
+    clearSelected
 })
 </script>
 <style lang="less" scoped>
