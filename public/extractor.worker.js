@@ -12,9 +12,8 @@ self.onmessage = async (e) => {
 async function ifcsgExtractor(file, mapping) {
     const t0 = performance.now()
     console.log('Starting worker');
-    const bim_entity = mapping.bim_entity
     const entities = []
-    for (const [entity, _] of Object.entries(bim_entity)) {
+    for (const [entity, _] of Object.entries(mapping)) {
         entities.push(entity)
     }
 
@@ -297,7 +296,7 @@ async function ifcsgExtractor(file, mapping) {
             ObjectType: typeof item.ObjectType == 'string' && item.ObjectType.startsWith("\\X2\\", 0) ? ifcToText(item.ObjectType) : item.ObjectType,
             Tag: typeof item.Tag == 'string' && item.Tag.startsWith("\\X2\\", 0) ? ifcToText(item.Tag) : item.Tag,
         }
-        const new_bim_entity = JSON.parse(JSON.stringify(bim_entity[item.Entity]))
+        const new_bim_entity = JSON.parse(JSON.stringify(mapping[item.Entity]))
         for (const [pset, value] of Object.entries(new_bim_entity)) {
             const psetName = pset.split('Pset_')[1]
             const bName = textToIfc(psetName)

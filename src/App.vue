@@ -119,6 +119,7 @@ import { IfcSpaceGen } from "./utils/ifc/ifcspacegen.ts";
 import { IfcExplosion } from './utils/ifc/IfcExplosion.ts';
 import * as animationFns from './utils/blockly/animation.ts';
 import { useLayoutManager } from './composables/useLayoutManager.ts';
+import { ModelManager } from "./services/model-manager.ts";
 import { useDragResize } from './composables/useDragResize.ts';
 import { IfcPropertyUtils } from './services/property-manager.ts';
 import { SceneManager } from './services/scene-manager.ts';
@@ -154,8 +155,10 @@ let shouldInitInspectData = ref(false);
 let lastClickedMeshId: string | null = null; // 记录上次点击的mesh ID
 
 const sceneStore = useSceneStore()
+const modelStore = useModelStore();
 const settingsStore = useSettingsStore();
 const sceneManager = new SceneManager();
+const modelManager = ModelManager.getInstance();
 const KhanonViewer = shallowRef<DefineComponent | null>(null)
 const structureTreeRef = ref()
 const animationControllerRef = ref() // 动画控制器引用
@@ -420,7 +423,6 @@ function resetGlobalVariables() {
 
 // 文件上传事件
 const handleFileUploaded = () => {
-  const modelStore = useModelStore()
   console.log("文件已上传", modelStore.modelData);
   // 获取模型数据
   const modelData = modelStore.modelData
@@ -481,28 +483,26 @@ const handleAnimationClick = (event: string) => {
     animationControllerRef.value.initializeBlockly();
   }
 };
-const handleInspectClick = async (event: string) => {
+const handleInspectClick = async (event: number) => {
   console.log("handleInspectClick", event);
-  if (event === 'show' || event === 'inspect') {
-    shouldInitInspectData.value = (event === 'inspect');
 
-    // 根据不同的事件类型切换到对应的布局模式
-    if (event === 'inspect') {
-      switchToMode(LM.INSPECT);
-    } else if (event === 'show') {
-      // 如果当前不在检查相关模式且不是画布模式，则切换到检查模式
-      if (!isMode(LM.INSPECT) && !isMode(LM.ANALYSIS) && !isMode(LM.MEASURE) && !isMode(LM.CANVAS_ONLY)) {
-        switchToMode(LM.INSPECT);
-      } else if (isMode(LM.CANVAS_ONLY)) {
-        // 从画布模式切换到检查模式
-        switchToMode(LM.INSPECT);
-      }
-    }
+  // 验证事件参数
+  if (![1, 2, 3, 4, 5].includes(event)) {
+    console.warn("Invalid inspect event:", event);
+    return;
+  }
+
+  shouldInitInspectData.value = true;
+  switchToMode(LM.INSPECT);
+  console.log("开始检查", modelStore);
+
+  const file = modelStore.file;
+  if (file) {
+    modelManager.setupInspectDataListener(file, event);
   }
 };
 const handleSpaceGenerate = async (action: 'generate' | 'export') => {
   console.log("handleSpaceGenerate", action);
-  const modelStore = useModelStore();
   const file = modelStore.file;
   if (file) {
     const gen = new IfcSpaceGen(file);
@@ -584,7 +584,7 @@ const tableRowClick = async (event: any) => {
     return;
   }
 
-  const modelStore = useModelStore();
+
   const tree = modelStore.modelData.tree;
   const mapping = IfcPropertyUtils.getExpressIdToRowMapping(tree);
 

@@ -175,11 +175,23 @@ const dialogTableColumns = [
 ];
 watch(
     () => modelStore.modelInspectData,
-    () => {
-        descriptions.value = [];
-        tableData.value = [];
-        selectedKey.value = null;
-        currentDataObj.value = null;
+        (val) => {
+        if (val) {
+            // 只有shouldInit为true时才初始化数据
+            const data = modelStore.modelInspectData?.data;
+            if (data && typeof data === 'object') {
+                descriptions.value = Object.entries(data).map(([key]) => key);
+                if (descriptions.value.length > 0) {
+                    handleListClick(descriptions.value[0]);
+                }
+            } else {
+                searchText.value = '';
+                descriptions.value = [];
+                tableData.value = [];
+                selectedKey.value = null;
+            }
+            console.log("数据更新了");
+        }
     },
     { immediate: true, deep: true }
 );

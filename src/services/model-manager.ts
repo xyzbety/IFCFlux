@@ -71,9 +71,8 @@ export class ModelManager {
       console.log("新场景已设置:", this.scene);
       
       const ifcLoader = new IfcLoader(file, this.scene);
-      this.setupInspectDataListener(file);
-      
-      await this.loadWithProgress(ifcLoader, emit);
+          
+      await this.loadWithProgress(ifcLoader,file, emit);
       console.log("模型加载完成");
     } catch (error) {
       console.error("加载失败:", error);
@@ -117,7 +116,6 @@ export class ModelManager {
     console.log("场景清理完成");
   }
 
-  // ... 其他方法保持不变 ...
 
   private getActiveScene(): BABYLON.Scene {
     const scenes = Array.from(Core.getActiveScenes());
@@ -127,8 +125,8 @@ export class ModelManager {
     return scenes[0].babylon.scene;
   }
 
-  private setupInspectDataListener(file: File): void {
-    const ifcInspect = new IfcInspect(file);
+  public setupInspectDataListener(file: File,type:number): void {
+    const ifcInspect = new IfcInspect(file,type);
     console.log("开始监听模型检查数据...", file);
     const checkInterval = setInterval(() => {
       if (ifcInspect.ifcData) {
@@ -141,7 +139,7 @@ export class ModelManager {
     setTimeout(() => clearInterval(checkInterval), 100000);
   }
 
-  private async loadWithProgress(ifcLoader: IfcLoader, emit: Function): Promise<void> {
+  private async loadWithProgress(ifcLoader: IfcLoader,file: File,emit: Function): Promise<void> {
     const proxyLoader = new Proxy(ifcLoader, {
       set: (target, prop, value) => {
         const result = Reflect.set(target, prop, value);
@@ -158,7 +156,7 @@ export class ModelManager {
     });
 
     await proxyLoader.load();
-    this.modelStore.setModel(ifcLoader.file, ifcLoader.ifcTree);
+    this.modelStore.setModel(file, ifcLoader.ifcTree);
     emit('file-uploaded');
   }
 

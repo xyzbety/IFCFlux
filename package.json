@@ -15,7 +15,7 @@
     "@babylonjs/materials": "^8.22.2",
     "@blockly/field-colour": "^6.0.4",
     "@jscad/modeling": "^2.12.5",
-    "@myfront/bimflux": "~0.0.22",
+    "@myfront/bimflux": "~0.0.24",
     "@tauri-apps/api": "^2.7.0",
     "@tauri-apps/plugin-dialog": "^2.3.2",
     "@tauri-apps/plugin-fs": "^2.4.1",

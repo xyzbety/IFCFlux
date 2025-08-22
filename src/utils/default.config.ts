@@ -315,24 +315,58 @@ export default {
   {
     label: '检查',
     ribbonGroups:  [{
-      label: '控制',
-      icon: 'select material-icons',
+      label: '合标性检查',
+      icon: 'compliance_inspection material-icons',
       ribbonItems: [
+
         {
-          label: '开始检查',
-          icon: 'pan_tool material-icons',
+          label: '基础数据',
+          icon: 'base_data material-icons',
           type: 'button',
           cssClass: 'flat',
           size: 'normal',
           allowedSizes: ['normal']
-        }]
+        },
+                {
+          label: '规划构建',
+          icon: 'planning_construction material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        },
+        {
+          label: '施工审查',
+          icon: 'construction_review material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        },
+        {
+          label: '智慧工地监管',
+          icon: 'smart_site_supervision material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        },
+        {
+          label: '竣工验收',
+          icon: 'completion_acceptance material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        },
+      ]
     },
     ]
   },
-  {
-    label: '转换',
-    ribbonGroups: []
-  },
+  // {
+  //   label: '转换',
+  //   ribbonGroups: []
+  // },
   // {
   //   label: '分析',
   //   ribbonGroups: [{

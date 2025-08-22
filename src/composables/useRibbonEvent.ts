@@ -12,7 +12,7 @@ export class RibbonEventManager {
     private scene: BABYLON.Scene | null = null;
     private eventMap: Map<string, { type: string; param: string }> = new Map();
     private singleEvents: Map<string, () => void> = new Map();
-    
+
     // 在内部初始化爆炸参数
     public explosionX = ref(0);
     public explosionY = ref(0);
@@ -84,9 +84,9 @@ export class RibbonEventManager {
 
             // 检查事件
             {
-                labels: ["开始检查"],
+                labels: ["规划构建", "基础数据", "施工审查", "智慧工地监管", "竣工验收"],
                 type: "inspect-click",
-                params: ["inspect"]
+                params: [1, 2, 3, 4, 5]
             }
         ];
 
@@ -155,7 +155,7 @@ export class RibbonEventManager {
     public initScene(value: BABYLON.Scene | null) {
         this.scene = value;
     }
-    
+
     public bindRibbonEvents() {
         const ribbon = document.getElementById('ribbon');
         if (ribbon) {

@@ -354,7 +354,7 @@ button.smart-button {
   padding: 0 0px;
   text-transform: none;
   min-width: 50px;
-  max-width: 60px;
+  max-width: 70px;
   border-radius: 4px;
 }
 
@@ -801,6 +801,60 @@ smart-ribbon-group[grouped] smart-drop-down-button {
   content: "";
   display: block;
   background-image: url(/icons/属性.svg);
+  background-size: cover;
+  background-position: center;
+}
+.planning_construction:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/规划报建.svg);
+  background-size: cover;
+  background-position: center;
+}
+.base_data:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/基础数据.svg);
+  background-size: cover;
+  background-position: center;
+}
+.construction_review:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/施工图审查.svg);
+  background-size: cover;
+  background-position: center;
+}
+.smart_site_supervision:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/智慧工地监管.svg);
+  background-size: cover;
+  background-position: center;
+}
+.completion_acceptance:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/竣工验收.svg);
+  background-size: cover;
+  background-position: center;
+}
+.compliance_inspection:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/合标性检查.svg);
   background-size: cover;
   background-position: center;
 }
