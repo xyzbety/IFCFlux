@@ -6,7 +6,7 @@ import * as VTable from '@visactor/vtable'
 import { watch, ref, reactive, nextTick, } from 'vue'
 import { useModelStore } from '../store';
 import { onMounted } from 'vue';
-import { EmptyTip } from '@visactor/vtable/es/vrender';
+import { SearchComponent } from '@visactor/vtable-search';
 
 interface Props {
     visible: boolean
@@ -27,6 +27,7 @@ const showTable = ref(true)
 const emit = defineEmits(['table-cell-click', 'table-checkbox-click']);
 
 let treeInstance: VTable.ListTable | null = null;
+let search: any;
 onMounted(() => {
 
     let treeData = ref([])
@@ -34,6 +35,17 @@ onMounted(() => {
         if (newValue.length > 0 && treeInstance) {
             treeInstance.setRecords(treeData.value)
             treeInstance.setCellCheckboxState(0, 0, true);
+            search = new SearchComponent({
+                table: treeInstance,
+                autoJump: true,
+                highlightCellStyle: {
+                    bgColor: 'rgba(231, 229, 251, 0)'
+                },
+                focuseHighlightCellStyle: {
+                    bgColor: 'rgba(231, 229, 251, 0)'
+                }
+            });
+            search.clear()
         }
     }, { deep: true, immediate: true });
 
@@ -84,13 +96,13 @@ onMounted(() => {
                 cellBorderLineWidth: 0
             }
         }),
-        emptyTip:{
+        emptyTip: {
             text: '暂无数据',
             textStyle: {
                 fontSize: 12,
                 color: '#999'
             },
-            icon:{
+            icon: {
                 width: 0,
                 height: 0
             },
@@ -133,10 +145,21 @@ onMounted(() => {
     });
 })
 
-const scrollToRow = (expressId: number) => {
+const scrollToRow = (node) => {
     if (!treeInstance) return;
-    treeInstance.scrollToCell({ row: expressId, col: 1 });
-    treeInstance.selectCell(1, expressId);
+    if (!search) return;
+    if (typeof node === 'object') {
+        let result = search.search(node.expressId).results;
+        let row = result[0].range.start.row;
+        let col = 1;
+        treeInstance.scrollToCell({ row, col });
+        treeInstance.selectCell(col, row);
+        return;
+    } else if (typeof node === 'number') {
+        treeInstance.scrollToCell({ row: node, col: 1 });
+        treeInstance.selectCell(1, node);
+        return;
+    }
 }
 const clearSelected = () => {
     if (!treeInstance) return;

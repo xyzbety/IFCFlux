@@ -25,6 +25,50 @@ export class IfcPropertyUtils {
 
   static rootExpressId = '0';
   static hiddenNodeIds = new Set<string>();
+
+  /**
+ * 在树结构中查找指定 expressId 的节点
+ * @param treeData 树结构数据
+ * @param expressID 要查找的 expressId
+ * @returns 找到的节点或 undefined
+ */
+  static findNodeByExpressId(treeData: any[], expressID: string): any | undefined {
+    // 深度优先搜索函数
+    function dfs(node: any): any | undefined {
+      // 检查当前节点是否匹配
+      if (node.expressId === expressID) {
+        return node;
+      }
+
+      // 递归检查子节点
+      if (node.children && Array.isArray(node.children)) {
+        for (const child of node.children) {
+          const found = dfs(child);
+          if (found) {
+            return found;
+          }
+        }
+      }
+
+      return undefined;
+    }
+
+    // 处理数组形式的树数据
+    if (Array.isArray(treeData)) {
+      for (const node of treeData) {
+        const found = dfs(node);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    // 处理单个根节点的情况
+    else if (treeData) {
+      return dfs(treeData);
+    }
+
+    return undefined;
+  }
   /**
    * 递归获取节点及其所有子节点的 expressId
    * @param nodes - 节点数组

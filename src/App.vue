@@ -1,6 +1,6 @@
 <template>
   <FileMenuSidebar :visible="isFileMenuVisible" @update:visible="isFileMenuVisible = $event"
-    @request-open-file="handleOpenFile" @file-uploaded="handleFileUploaded"/>
+    @request-open-file="handleOpenFile" @file-uploaded="handleFileUploaded" />
   <div class="container-title" data-tauri-drag-region :style="themeStyle">
     <TitleBar :is-maximized="isMaximized" @open-file="handleOpenFile" @replay="handleReplay" @redo="handleRedo" />
   </div>
@@ -611,8 +611,9 @@ const tableRowClick = async (event: any) => {
     console.log('CoordinateTemp:', CoordinateTemp);
     if (expressID) {
       lastClickedMeshId = expressID; // 记录上次点击的mesh ID
-      const row = mapping.get(expressID) || undefined;
-      structureTreeRef.value.scrollToRow(row);
+      let node = IfcPropertyUtils.findNodeByExpressId(tree, expressID);
+      console.log('node:', node);
+      structureTreeRef.value.scrollToRow(node);
     }
     else {
       structureTreeRef.value.clearSelected();
