@@ -3,15 +3,15 @@
         <div class="title-left">
             <img src="/logo.png" alt="logo" style="padding: 0 5px;margin-left: 0px;" />
             <span>IFCFlux</span>
-            <img src="/icons/open-file.svg" class="icon" @click="handleOpenFile" />
-            <img src="/icons/undo.svg" class="icon" @click="handleReplay" />
-            <img src="/icons/redo.svg" class="icon" @click="handleRedo" />
+            <img src="/icons/打开文件.svg" class="icon" @click="handleOpenFile" />
+            <img src="/icons/撤销.svg" class="icon" @click="handleReplay" />
+            <img src="/icons/重做.svg" class="icon" @click="handleRedo" />
         </div>
         <div class="title-right">
-            <img src="/icons/minimize.svg" class="icon" @click="minimize" />
-            <img src="/icons/restore.svg" class="icon" v-if="isMaximized" @click="maximize" />
-            <img src="/icons/maximize.svg" class="icon" v-if="!isMaximized" @click="maximize" />
-            <img src="/icons/close.svg" class="icon" @click="close" />
+            <img src="/icons/最小化.svg" class="icon" @click="minimize" />
+            <img src="/icons/最大化.svg" class="icon" v-if="isMaximized" @click="maximize" />
+            <img src="/icons/最大化.svg" class="icon" v-if="!isMaximized" @click="maximize" />
+            <img src="/icons/关闭.svg" class="icon" @click="close" />
         </div>
     </div>
 </template>

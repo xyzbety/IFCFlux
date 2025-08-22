@@ -199,7 +199,7 @@ export class RibbonEventManager {
         if (event.detail) {
             console.log("选中了:", event.detail.index);
             this.options.emit('ribbon-tab-change', event.detail.index);
-            if (event.detail.index === 3) {
+            if (event.detail.index === 2) {
                 this.handleSettingsTabSelect();
             }
         }

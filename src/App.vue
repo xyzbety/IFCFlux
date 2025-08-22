@@ -841,7 +841,7 @@ smart-ribbon:focus>div.smart-ribbon {
 #khanonjs {
   width: 100%;
   height: 100%;
-  background: white;
+  background: rgb(236, 241, 245);
 }
 
 #khanonjs-canvas {
