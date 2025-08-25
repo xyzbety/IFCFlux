@@ -1,9 +1,9 @@
 import * as WEBIFC from "web-ifc";
 import * as BABYLON from "@babylonjs/core";
-import { EarthTool } from "@myfront/bimflux/dist/main/EarthTool";
-import { cacheDB } from '@myfront/bimflux/dist/main/CacheDB';
-import { IfcParser } from "@myfront/bimflux/dist/main/IfcParser";
-import { GeometryTypes } from "@myfront/bimflux/dist/main/ifc/ifc-geometry-types";
+import { EarthTool } from "./EarthTool";
+import { cacheDB } from './CacheDB';
+import { IfcParser } from "./IfcParser";
+import { GeometryTypes } from "../ifc/ifc-geometry-types";
 /**
  * IFC模型加载器，用于加载和解析IFC文件并在Babylon.js场景中渲染
  */

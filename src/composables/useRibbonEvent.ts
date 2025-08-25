@@ -84,7 +84,7 @@ export class RibbonEventManager {
 
             // 检查事件
             {
-                labels: ["规划构建", "基础数据", "施工审查", "智慧工地监管", "竣工验收"],
+                labels: [ "基础数据", "规划构建","施工审查", "智慧工地监管", "竣工验收"],
                 type: "inspect-click",
                 params: [1, 2, 3, 4, 5]
             }

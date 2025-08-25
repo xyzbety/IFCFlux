@@ -3,7 +3,7 @@ import {
   Mesh,
   Scene,
   SceneInterface,
-} from '@myfront/bimflux/dist'
+} from '@khanonjs/engine'
 
 import { SceneCamera } from '../utils/camera'
 

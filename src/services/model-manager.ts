@@ -1,8 +1,8 @@
 import { nextTick, ref, Ref } from 'vue';
-import { Core } from '@myfront/bimflux/dist/base/core/core';
+import { Core } from '@khanonjs/engine/base/core/core';
 import * as BABYLON from '@babylonjs/core/index.js';
 import { IfcLoader } from '../utils/loader/IfcLoader.js';
-import { IfcInspect } from "@myfront/bimflux/dist/main";
+import { IfcInspect } from "../utils/ifc/IfcInspect.js";
 import { restoreMaterials } from '../utils/ifc-api.ts';
 import { addFileHistory } from '../utils/indexedDB.ts';
 import { useModelStore } from '../store/index.ts';

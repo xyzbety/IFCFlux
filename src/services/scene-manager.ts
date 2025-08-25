@@ -1,5 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
-import { CubeView } from '@myfront/bimflux/dist';
+import { CubeView } from '../utils/plugin/viewer/cubeView';
 import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils/ifc-api';
 import { CameraHistoryManager } from './camera-history-manager';
 import { Measure } from '../utils/analysis/measure.js';

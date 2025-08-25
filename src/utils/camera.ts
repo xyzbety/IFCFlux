@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core'
 import {
   Camera,
   CameraInterface
-} from '@myfront/bimflux/dist'
+} from '@khanonjs/engine'
 
 @Camera()
 export class SceneCamera extends CameraInterface {

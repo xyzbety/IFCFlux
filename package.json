@@ -15,7 +15,7 @@
     "@babylonjs/materials": "^8.22.2",
     "@blockly/field-colour": "^6.0.4",
     "@jscad/modeling": "^2.12.5",
-    "@myfront/bimflux": "~0.0.24",
+    "@khanonjs/engine": "^0.2.16",
     "@tauri-apps/api": "^2.7.0",
     "@tauri-apps/plugin-dialog": "^2.3.2",
     "@tauri-apps/plugin-fs": "^2.4.1",
@@ -29,7 +29,8 @@
     "tdesign-icons-vue-next": "^0.3.7",
     "tdesign-vue-next": "^1.15.2",
     "vue": "^3.5.18",
-    "web-ifc": "~0.0.68"
+    "web-ifc": "~0.0.68",
+    "xe-utils": "3.7.4"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.7.1",

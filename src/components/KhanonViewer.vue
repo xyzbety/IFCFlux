@@ -8,7 +8,7 @@ import {
     AppInterface,
     KJS,
     Logger
-} from '@myfront/bimflux/dist'
+} from '@khanonjs/engine'
 
 import { onMounted, reactive } from 'vue';
 import { SceneMonsters } from '../utils/scene'

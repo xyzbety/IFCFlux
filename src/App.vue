@@ -96,7 +96,7 @@ console.log('是否在Tauri环境中运行:', isTauriEnv);
 
 import { onMounted, reactive, ref, shallowRef, watch, markRaw, computed, DefineComponent, onUnmounted } from 'vue'
 import * as BABYLON from '@babylonjs/core'
-import { Core } from '@myfront/bimflux/dist/base/core/core';
+import { Core } from '@khanonjs/engine/base/core/core';
 import FileMenuSidebar from './components/FileMenuSidebar.vue';
 import TitleBar from './components/TitleBar.vue';
 import DragBar from './components/DragBar.vue';
