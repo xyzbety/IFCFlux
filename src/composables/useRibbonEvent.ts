@@ -1,14 +1,15 @@
 import { ref, Ref } from "vue";
 import * as BABYLON from '@babylonjs/core/index.js';
 
-
 export interface RibbonEventsOptions {
     modelStore: any;
     emit: any;
 }
 
 export class RibbonEventManager {
-    private options: RibbonEventsOptions;
+    private static instance: RibbonEventManager | null = null;
+    
+    private options: RibbonEventsOptions | null = null;
     private scene: BABYLON.Scene | null = null;
     private eventMap: Map<string, { type: string; param: string }> = new Map();
     private singleEvents: Map<string, () => void> = new Map();
@@ -18,9 +19,27 @@ export class RibbonEventManager {
     public explosionY = ref(0);
     public explosionZ = ref(0);
 
-    constructor(options: RibbonEventsOptions) {
-        this.options = options;
+    private constructor() {
+        // 私有构造函数，防止外部实例化
         this.initializeEventMap();
+    }
+
+    // 获取单例实例
+    public static getInstance(): RibbonEventManager {
+        if (!RibbonEventManager.instance) {
+            RibbonEventManager.instance = new RibbonEventManager();
+        }
+        return RibbonEventManager.instance;
+    }
+
+    // 重置单例（如果需要）
+    public static resetInstance(): void {
+        RibbonEventManager.instance = null;
+    }
+
+    // 初始化配置（替代原来的构造函数参数）
+    public initialize(options: RibbonEventsOptions): void {
+        this.options = options;
         this.initializeSingleEvents();
     }
 
@@ -98,9 +117,15 @@ export class RibbonEventManager {
     }
 
     private initializeSingleEvents() {
-        this.singleEvents.set("构件树", () => this.options.emit("build-tree"));
-        this.singleEvents.set("属性表", () => this.options.emit("properties-table"));
-        this.singleEvents.set("重置", () => this.options.emit("light-settings-reset"));
+        if (!this.options) {
+            console.warn("Options not initialized. Call initialize() first.");
+            return;
+        }
+        
+        this.singleEvents.clear(); // 清空之前的事件
+        this.singleEvents.set("构件树", () => this.options!.emit("build-tree"));
+        this.singleEvents.set("属性表", () => this.options!.emit("properties-table"));
+        this.singleEvents.set("重置", () => this.options!.emit("light-settings-reset"));
     }
 
     /**
@@ -109,6 +134,11 @@ export class RibbonEventManager {
      * @returns 是否成功处理
      */
     public handleClick(label: string): boolean {
+        if (!this.options) {
+            console.warn("RibbonEventManager not initialized. Call initialize() first.");
+            return false;
+        }
+
         console.log("按钮被点击:", label);
 
         // 检查单独事件
@@ -136,10 +166,15 @@ export class RibbonEventManager {
      * @param eventParam - 事件参数
      */
     public addButtonMapping(label: string, eventType: string, eventParam?: string) {
+        if (!this.options) {
+            console.warn("RibbonEventManager not initialized. Call initialize() first.");
+            return;
+        }
+
         if (eventParam) {
             this.eventMap.set(label, { type: eventType, param: eventParam });
         } else {
-            this.singleEvents.set(label, () => this.options.emit(eventType));
+            this.singleEvents.set(label, () => this.options!.emit(eventType));
         }
     }
 
@@ -153,12 +188,22 @@ export class RibbonEventManager {
     }
 
     public initScene(value: BABYLON.Scene | null) {
+        console.log("初始化场景:", value);
         this.scene = value;
+    }
+
+    public getCurrentScene(): BABYLON.Scene | null {
+        return this.scene;
     }
 
     public bindRibbonEvents() {
         const ribbon = document.getElementById('ribbon');
         if (ribbon) {
+            // 移除之前的监听器（如果存在）
+            ribbon.removeEventListener('click', this.handleRibbonClick);
+            ribbon.removeEventListener('select', this.handleRibbonSelect);
+            
+            // 添加新的监听器
             ribbon.addEventListener('click', (event) => {
                 this.handleRibbonClick(event);
             });
@@ -181,7 +226,7 @@ export class RibbonEventManager {
         if (fileMenuButton && fileMenuDropdown) {
             event.preventDefault();
             event.stopPropagation();
-            this.options.emit('toggle-file-menu');
+            this.options?.emit('toggle-file-menu');
             fileMenuDropdown.style.display = 'none'
             return;
         }
@@ -196,7 +241,7 @@ export class RibbonEventManager {
     }
 
     private handleRibbonSelect(event: any) {
-        if (event.detail) {
+        if (event.detail && this.options) {
             console.log("选中了:", event.detail.index);
             this.options.emit('ribbon-tab-change', event.detail.index);
             if (event.detail.index === 2) {
@@ -210,7 +255,8 @@ export class RibbonEventManager {
             const scene = this.scene;
             console.log("场景:", scene);
 
-            if (!scene) return;
+            if (!scene || !this.options) return;
+            
             const handleSliderX = document.getElementById("horizontalSliderX") as HTMLInputElement;
             const handleSliderY = document.getElementById("horizontalSliderY");
             const handleSliderZ = document.getElementById("horizontalSliderZ");
@@ -228,31 +274,31 @@ export class RibbonEventManager {
 
             if (handleSliderX) {
                 handleSliderX.addEventListener('change', (event: any) => {
-                    this.options.emit('light-settings', { lightX: event.detail.value })
+                    this.options?.emit('light-settings', { lightX: event.detail.value })
                 })
             }
 
             if (handleSliderY) {
                 handleSliderY.addEventListener('change', (event: any) => {
-                    this.options.emit('light-settings', { lightY: event.detail.value })
+                    this.options?.emit('light-settings', { lightY: event.detail.value })
                 })
             }
 
             if (handleSliderZ) {
                 handleSliderZ.addEventListener('change', (event: any) => {
-                    this.options.emit('light-settings', { lightZ: event.detail.value })
+                    this.options?.emit('light-settings', { lightZ: event.detail.value })
                 })
             }
 
             if (inputIndensity) {
                 inputIndensity.addEventListener('change', (event: any) => {
-                    this.options.emit('light-settings', { lightIndensity: event.detail.value })
+                    this.options?.emit('light-settings', { lightIndensity: event.detail.value })
                 })
             }
 
             if (checkboxShadow) {
                 checkboxShadow.addEventListener('change', (event: any) => {
-                    this.options.emit('light-settings', { lightShadowEnabled: event.detail.value })
+                    this.options?.emit('light-settings', { lightShadowEnabled: event.detail.value })
                 })
             }
 
@@ -261,7 +307,7 @@ export class RibbonEventManager {
                     if (scene) {
                         const speed = event.detail.value;
                         console.log("拖动速度:", speed);
-                        this.options.emit('scene-settings', { dragSpeed: speed });
+                        this.options?.emit('scene-settings', { dragSpeed: speed });
                     }
                 });
             }
@@ -271,7 +317,7 @@ export class RibbonEventManager {
                     if (scene) {
                         const isChecked = event.detail.value;
                         console.log("Focus mode:", isChecked);
-                        this.options.emit('scene-settings', { focusMode: isChecked });
+                        this.options?.emit('scene-settings', { focusMode: isChecked });
                     }
                 });
             }
@@ -284,7 +330,7 @@ export class RibbonEventManager {
                 handleColorPicker.addEventListener('change', (event: any) => {
                     const color = event.detail.value;
                     console.log("背景颜色改变:", color);
-                    this.options.emit('scene-settings', { backgroundColor: color });
+                    this.options?.emit('scene-settings', { backgroundColor: color });
                 })
             }
         }
@@ -321,11 +367,12 @@ export class RibbonEventManager {
     }
 
     private emitExplosion() {
-        this.options.emit('explosion-event', {
-            X: this.explosionX.value,
-            Y: this.explosionY.value,
-            Z: this.explosionZ.value
-        });
+        if (this.options) {
+            this.options.emit('explosion-event', {
+                X: this.explosionX.value,
+                Y: this.explosionY.value,
+                Z: this.explosionZ.value
+            });
+        }
     }
-
 }

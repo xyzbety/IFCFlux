@@ -39,7 +39,7 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
-                    :table-layout="'auto'" :row-class-name="getRowClassName" rowKey="guid" />
+                    :max-height="'100%'" :table-layout="'auto'" :row-class-name="getRowClassName" rowKey="guid" />
             </div>
         </div>
         <!-- 弹框 -->
@@ -175,7 +175,7 @@ const dialogTableColumns = [
 ];
 watch(
     () => modelStore.modelInspectData,
-        (val) => {
+    (val) => {
         if (val) {
             // 只有shouldInit为true时才初始化数据
             const data = modelStore.modelInspectData?.data;
@@ -503,7 +503,7 @@ function getRowClassName({ row }) {
 .list-area {
     width: 25%;
     height: calc(100% - 15px);
-    overflow: hidden;
+    overflow: auto;
     border-right: 1px solid #eee;
     box-sizing: border-box;
 }
@@ -511,7 +511,7 @@ function getRowClassName({ row }) {
 .table-area {
     width: 75%;
     height: calc(100% - 30px);
-    overflow: visible;
+    overflow: auto;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -563,6 +563,9 @@ function getRowClassName({ row }) {
 
 .t-table-tr--level-0 {
     background-color: #f0f0f0 !important;
+}
+.t-table__header--fixed:not(.t-table__header--multiple) > tr > th{
+    background-color: white !important;
 }
 
 .t-table__body tr,

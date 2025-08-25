@@ -38,10 +38,8 @@ const emit = defineEmits([
   'toggle-file-menu', 'ribbon-tab-change'
 ]);
 
-let eventManager = new RibbonEventManager({
-  modelStore,
-  emit
-});
+let  eventManager = RibbonEventManager.getInstance();
+eventManager.initialize({ modelStore, emit });
 
 onMounted(() => {
   window.Smart('#ribbon', class {

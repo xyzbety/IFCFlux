@@ -106,6 +106,7 @@ onMounted(() => {
                 width: 0,
                 height: 0
             },
+            displayMode:'basedOnContainer'
         }
     })
     const { CLICK_CELL, } = VTable.ListTable.EVENT_TYPE;

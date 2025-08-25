@@ -3,7 +3,7 @@ import { Core } from '@khanonjs/engine/base/core/core';
 import * as BABYLON from '@babylonjs/core/index.js';
 import { IfcLoader } from '../utils/loader/IfcLoader.js';
 import { IfcInspect } from "../utils/ifc/IfcInspect.js";
-import { restoreMaterials } from '../utils/ifc-api.ts';
+import { IfcPropertyUtils } from './property-manager.ts';
 import { addFileHistory } from '../utils/indexedDB.ts';
 import { useModelStore } from '../store/index.ts';
 
@@ -19,6 +19,7 @@ export class ModelManager {
     text: string;
   }>;
   private modelStore = useModelStore();
+  private ifcPropertyUtils = IfcPropertyUtils.getInstance();
 
   private constructor() { // 私有构造函数
     this.loading = ref(false);
@@ -104,7 +105,7 @@ export class ModelManager {
     }
 
     console.log("清理现有场景:", this.scene);
-    restoreMaterials(this.scene);
+    this.ifcPropertyUtils.restoreMaterials(this.scene);
     this.scene.meshes.slice().forEach(mesh => mesh?.dispose());
     this.scene.materials.slice().forEach(mat => mat?.dispose());
     this.scene.textures.slice().forEach(tex => tex?.dispose());

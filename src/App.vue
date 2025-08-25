@@ -70,12 +70,12 @@
       minWidth: layoutState.propertyTableWidth === 0 ? '0' : '300px',
       margin: layoutState.propertyTableWidth === 0 ? '0' : '15px'
     }">
-      <Dialog-r :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
+      <Dialog :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
         @tab-change="handleTabChange" :activeTab="activeTab">
         <PropertyTable v-if="layoutState.showPropertyTable" :property-data="pageState.property"
           :visible="layoutState.showPropertyTable">
         </PropertyTable>
-      </Dialog-r>
+      </Dialog>
     </div>
   </div>
 </template>
@@ -103,7 +103,6 @@ import DragBar from './components/DragBar.vue';
 import Ribbon from "./components/Ribbon.vue"
 import AnimationController from './components/AnimationController.vue';
 import Dialog from './components/Dialog.vue';
-import DialogR from './components/DialogR.vue';
 import Inspect from './components/Inspect.vue';
 import StructureTree from './components/StructureTree.vue';
 import PropertyTable from './components/PropertyTable.vue';
@@ -114,7 +113,7 @@ import { useSettingsStore } from './store/settings';
 import { SlicePlane } from './utils/analysis/slice/slicePlane.ts'
 import { Measure } from './utils/analysis/measure'
 import { ifcPropertyColumns } from './utils/config'
-import { getBoundingBoxForMeshes, updateTempLineLabel } from './utils/ifc-api'
+import { getBoundingBoxForMeshes, updateTempLineLabel } from './utils/index.ts'
 import { IfcSpaceGen } from "./utils/ifc/ifcspacegen.ts";
 import { IfcExplosion } from './utils/ifc/IfcExplosion.ts';
 import * as animationFns from './utils/blockly/animation.ts';
@@ -157,7 +156,8 @@ let lastClickedMeshId: string | null = null; // 记录上次点击的mesh ID
 const sceneStore = useSceneStore()
 const modelStore = useModelStore();
 const settingsStore = useSettingsStore();
-const sceneManager = new SceneManager();
+const sceneManager = SceneManager.getInstance();
+const ifcPropertyUtils = IfcPropertyUtils.getInstance();
 const modelManager = ModelManager.getInstance();
 const KhanonViewer = shallowRef<DefineComponent | null>(null)
 const structureTreeRef = ref()
@@ -315,6 +315,9 @@ const handleView = (view: 'default' | 'top' | 'bottom' | 'front' | 'back' | 'lef
 // 剖切
 const handleSlice = (action: 'visible' | 'reset' | 'x' | 'y' | 'z') => {
   isHightlight = false;
+  if (action === 'reset') {
+    isHightlight = true;
+  }
   sceneManager.handleSlice(action, SlicePlane);
 };
 
@@ -447,6 +450,7 @@ const handleFileUploaded = () => {
     const bbox = getBoundingBoxForMeshes(sceneManager.scene!.meshes);
     const handleInspectboxFocus = document.getElementById("checkboxFocus") as HTMLInputElement;
     if (handleInspectboxFocus.checked) {
+      isGrid = true;
       sceneManager.setupGround(bbox, isGrid);
     }
 
@@ -456,7 +460,7 @@ const handleFileUploaded = () => {
     // 保存原始材质属性
     sceneManager.saveOriginalMaterialProperties(originalMaterialProperties);
 
-    initResult = IfcPropertyUtils.initializeModelData(modelData);
+    initResult = ifcPropertyUtils.initializeModelData(modelData);
 
     pageState.treeData = initResult.treeData;
     pageState.property = [];
@@ -575,7 +579,7 @@ const onTableSelectChange = (event) => {
     return;
   }
   // 使用修改后的工具类更新模型可见性
-  IfcPropertyUtils.updateModelVisibilityByCheckbox(scene, expressId, isChecked, pageState.treeData,);
+  ifcPropertyUtils.updateModelVisibilityByCheckbox(scene, expressId, isChecked, pageState.treeData,);
 };
 // 结构目录 行 点击
 const tableRowClick = async (event: any) => {
@@ -586,7 +590,6 @@ const tableRowClick = async (event: any) => {
 
 
   const tree = modelStore.modelData.tree;
-  const mapping = IfcPropertyUtils.getExpressIdToRowMapping(tree);
 
   let expressID: string | null = null;
   let globalId: string | null = null;
@@ -600,7 +603,7 @@ const tableRowClick = async (event: any) => {
       : event[0]?.originData?.expressId;
     globalId = event[0]?.originData?.globalId || expressID; // 优先使用 GlobalId
     selectedMeshIds.clear()
-    selectedMeshIds = new Set(IfcPropertyUtils.getChildrenExpressIds(event[0]?.originData));
+    selectedMeshIds = new Set(ifcPropertyUtils.getChildrenExpressIds(event[0]?.originData));
     lastClickedMeshId = expressID; // 记录上次点击的mesh ID
   }
   // 处理场景点击事件
@@ -608,15 +611,17 @@ const tableRowClick = async (event: any) => {
     expressID = event.detail.expressID; // 来自场景点击事件
     globalId = event.detail.globalId || expressID; // 优先使用 GlobalId
     CoordinateTemp.point = event.detail.point
-    console.log('CoordinateTemp:', CoordinateTemp);
     if (expressID) {
       lastClickedMeshId = expressID; // 记录上次点击的mesh ID
-      let node = IfcPropertyUtils.findNodeByExpressId(tree, expressID);
-      console.log('node:', node);
-      structureTreeRef.value.scrollToRow(node);
+      let node = ifcPropertyUtils.findNodeByExpressId(tree, expressID);
+      if (structureTreeRef.value) {
+        structureTreeRef.value.scrollToRow(node);
+      } 
     }
     else {
-      structureTreeRef.value.clearSelected();
+      if (structureTreeRef.value) {
+        structureTreeRef.value.clearSelected();
+      } 
     }
   }
   else {
@@ -638,7 +643,7 @@ const tableRowClick = async (event: any) => {
     pageState.property = [];
 
     // 清除场景中的高亮
-    IfcPropertyUtils.clearAllHighlights(scene)
+    ifcPropertyUtils.clearAllHighlights(scene)
     const colorPicker = document.getElementById("colorPicker") as any;
     if (expressID === '' && colorPicker) {
       colorPicker.opened = false
@@ -648,8 +653,8 @@ const tableRowClick = async (event: any) => {
 
   selectedMeshId = expressID
 
-  let property = await IfcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds)
-  pageState.property = await IfcPropertyUtils.flattenTreeToGroupedItems(property);
+  let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds)
+  pageState.property = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
 
   const meshConfig = {
     scene,
@@ -668,7 +673,7 @@ const tableRowClick = async (event: any) => {
   };
 
   // 调用统一的处理方法
-  await IfcPropertyUtils.handleComponentClick(expressID, meshConfig, treeConfig);
+  await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, treeConfig);
 }
 
 

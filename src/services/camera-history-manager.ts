@@ -11,17 +11,33 @@ export interface CameraState {
 }
 
 /**
- * 相机历史管理器
+ * 相机历史管理器（单例模式）
  */
 export class CameraHistoryManager {
+  private static instance: CameraHistoryManager | null = null;
+  
   private cameraStates: CameraState[] = [];
   private currentIndex: number = -1;
   private camera: BABYLON.ArcRotateCamera | null = null;
 
-  constructor(camera?: BABYLON.ArcRotateCamera) {
+  private constructor(camera?: BABYLON.ArcRotateCamera) {
+    // 私有构造函数，防止外部实例化
     if (camera) {
       this.camera = camera;
     }
+  }
+
+  // 获取单例实例
+  public static getInstance(camera?: BABYLON.ArcRotateCamera): CameraHistoryManager {
+    if (!CameraHistoryManager.instance) {
+      CameraHistoryManager.instance = new CameraHistoryManager(camera);
+    }
+    return CameraHistoryManager.instance;
+  }
+
+  // 重置单例（如果需要）
+  public static resetInstance(): void {
+    CameraHistoryManager.instance = null;
   }
 
   /**
@@ -277,18 +293,37 @@ export class CameraHistoryManager {
     const initialState = this.createStateFromCamera(camera);
     this.setInitialState(initialState);
   }
+
+  /**
+   * 获取是否相机状态相等的方法（公共访问）
+   * @param state1 - 第一个相机状态
+   * @param state2 - 第二个相机状态
+   * @returns 是否相等
+   */
+  public isCameraStateEqualPublic(state1: CameraState, state2: CameraState): boolean {
+    return this.isCameraStateEqual(state1, state2);
+  }
+
+  /**
+   * 应用相机状态的公共方法
+   * @param state - 要应用的相机状态
+   * @param camera - 目标相机实例
+   */
+  public applyCameraStatePublic(state: CameraState, camera: BABYLON.ArcRotateCamera): void {
+    this.applyCameraState(state, camera);
+  }
 }
 
-// 创建单例实例（可选）
-export const cameraHistoryManager = new CameraHistoryManager();
+// 导出单例实例的便捷访问方式
+export const cameraHistoryManager = () => CameraHistoryManager.getInstance();
 
-// 导出工具函数（保持向后兼容）
+// 导出工具函数（保持向后兼容，使用单例）
 export const isCameraStateEqual = (state1: CameraState, state2: CameraState): boolean => {
-  const manager = new CameraHistoryManager();
-  return (manager as any).isCameraStateEqual(state1, state2);
+  const manager = CameraHistoryManager.getInstance();
+  return manager.isCameraStateEqualPublic(state1, state2);
 };
 
 export const applyCameraState = (state: CameraState, camera: BABYLON.ArcRotateCamera): void => {
-  const manager = new CameraHistoryManager();
-  (manager as any).applyCameraState(state, camera);
+  const manager = CameraHistoryManager.getInstance();
+  manager.applyCameraStatePublic(state, camera);
 };

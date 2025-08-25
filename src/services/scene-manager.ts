@@ -1,12 +1,13 @@
 import * as BABYLON from '@babylonjs/core';
 import { CubeView } from '../utils/plugin/viewer/cubeView';
-import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils/ifc-api';
+import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils/index.js';
 import { CameraHistoryManager } from './camera-history-manager';
 import { Measure } from '../utils/analysis/measure.js';
 import * as GUI from '@babylonjs/gui';
 
-
 export class SceneManager {
+  private static instance: SceneManager | null = null;
+  
   public scene: BABYLON.Scene | null = null;
   public camera: BABYLON.ArcRotateCamera | null = null;
   public light: BABYLON.DirectionalLight | null = null;
@@ -24,8 +25,22 @@ export class SceneManager {
   private isolatedMeshIds: Set<string> = new Set(); // 存储已隔离的mesh ID
   private transparentMeshIds: Set<string> = new Set(); // 存储已半透明的mesh ID
 
-  constructor() {
-    this.cameraHistoryManager = new CameraHistoryManager();
+  private constructor() {
+    // 私有构造函数，防止外部实例化
+    this.cameraHistoryManager = CameraHistoryManager.getInstance();
+  }
+
+  // 获取单例实例
+  public static getInstance(): SceneManager {
+    if (!SceneManager.instance) {
+      SceneManager.instance = new SceneManager();
+    }
+    return SceneManager.instance;
+  }
+
+  // 重置单例（如果需要）
+  public static resetInstance(): void {
+    SceneManager.instance = null;
   }
 
   /**
@@ -49,10 +64,11 @@ export class SceneManager {
       scene.getEngine().setDepthFunction(BABYLON.Engine.LEQUAL);
     });
   }
+
   /**
-     * 保存场景中所有网格的原始材质属性
-     * @param originalMaterialProperties 存储原始材质属性的Map
-     */
+   * 保存场景中所有网格的原始材质属性
+   * @param originalMaterialProperties 存储原始材质属性的Map
+   */
   public saveOriginalMaterialProperties(originalMaterialProperties: Map<string, { alpha: number }>) {
     if (!this.scene) return;
 
@@ -65,6 +81,7 @@ export class SceneManager {
       }
     });
   }
+
   /**
    * 在模型加载后设置场景
    */
@@ -241,16 +258,13 @@ export class SceneManager {
   }
 
   /**
- * 处理模型可见性控制
- * @param mode 可见性模式
- * @param hiddenMeshIds 隐藏的网格ID集合
- * @param isolatedMeshIds 隔离的网格ID集合
- * @param transparentMeshIds 半透明的网格ID集合
- * @param selectedMeshIds 选中的网格ID集合
- * @param selectedMeshId 当前选中的网格ID
- * @param originalMaterialProperties 原始材质属性映射
- * @param isClickVisibleRef 是否通过点击选择可见的引用
- */
+   * 处理模型可见性控制
+   * @param mode 可见性模式
+   * @param selectedMeshIds 选中的网格ID集合
+   * @param selectedMeshId 当前选中的网格ID
+   * @param originalMaterialProperties 原始材质属性映射
+   * @param isClickVisibleRef 是否通过点击选择可见的引用
+   */
   public handleVisibility(
     mode: 'showAll' | 'hideSelected' | 'isolateSelected' | 'transparentSelected',
     selectedMeshIds: Set<string>,
@@ -394,13 +408,13 @@ export class SceneManager {
   }
 
   /**
- * 处理测量功能
- * @param type 测量类型
- * @param measure 测量实例
- * @param CoordinateTemp 坐标临时存储
- * @param updateTempLineLabel 更新临时线标签的函数
- * @returns 新的Measure实例或null
- */
+   * 处理测量功能
+   * @param type 测量类型
+   * @param measure 测量实例
+   * @param CoordinateTemp 坐标临时存储
+   * @param updateTempLineLabel 更新临时线标签的函数
+   * @returns 新的Measure实例或null
+   */
   public handleMeasure(
     type: 'distance' | 'area' | 'angle' | 'coordinate' | 'clear',
     measure: Measure | null,
@@ -503,6 +517,7 @@ export class SceneManager {
 
     return measure;
   }
+
   /**
    * 设置剖切面
    * @param action 剖切操作

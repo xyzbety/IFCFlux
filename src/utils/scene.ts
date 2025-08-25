@@ -1,9 +1,5 @@
 import * as BABYLON from '@babylonjs/core'
-import {
-  Mesh,
-  Scene,
-  SceneInterface,
-} from '@khanonjs/engine'
+import { Scene, SceneInterface } from '@khanonjs/engine'
 
 import { SceneCamera } from '../utils/camera'
 

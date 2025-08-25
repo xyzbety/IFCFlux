@@ -36,8 +36,8 @@ onMounted(() => {
     let options = reactive({
         records: treeData,
         columns: [
-            { field: 'name', title: '名称', width: 'auto' },
-            { field: 'value', title: '值', width: 'auto' },
+            { field: 'name', title: '名称', width: '40%' },
+            { field: 'value', title: '值', width: '60%' },
         ],
         widthMode: "adaptive" as const,
         autoFillWidth: true,
@@ -75,6 +75,7 @@ onMounted(() => {
                 width: 0,
                 height: 0
             },
+            displayMode: 'basedOnContainer'
         }
     })
     treeInstance = new VTable.ListTable(document.getElementById('PropertyTable') as HTMLElement, options)

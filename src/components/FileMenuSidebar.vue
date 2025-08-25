@@ -168,10 +168,8 @@ const fileHistory = ref<any[]>([]);
 const modelManager = ModelManager.getInstance();;
 const loading = modelManager.isLoading;
 const progress = modelManager.loadProgress;
-let eventManager = new RibbonEventManager({
-  modelStore,
-  emit
-});
+let eventManager = RibbonEventManager.getInstance();
+eventManager.initialize({ modelStore, emit });
 
 const currentTheme = computed(() => themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0]);
 
@@ -253,6 +251,7 @@ const handleThemeChange = (color: string) => {
 const handleFileClick = async (item: any) => {
   close();
   await modelManager.loadModel(item.file, emit);
+  console.log("文件加载完成事件已发送，当前场景为", modelManager.currentScene);
   eventManager.initScene(modelManager.currentScene);
 };
 </script>

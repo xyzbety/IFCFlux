@@ -11,7 +11,7 @@ import { workspace, initBlocks } from "../utils/blockly/blocks";
 import { javascriptGenerator } from 'blockly/javascript';
 import { animatables } from '../utils/blockly/animation.ts';
 import * as animationFns from '../utils/blockly/animation.ts';
-import { resetModelToInitialState } from '../utils/ifc-api';
+import { resetModelToInitialState } from '../utils/index.ts';
 
 // Props
 interface Props {

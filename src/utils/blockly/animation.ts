@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
-import { createAnimatable } from "../ifc-api";
-import { hexToRgb } from "../ifc-api";
+import { createAnimatable } from "../index";
+import { hexToRgb } from "../index";
 // animation.ts
 import { useSceneStore } from "../../store/index";
 
