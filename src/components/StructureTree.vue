@@ -1,42 +1,68 @@
 <template>
-    <div class="structure-container" id="structureTree" v-if="showTable"></div>
+    <div class="structure-container" id="structureTree"></div>
 </template>
 <script setup lang="ts">
 import * as VTable from '@visactor/vtable'
-import { watch, ref, reactive, nextTick, } from 'vue'
+import { watch, ref, reactive, computed } from 'vue'
 import { useModelStore } from '../store';
 import { onMounted } from 'vue';
 import { SearchComponent } from '@visactor/vtable-search';
-
-interface Props {
-    visible: boolean
-}
-const props = withDefaults(defineProps<Props>(), {
-    visible: false
-})
-// 监听可见性变化，重新渲染表格
-watch(() => props.visible, (newVal) => {
-    if (newVal) {
-        showTable.value = false
-        nextTick(() => {
-            showTable.value = true
-        })
-    }
-})
-const showTable = ref(true)
 const emit = defineEmits(['table-cell-click', 'table-checkbox-click']);
+const rootStyles = getComputedStyle(document.documentElement);
+const themeColor = ref(rootStyles.getPropertyValue('--theme-color'));
+
+// 创建一个计算属性来动态生成主题
+const theme = computed(() => {
+    return VTable.themes.DEFAULT.extends({
+        bodyStyle: {
+            fontSize: 11.5,
+            padding: 10
+        },
+        headerStyle: {
+            fontSize: 12,
+            fontWeight: 300,
+            padding: 10
+        },
+        selectionStyle: {
+            cellBorderLineWidth: 0
+        },
+        checkboxStyle: {
+            checkedFill: themeColor.value || '#6200ee',
+            checkedStroke: themeColor.value || '#6200ee',
+        }
+    });
+});
+const props = defineProps<{
+    style?: Record<string, string>
+}>()
+// 监听 props.style 的变化
+watch(
+    () => props.style,
+    (newStyle) => {
+        if (newStyle && newStyle['--theme-color']) {
+            themeColor.value = newStyle['--theme-color'];
+            console.log('Theme color changed to:', themeColor.value);
+            // 当主题颜色变化时，更新表格主题
+            if (treeInstance) {
+                treeInstance.updateTheme(theme.value)
+            }
+        }
+    },
+    { deep: true }
+);
 
 let treeInstance: VTable.ListTable | null = null;
 let search: any;
 onMounted(() => {
 
     let treeData = ref([])
+
     watch(() => treeData.value, (newValue) => {
         if (newValue.length > 0 && treeInstance) {
             treeInstance.setRecords(treeData.value)
             treeInstance.setCellCheckboxState(0, 0, true);
             search = new SearchComponent({
-                table: treeInstance,
+                table: treeInstance as any,
                 autoJump: true,
                 highlightCellStyle: {
                     bgColor: 'rgba(231, 229, 251, 0)'
@@ -82,20 +108,7 @@ onMounted(() => {
         select: {
             highlightMode: 'row' as const,
         },
-        theme: VTable.themes.DEFAULT.extends({
-            bodyStyle: {
-                fontSize: 11.5,
-                padding: 10
-            },
-            headerStyle: {
-                fontSize: 12,
-                fontWeight: 300,
-                padding: 10
-            },
-            selectionStyle: {
-                cellBorderLineWidth: 0
-            }
-        }),
+        theme: theme.value,
         emptyTip: {
             text: '暂无数据',
             textStyle: {
@@ -104,9 +117,10 @@ onMounted(() => {
             },
             icon: {
                 width: 0,
-                height: 0
+                height: 0,
+                image: ''
             },
-            displayMode:'basedOnContainer'
+            displayMode: 'basedOnContainer' as const
         }
     })
     const { CLICK_CELL, } = VTable.ListTable.EVENT_TYPE;
@@ -126,6 +140,7 @@ onMounted(() => {
         emit('table-cell-click', args)
     });
     treeInstance.on('mouseenter_cell', args => {
+        console.log('mouseenter_cell', args);
         const { col, row } = args;
         if (treeInstance) {
             const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
@@ -146,7 +161,7 @@ onMounted(() => {
     });
 })
 
-const scrollToRow = (node) => {
+const scrollToRow = (node: any, search: any) => {
     if (!treeInstance) return;
     if (!search) return;
     if (typeof node === 'object') {

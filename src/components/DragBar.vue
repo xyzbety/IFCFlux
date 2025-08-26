@@ -123,11 +123,6 @@ defineExpose({
   border-radius: 50%;
 }
 
-/* 拖拽时的视觉反馈 */
-.drag-bar-dragging {
-  /* background: #007acc !important; */
-  /* box-shadow: 0 0 8px rgba(0, 122, 204, 0.3); */
-}
 
 /* 响应式设计 */
 @media (max-width: 768px) {

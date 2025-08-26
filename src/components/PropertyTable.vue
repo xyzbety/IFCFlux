@@ -1,28 +1,17 @@
 <template>
-    <div class="property-container" id="PropertyTable" v-if="showTable"></div>
+    <div class="property-container" id="PropertyTable" ></div>
 </template>
 <script setup lang="ts">
 import * as VTable from '@visactor/vtable'
-import { watch, ref, reactive, nextTick } from 'vue'
+import { watch, ref, reactive} from 'vue'
 import { onMounted } from 'vue';
 interface Props {
-    propertyData: any[],
-    visible: boolean
+    propertyData: any[]
 }
 const props = withDefaults(defineProps<Props>(), {
-    propertyData: () => [],
-    visible: false
+    propertyData: () => []
 })
-// 监听可见性变化，重新渲染表格
-watch(() => props.visible, (newVal) => {
-    if (newVal) {
-        showTable.value = false
-        nextTick(() => {
-            showTable.value = true
-        })
-    }
-})
-const showTable = ref(true)
+
 onMounted(() => {
     let treeData = ref<any[]>([])
     let treeInstance: VTable.ListTable | null = null;
@@ -73,9 +62,10 @@ onMounted(() => {
             },
             icon: {
                 width: 0,
-                height: 0
+                height: 0,
+                image: ''
             },
-            displayMode: 'basedOnContainer'
+            displayMode: 'basedOnContainer' as const
         }
     })
     treeInstance = new VTable.ListTable(document.getElementById('PropertyTable') as HTMLElement, options)

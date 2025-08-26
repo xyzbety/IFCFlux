@@ -10,7 +10,7 @@ import {
     Logger
 } from '@khanonjs/engine'
 
-import { onMounted, reactive } from 'vue';
+import { onMounted } from 'vue';
 import { SceneMonsters } from '../utils/scene'
 
 

@@ -236,7 +236,7 @@ function handleListClick(key: string) {
         // 找出所有属性集（key以Pset_开头且为对象）
         const psets = Object.entries(obj)
             .filter(([k, v]) => k.startsWith('Pset_') && typeof v === 'object' && v !== null);
-        for (const [psetName, psetObj] of psets) {
+        for (const [__, psetObj] of psets) {
 
             const psetObjTyped = psetObj as Record<string, unknown>;
             for (const val of Object.values(psetObjTyped)) {
@@ -371,9 +371,10 @@ function handleSearch() {
                 }
             }
         } else if (typeof value === 'object' && value !== null) {
+            const item = value as { Guid?: string; Tag?: string };
             if (
-                (value.Guid && String(value.Guid).toLowerCase().includes(keyword)) ||
-                (value.Tag && String(value.Tag).toLowerCase().includes(keyword))
+                (item.Guid && String(item.Guid).toLowerCase().includes(keyword)) ||
+                (item.Tag && String(item.Tag).toLowerCase().includes(keyword))
             ) {
                 foundKey = key;
             }
@@ -500,7 +501,9 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
 .t-list {
     overflow: visible;
 }
-
+.t-list.t-size-s .t-list-item{
+    padding: var(--td-comp-paddingTB-m) var(--td-comp-paddingLR-l)
+}
 .t-list__inner {
     border-top: 1px solid #eee;
 }

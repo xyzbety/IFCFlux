@@ -46,7 +46,7 @@ const handleTabClick = (tabId: string) => {
 </script>
 
 <template>
-  <div class="dialog" v-if="pageState.visible" ref="dialog">
+  <div class="dialog" ref="dialog">
     <div class="dialog-header">
       <div class="dialog-title">{{ title }}</div>
       <div class="dialog-actions">

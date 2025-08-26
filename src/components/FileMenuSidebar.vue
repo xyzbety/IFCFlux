@@ -130,7 +130,7 @@ import { useSettingsStore } from '../store/settings';
 import { useModelStore } from "../store/index.ts";
 import { getFileHistory } from '../utils/indexedDB';
 import { RibbonEventManager } from "../composables/useRibbonEvent.ts";
-import { themeColors, type Theme } from '../styles/themes';
+import { themeColors } from '../styles/themes';
 import ProgressBar from "./ProgressBar.vue";
 import {
   Layout as TLayout,
@@ -175,7 +175,7 @@ const currentTheme = computed(() => themeColors.find(t => t.value === settingsSt
 
 const themeVars = computed(() => {
   const theme = currentTheme.value;
-  const hexToRgba = (hex, alpha) => {
+  const hexToRgba = (hex: string, alpha: number) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);

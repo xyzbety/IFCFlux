@@ -20,9 +20,8 @@
       margin: layoutState.structureTreeWidth === 0 ? '0' : '15px'
     }">
       <Dialog :title="'构件树'" :visible="layoutState.showStructureTree" @close="toggleStructureTreeDialog">
-        <StructureTree v-show="layoutState.showStructureTree" ref="structureTreeRef" :tree-data="pageState.treeData"
-          :visible="layoutState.showStructureTree" @table-cell-click="tableRowClick"
-          @table-checkbox-click="onTableSelectChange" />
+        <StructureTree ref="structureTreeRef" :tree-data="pageState.treeData" :visible="layoutState.showStructureTree"
+          @table-cell-click="tableRowClick" @table-checkbox-click="onTableSelectChange" :style="themeStyle"/>
       </Dialog>
     </div>
 
@@ -47,7 +46,7 @@
       }">
         <div id="codeInspect" style="flex: 1 1 0;">
           <Inspect :visible="layoutState.showInspectResult" :should-init="shouldInitInspectData"
-            :inspect-type="inspectType" @update:visible="onInspectVisibleChange" />
+            :inspect-type="inspectType" @update:visible="onInspectVisibleChange" :style="themeStyle" />
           @update:visible="onInspectVisibleChange" />
         </div>
         <DragBar ref="inspectDragBarRef" v-show="layoutState.showInspectResult" side="inspect"
@@ -73,8 +72,7 @@
     }">
       <Dialog :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
         @tab-change="handleTabChange" :activeTab="activeTab">
-        <PropertyTable v-show="layoutState.showPropertyTable" :property-data="pageState.property"
-          :visible="layoutState.showPropertyTable">
+        <PropertyTable :property-data="pageState.property" :visible="layoutState.showPropertyTable">
         </PropertyTable>
       </Dialog>
     </div>
@@ -95,7 +93,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 const isTauriEnv = isTauri();
 console.log('是否在Tauri环境中运行:', isTauriEnv);
 
-import { onMounted, reactive, ref, shallowRef, watch, markRaw, computed, DefineComponent, onUnmounted } from 'vue'
+import { onMounted, reactive, ref, shallowRef, watch, markRaw, computed, onUnmounted } from 'vue'
 import * as BABYLON from '@babylonjs/core'
 import { Core } from '@khanonjs/engine/base/core/core';
 import FileMenuSidebar from './components/FileMenuSidebar.vue';
@@ -161,7 +159,7 @@ const settingsStore = useSettingsStore();
 const sceneManager = SceneManager.getInstance();
 const ifcPropertyUtils = IfcPropertyUtils.getInstance();
 const modelManager = ModelManager.getInstance();
-const KhanonViewer = shallowRef<DefineComponent | null>(null)
+const KhanonViewer = shallowRef<any>(null)
 const structureTreeRef = ref()
 const animationControllerRef = ref() // 动画控制器引用
 const leftDragBarRef = ref<InstanceType<typeof DragBar> | null>(null)
@@ -215,8 +213,8 @@ const handleRibbonTabChange = (tabIndex: number) => {
       switchToMode(LM.CANVAS_ONLY);
       shouldInitInspectData.value = false;
       break;
-    case 2: // 分析
-      switchToMode(LM.ANALYSIS);
+    case 2: // 设置
+      switchToMode(LM.VIEW);
       shouldInitInspectData.value = false;
       break;
     case 3: // 测量
@@ -291,6 +289,7 @@ const onInspectVisibleChange = (visible: boolean) => {
     // 当检查结果组件被关闭时，切换到画布模式（只显示画布）
     switchToMode(LM.CANVAS_ONLY);
     shouldInitInspectData.value = false;
+    inspectType.value = '';
   }
 };
 const toggleFileMenu = () => {
@@ -440,6 +439,7 @@ const handleFileUploaded = () => {
     sceneManager.initializeScene(scene);
     sceneManager.setIfcExplosion(new IfcExplosion(scene));
     switchToMode(LM.VIEW);
+    inspectType.value = "";
     // 初始化动画控制器
     if (animationControllerRef.value) {
       animationControllerRef.value.initializeBlockly();
@@ -474,6 +474,10 @@ const handleFileUploaded = () => {
     // 文件加载后，显示构件树和属性表
     pageState.structureDialogVisible = true;
     pageState.propertyDialogVisible = true;
+    const ribbon = document.querySelector('smart-ribbon') as any;
+    if (ribbon) {
+      ribbon.selectTab(0);
+    }
   }
 };
 
@@ -503,8 +507,8 @@ const handleInspectClick = async (event: number) => {
     3: "施工图审查",
     4: "智慧工地监管",
     5: "竣工验收"
-  }
-  inspectType.value = map[event];
+  } as const
+  inspectType.value = map[event as keyof typeof map];
   shouldInitInspectData.value = true;
   switchToMode(LM.INSPECT);
   console.log("开始检查", modelStore);
@@ -573,7 +577,7 @@ const handleSpaceGenerate = async (action: 'generate' | 'export') => {
   }
 }
 
-const onTableSelectChange = (event) => {
+const onTableSelectChange = (event: any) => {
   console.log('表格选中状态变化:', event);
 
   // 解析事件数据
