@@ -277,44 +277,44 @@ export default {
         allowedSizes: ['normal']
       }]
     },
-    // {
-    //   label: '层间滑动',
-    //   icon: 'object material-icons',
-    //   ribbonItems: [{
-    //     type: 'group',
-    //     direction: 'horizontal',
-    //     ribbonItems: [{
-    //       type: 'group',
-    //       direction: 'vertical',
-    //       ribbonItems: [{
-    //         label: 'X',
-    //         itemTemplate: '<smart-slider value="0.0" id="explosionSliderX" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
-    //       },
-    //       {
-    //         label: 'Y',
-    //         itemTemplate: '<smart-slider value="0" id="explosionSliderY" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
-    //       },
-    //       {
-    //         label: 'Z',
-    //         itemTemplate: '<smart-slider value="0" id="explosionSliderZ" show-tooltip orientation="horizontal" min="-5" max="5"  scale-position="none"></smart-slider>',
+      // {
+      //   label: '层间滑动',
+      //   icon: 'object material-icons',
+      //   ribbonItems: [{
+      //     type: 'group',
+      //     direction: 'horizontal',
+      //     ribbonItems: [{
+      //       type: 'group',
+      //       direction: 'vertical',
+      //       ribbonItems: [{
+      //         label: 'X',
+      //         itemTemplate: '<smart-slider value="0.0" id="explosionSliderX" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
+      //       },
+      //       {
+      //         label: 'Y',
+      //         itemTemplate: '<smart-slider value="0" id="explosionSliderY" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
+      //       },
+      //       {
+      //         label: 'Z',
+      //         itemTemplate: '<smart-slider value="0" id="explosionSliderZ" show-tooltip orientation="horizontal" min="-5" max="5"  scale-position="none"></smart-slider>',
 
-    //       }]
-    //     }]
-    //   },
-    //   {
-    //     label: '清除效果',
-    //     icon: 'measure_clear material-icons',
-    //     type: 'button',
-    //     cssClass: 'flat',
-    //     size: 'normal',
-    //     allowedSizes: ['normal']
-    //   },]
-    // },
+      //       }]
+      //     }]
+      //   },
+      //   {
+      //     label: '清除效果',
+      //     icon: 'measure_clear material-icons',
+      //     type: 'button',
+      //     cssClass: 'flat',
+      //     size: 'normal',
+      //     allowedSizes: ['normal']
+      //   },]
+      // },
     ]
   },
   {
     label: '检查',
-    ribbonGroups:  [{
+    ribbonGroups: [{
       label: '合标性检查',
       icon: 'compliance_inspection material-icons',
       ribbonItems: [
@@ -327,8 +327,8 @@ export default {
           size: 'normal',
           allowedSizes: ['normal']
         },
-                {
-          label: '规划构建',
+        {
+          label: '规划报建',
           icon: 'planning_construction material-icons',
           type: 'button',
           cssClass: 'flat',
@@ -336,7 +336,7 @@ export default {
           allowedSizes: ['normal']
         },
         {
-          label: '施工审查',
+          label: '施工图审查',
           icon: 'construction_review material-icons',
           type: 'button',
           cssClass: 'flat',

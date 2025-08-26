@@ -1,8 +1,9 @@
 <template>
     <div class="check-root" v-show="props.visible">
+        <t-loading :loading="loading" :text="loadingText" fullscreen />
         <!-- 顶部栏 -->
         <div class="header-bar">
-            <span class="header-title">检查结果</span>
+            <span class="header-title">{{ props.inspectType }}检查结果</span>
             <span class="header-close" @click="handleClose">
                 <svg width="18" height="18" viewBox="0 0 1024 1024" fill="#888" xmlns="http://www.w3.org/2000/svg">
                     <path
@@ -57,20 +58,21 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useModelStore } from '../store';
 import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 import { Tooltip as TTooltip } from 'tdesign-vue-next';
 
-const props = defineProps<{ visible: boolean; shouldInit: boolean }>();
+const props = defineProps<{ visible: boolean; shouldInit: boolean; inspectType: string }>();
 
 const emit = defineEmits(['update:visible']);
-const treeExpandAndFoldIcon = (h: any, { type }) => {
+const treeExpandAndFoldIcon = (h: any, { type }: { type: string }) => {
     return type === 'expand'
         ? h(ChevronRightIcon)
         : h(ChevronDownIcon);
 };
-
+let loading = ref(false);
+const loadingText = computed(() => `正在进行${props.inspectType}检查，请稍候...`);
 const searchText = ref('');
 const modelStore = useModelStore();
 const descriptions = ref<string[]>([]);
@@ -88,7 +90,7 @@ const tableColumns = [
     {
         colKey: 'op',
         title: '',
-        cell: (h, { row }) =>
+        cell: (h: any, { row }: { row: any })=>
             h(
                 'a',
                 {
@@ -125,7 +127,7 @@ const dialogTableColumns = [
         colKey: 'name',
         title: '名称',
         ellipsis: true,
-        cell: (h, params) => {
+        cell: (h: any, params: any) => {
             const children = [];
             // 用 TDesign 的 Tooltip 包裹文字
             children.push(
@@ -151,7 +153,7 @@ const dialogTableColumns = [
                     3: '#faad14',    // 深黄色
                     4: '#ffe58f'     // 浅黄色
                 };
-                const color = colorMap[params.row.state] || '#d9d9d9';
+                const color = colorMap[params.row.state as keyof typeof colorMap] || '#d9d9d9';
                 children.push(
                     h('span', {
                         style: `display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};position:absolute;right:10px;`
@@ -177,11 +179,11 @@ watch(
     () => modelStore.modelInspectData,
     (val) => {
         if (val) {
-            // 只有shouldInit为true时才初始化数据
             const data = modelStore.modelInspectData?.data;
             if (data && typeof data === 'object') {
                 descriptions.value = Object.entries(data).map(([key]) => key);
                 if (descriptions.value.length > 0) {
+                    loading.value = false;
                     handleListClick(descriptions.value[0]);
                 }
             } else {
@@ -190,36 +192,24 @@ watch(
                 tableData.value = [];
                 selectedKey.value = null;
             }
-            console.log("数据更新了");
+            console.log("数据更新了1");
         }
     },
     { immediate: true, deep: true }
 );
 
-watch(
-    () => props.shouldInit,
-    (val) => {
-        if (val) {
-            // 只有shouldInit为true时才初始化数据
-            const data = modelStore.modelInspectData?.data;
-            if (data && typeof data === 'object') {
-                descriptions.value = Object.entries(data).map(([key]) => key);
-                if (descriptions.value.length > 0) {
-                    handleListClick(descriptions.value[0]);
-                }
-            } else {
-                searchText.value = '';
-                descriptions.value = [];
-                tableData.value = [];
-                selectedKey.value = null;
-            }
-            console.log("数据更新了");
-        }
-    },
-    { immediate: true, deep: true }
-);
+
 watch(dialogTableData, (val) => {
     expandedKeys.value = getAllExpandedKeys(val);
+}, { immediate: true });
+
+watch(() => props.inspectType, (val) => {
+    console.log("检查类型变了", val);
+    searchText.value = '';
+    descriptions.value = [];
+    tableData.value = [];
+    selectedKey.value = null;
+    loading.value = true;
 }, { immediate: true });
 
 
@@ -240,7 +230,6 @@ function getAllExpandedKeys(data: any[], childrenKey = 'children') {
 function handleListClick(key: string) {
     selectedKey.value = key;
     const dataObj = modelStore.modelInspectData?.data?.[key];
-    console.log("handleListClick", key, dataObj);
     currentDataObj.value = dataObj; // 保存当前dataObj
     // 判断属性集所有子项的第一个元素是否全为0
     function isAllGreen(obj: any) {
@@ -249,7 +238,8 @@ function handleListClick(key: string) {
             .filter(([k, v]) => k.startsWith('Pset_') && typeof v === 'object' && v !== null);
         for (const [psetName, psetObj] of psets) {
 
-            for (const val of Object.values(psetObj)) {
+            const psetObjTyped = psetObj as Record<string, unknown>;
+            for (const val of Object.values(psetObjTyped)) {
                 if (!Array.isArray(val) || val[0] !== 0) {
                     return false;
                 }
@@ -276,27 +266,21 @@ function handleListClick(key: string) {
     } else {
         tableData.value = [];
     }
-    console.log("tableData", tableData.value);
 }
 
 // 查看操作
 function handleView(row: any) {
     // 假设 row 是你要展示的对象，将其属性转为 [{key, value}] 数组
-    console.log("handleView", row);
     // 通过 guid 查找完整数据
     let detail = null;
     if (Array.isArray(currentDataObj.value)) {
-        console.log("currentDataObj is array", currentDataObj.value);
         detail = currentDataObj.value.find((item: any) => item.Guid === row.guid);
-        console.log("detail found", detail);
-
     } else if (currentDataObj.value && typeof currentDataObj.value === 'object') {
         // 只有一个对象时直接用
         detail = currentDataObj.value;
     }
     if (detail) {
         dialogTableData.value = convertToTreeData(detail);
-        console.log("dialogTableData", dialogTableData.value);
         // 判断所有属性集子项的 state 是否全为 0
         let allGreen = true;
         for (const group of dialogTableData.value) {
@@ -304,7 +288,6 @@ function handleView(row: any) {
                 // 只判断属性集（_parentName !== 'Element Specific'）
                 if (group.name !== 'Element Specific') {
                     for (const child of group.children) {
-                        console.log("child", child);
                         if (child.state !== 0) {
                             allGreen = false;
                             break;
@@ -314,11 +297,10 @@ function handleView(row: any) {
             }
             if (!allGreen) break;
         }
-        console.log("allGreen", allGreen);
         dialogVisible.value = true;
     }
 }
-function convertToTreeData(obj) {
+function convertToTreeData(obj: any) {
     let idCounter = 1;
     const result = [];
 
@@ -372,12 +354,9 @@ function handleSearch() {
     const keyword = searchText.value.trim().toLowerCase();
     const dataObj = modelStore.modelInspectData?.data;
     if (!dataObj || typeof dataObj !== 'object') {
-        // 
         console.log("handleSearch", "dataObj is not an object");
         return;
     }
-    console.log("handleSearch", "dataObj", dataObj);
-    console.log("handleSearch", "keyword", keyword);
     let foundKey: string | null = null;
 
     for (const [key, value] of Object.entries(dataObj)) {
@@ -411,17 +390,12 @@ function handleSearch() {
     }
 }
 function handleClose() {
-    console.log("handleClose");
-    searchText.value = '';
-    descriptions.value = [];
-    tableData.value = [];
-    selectedKey.value = null;
     emit('update:visible', false); // 通知父组件隐藏Inspect
 }
 function onExpandedTreeNodesChange(keys: string[]) {
     expandedKeys.value = keys;
 }
-function getRowClassName({ row }) {
+function getRowClassName({ row }: { row: { allGreen: boolean } }) {
     if (!row) return '';
     if (!tableData.value || tableData.value.length === 0) return '';
     return row.allGreen === true ? 'green-border' : 'red-border';
@@ -501,7 +475,7 @@ function getRowClassName({ row }) {
 }
 
 .list-area {
-    width: 25%;
+    width: 30%;
     height: calc(100% - 15px);
     overflow: auto;
     border-right: 1px solid #eee;
@@ -509,14 +483,14 @@ function getRowClassName({ row }) {
 }
 
 .table-area {
-    width: 75%;
+    width: 70%;
     height: calc(100% - 30px);
     overflow: auto;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    margin: 15px;
+    margin: 10px;
 }
 
 .selected-item {
@@ -564,7 +538,8 @@ function getRowClassName({ row }) {
 .t-table-tr--level-0 {
     background-color: #f0f0f0 !important;
 }
-.t-table__header--fixed:not(.t-table__header--multiple) > tr > th{
+
+.t-table__header--fixed:not(.t-table__header--multiple)>tr>th {
     background-color: white !important;
 }
 

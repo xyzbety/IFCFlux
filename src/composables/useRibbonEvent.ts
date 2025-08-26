@@ -8,7 +8,7 @@ export interface RibbonEventsOptions {
 
 export class RibbonEventManager {
     private static instance: RibbonEventManager | null = null;
-    
+
     private options: RibbonEventsOptions | null = null;
     private scene: BABYLON.Scene | null = null;
     private eventMap: Map<string, { type: string; param: string }> = new Map();
@@ -103,7 +103,7 @@ export class RibbonEventManager {
 
             // 检查事件
             {
-                labels: [ "基础数据", "规划构建","施工审查", "智慧工地监管", "竣工验收"],
+                labels: ["基础数据", "规划报建", "施工图审查", "智慧工地监管", "竣工验收"],
                 type: "inspect-click",
                 params: [1, 2, 3, 4, 5]
             }
@@ -121,7 +121,7 @@ export class RibbonEventManager {
             console.warn("Options not initialized. Call initialize() first.");
             return;
         }
-        
+
         this.singleEvents.clear(); // 清空之前的事件
         this.singleEvents.set("构件树", () => this.options!.emit("build-tree"));
         this.singleEvents.set("属性表", () => this.options!.emit("properties-table"));
@@ -202,7 +202,7 @@ export class RibbonEventManager {
             // 移除之前的监听器（如果存在）
             ribbon.removeEventListener('click', this.handleRibbonClick);
             ribbon.removeEventListener('select', this.handleRibbonSelect);
-            
+
             // 添加新的监听器
             ribbon.addEventListener('click', (event) => {
                 this.handleRibbonClick(event);
@@ -256,7 +256,7 @@ export class RibbonEventManager {
             console.log("场景:", scene);
 
             if (!scene || !this.options) return;
-            
+
             const handleSliderX = document.getElementById("horizontalSliderX") as HTMLInputElement;
             const handleSliderY = document.getElementById("horizontalSliderY");
             const handleSliderZ = document.getElementById("horizontalSliderZ");

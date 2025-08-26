@@ -20,13 +20,13 @@
       margin: layoutState.structureTreeWidth === 0 ? '0' : '15px'
     }">
       <Dialog :title="'构件树'" :visible="layoutState.showStructureTree" @close="toggleStructureTreeDialog">
-        <StructureTree v-if="layoutState.showStructureTree" ref="structureTreeRef" :tree-data="pageState.treeData"
+        <StructureTree v-show="layoutState.showStructureTree" ref="structureTreeRef" :tree-data="pageState.treeData"
           :visible="layoutState.showStructureTree" @table-cell-click="tableRowClick"
           @table-checkbox-click="onTableSelectChange" />
       </Dialog>
     </div>
 
-    <DragBar ref="leftDragBarRef" v-if="layoutState.showStructureTree" side="left"
+    <DragBar ref="leftDragBarRef" v-show="layoutState.showStructureTree" side="left"
       :current-width="layoutState.structureTreeWidth" :show-handle="true" @drag-start="handleDragStart" />
 
     <div id="canvas-middle">
@@ -47,21 +47,22 @@
       }">
         <div id="codeInspect" style="flex: 1 1 0;">
           <Inspect :visible="layoutState.showInspectResult" :should-init="shouldInitInspectData"
-            @update:visible="onInspectVisibleChange" />
+            :inspect-type="inspectType" @update:visible="onInspectVisibleChange" />
+          @update:visible="onInspectVisibleChange" />
         </div>
-        <DragBar ref="inspectDragBarRef" v-if="layoutState.showInspectResult" side="inspect"
+        <DragBar ref="inspectDragBarRef" v-show="layoutState.showInspectResult" side="inspect"
           :current-width="layoutState.inspectResultWidth" :show-handle="false" @drag-start="handleDragStart" />
       </div>
 
       <!-- 主画布区域 -->
       <div id="rightArea" :style="{ flex: layoutState.showAnimationPanel ? '2 1 0' : '1 1 0' }">
         <div id="khanonjs">
-          <component :is="KhanonViewer" v-if="KhanonViewer"></component>
+          <component :is="KhanonViewer" v-show="KhanonViewer"></component>
         </div>
       </div>
     </div>
 
-    <DragBar ref="rightDragBarRef" v-if="layoutState.showPropertyTable" side="right"
+    <DragBar ref="rightDragBarRef" v-show="layoutState.showPropertyTable" side="right"
       :current-width="layoutState.propertyTableWidth" :show-handle="true" @drag-start="handleDragStart" />
 
     <!-- 属性表区域 -->
@@ -72,7 +73,7 @@
     }">
       <Dialog :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
         @tab-change="handleTabChange" :activeTab="activeTab">
-        <PropertyTable v-if="layoutState.showPropertyTable" :property-data="pageState.property"
+        <PropertyTable v-show="layoutState.showPropertyTable" :property-data="pageState.property"
           :visible="layoutState.showPropertyTable">
         </PropertyTable>
       </Dialog>
@@ -151,6 +152,7 @@ let selectedMeshIds = new Set<string>(); // 当前选中的mesh
 let originalMaterialProperties = new Map<string, { alpha: number }>(); // 存储原始材质属性
 let isClickVisible = ref(true); // 是否通过点击选择可见
 let shouldInitInspectData = ref(false);
+let inspectType = ref('');
 let lastClickedMeshId: string | null = null; // 记录上次点击的mesh ID
 
 const sceneStore = useSceneStore()
@@ -210,8 +212,8 @@ const handleRibbonTabChange = (tabIndex: number) => {
       shouldInitInspectData.value = false;
       break;
     case 1: // 检查
-      switchToMode(LM.INSPECT);
-      shouldInitInspectData.value = true;
+      switchToMode(LM.CANVAS_ONLY);
+      shouldInitInspectData.value = false;
       break;
     case 2: // 分析
       switchToMode(LM.ANALYSIS);
@@ -495,7 +497,14 @@ const handleInspectClick = async (event: number) => {
     console.warn("Invalid inspect event:", event);
     return;
   }
-
+  let map = {
+    1: "基础数据",
+    2: "规划报建",
+    3: "施工图审查",
+    4: "智慧工地监管",
+    5: "竣工验收"
+  }
+  inspectType.value = map[event];
   shouldInitInspectData.value = true;
   switchToMode(LM.INSPECT);
   console.log("开始检查", modelStore);
@@ -616,12 +625,12 @@ const tableRowClick = async (event: any) => {
       let node = ifcPropertyUtils.findNodeByExpressId(tree, expressID);
       if (structureTreeRef.value) {
         structureTreeRef.value.scrollToRow(node);
-      } 
+      }
     }
     else {
       if (structureTreeRef.value) {
         structureTreeRef.value.clearSelected();
-      } 
+      }
     }
   }
   else {

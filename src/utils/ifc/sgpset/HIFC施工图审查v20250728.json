@@ -797,7 +797,7 @@
                 "材质": "IfcText"
             },
             "Pset_耐久性属性集": { "设计使用年限": "IfcDuration" },
-            "set_声学特性属性集": { "声学性能": "IfcLabel" }
+            "Pset_声学特性属性集": { "声学性能": "IfcLabel" }
         }
     }
 }
