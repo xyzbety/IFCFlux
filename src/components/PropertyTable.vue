@@ -1,9 +1,9 @@
 <template>
-    <div class="property-container" id="PropertyTable" ></div>
+    <div class="property-container" id="PropertyTable"></div>
 </template>
 <script setup lang="ts">
 import * as VTable from '@visactor/vtable'
-import { watch, ref, reactive} from 'vue'
+import { watch, ref, reactive } from 'vue'
 import { onMounted } from 'vue';
 interface Props {
     propertyData: any[]
@@ -42,16 +42,22 @@ onMounted(() => {
         defaultRowHeight: 30,
         theme: VTable.themes.DEFAULT.extends({
             bodyStyle: {
+                bgColor:"#fdfdfd",
+                borderLineWidth:0.5,
                 fontSize: 11.5,
                 padding: 10
             },
             headerStyle: {
                 fontSize: 12,
+                borderLineWidth:0.5,
                 fontWeight: 300,
                 padding: 10
             },
             selectionStyle: {
                 cellBorderLineWidth: 0
+            },
+            scrollStyle: {
+                visible: 'always'
             }
         }),
         emptyTip: {

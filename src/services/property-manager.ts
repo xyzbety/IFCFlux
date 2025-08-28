@@ -455,6 +455,7 @@ export class IfcPropertyUtils {
       mesh.overlayColor = new BABYLON.Color4(0.68, 1.0, 1.0, 0.5); // 浅蓝色
       mesh.isVisible = true;
       this.highlightLayer!.addMesh(mesh, new BABYLON.Color3(0.0, 1.0, 1.0)); // 浅蓝色高亮
+      mesh.renderingGroupId = 1;
     });
 
     // 自动聚焦（保持原有逻辑）

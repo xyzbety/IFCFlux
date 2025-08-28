@@ -21,7 +21,11 @@ export enum LayoutMode {
   CANVAS_ONLY = 5  // 画布模式：只显示画布
 }
 
-export function useLayoutManager() {
+// 单例实例存储
+let layoutManagerInstance: ReturnType<typeof createLayoutManager> | null = null;
+
+// 创建布局管理器实例的内部函数
+function createLayoutManager() {
   // 当前布局模式
   const currentMode = ref<LayoutMode>(LayoutMode.VIEW);
 
@@ -236,6 +240,12 @@ export function useLayoutManager() {
     }
   };
 
+  // 销毁实例的方法（用于清理）
+  const destroy = () => {
+    console.log('布局管理器实例已销毁');
+    // 这里可以添加清理逻辑
+  };
+
   return {
     currentMode: computed(() => currentMode.value),
     layoutState,
@@ -251,7 +261,18 @@ export function useLayoutManager() {
     getCurrentModeName,
     isMode,
     canToggleComponents,
-    syncButtonStates, // 新增：手动同步按钮状态
+    syncButtonStates,
+    destroy,
     LayoutMode
   };
+}
+
+// 原有的导出函数保持不变
+export function useLayoutManager() {
+  if (!layoutManagerInstance) {
+    layoutManagerInstance = createLayoutManager();
+    console.log('创建新的布局管理器单例实例');
+  }
+  
+  return layoutManagerInstance;
 }

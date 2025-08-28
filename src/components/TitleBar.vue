@@ -9,7 +9,7 @@
         </div>
         <div class="title-right">
             <img src="/icons/最小化.svg" class="icon" @click="minimize" />
-            <img src="/icons/最大化.svg" class="icon" v-if="isMaximized" @click="maximize" />
+            <img src="/icons/还原.svg" class="icon" v-if="isMaximized" @click="maximize" />
             <img src="/icons/最大化.svg" class="icon" v-if="!isMaximized" @click="maximize" />
             <img src="/icons/关闭.svg" class="icon" @click="close" />
         </div>

@@ -10,16 +10,21 @@ import { SearchComponent } from '@visactor/vtable-search';
 const emit = defineEmits(['table-cell-click', 'table-checkbox-click']);
 const rootStyles = getComputedStyle(document.documentElement);
 const themeColor = ref(rootStyles.getPropertyValue('--theme-color'));
+const props = defineProps<{
+    style?: Record<string, string>
+}>()
 
-// 创建一个计算属性来动态生成主题
 const theme = computed(() => {
     return VTable.themes.DEFAULT.extends({
         bodyStyle: {
+            bgColor: "#fdfdfd",
+            borderLineWidth: 0.5,
             fontSize: 11.5,
             padding: 10
         },
         headerStyle: {
             fontSize: 12,
+            borderLineWidth: 0.5,
             fontWeight: 300,
             padding: 10
         },
@@ -27,35 +32,102 @@ const theme = computed(() => {
             cellBorderLineWidth: 0
         },
         checkboxStyle: {
-            checkedFill: themeColor.value || '#6200ee',
-            checkedStroke: themeColor.value || '#6200ee',
+            checkedFill: themeColor.value,
+            checkedStroke: themeColor.value,
+        },
+        scrollStyle: {
+            visible: 'always'
         }
     });
 });
-const props = defineProps<{
-    style?: Record<string, string>
-}>()
-// 监听 props.style 的变化
-watch(
-    () => props.style,
-    (newStyle) => {
-        if (newStyle && newStyle['--theme-color']) {
-            themeColor.value = newStyle['--theme-color'];
-            console.log('Theme color changed to:', themeColor.value);
-            // 当主题颜色变化时，更新表格主题
-            if (treeInstance) {
-                treeInstance.updateTheme(theme.value)
-            }
-        }
-    },
-    { deep: true }
-);
 
 let treeInstance: VTable.ListTable | null = null;
+let treeData = ref([])
 let search: any;
-onMounted(() => {
+let options = reactive({
+    records: treeData,
+    columns: [
+        {
+            headerType: 'checkbox' as const, //指定表头单元格显示为复选框
+            cellType: 'checkbox' as const,
+            field: 'check',
+            width: "11%" as const,
+            style: {
+                checkedFill: themeColor.value,
+                checkedStroke: themeColor.value,
+                defaultFill: 'transparent',
+                defaultStroke: '#d0d0d0'
+            } as any
+        },
+        {
+            field: 'typeShow',
+            title: '类型',
+            width: '50%' as const,
+            tree: true,
 
-    let treeData = ref([])
+        },
+        { field: 'name', title: '名称', width: '39%' as const },
+    ],
+    widthMode: 'adaptive' as const,
+    autoFillWidth: true,
+    hierarchyExpandLevel: 6,
+    hierarchyIndent: 2,
+    hierarchyTextStartAlignment: true,
+    defaultRowHeight: 30,
+    select: {
+        highlightMode: 'row' as const,
+    },
+    theme: theme.value,
+    emptyTip: {
+        text: '暂无数据',
+        textStyle: {
+            fontSize: 12,
+            color: '#999'
+        },
+        icon: {
+            width: 0,
+            height: 0,
+            image: ''
+        },
+        displayMode: 'basedOnContainer' as const
+    }
+})
+
+onMounted(() => {
+    watch(
+        () => props.style,
+        (newStyle) => {
+            if (newStyle && newStyle['--theme-color']) {
+                themeColor.value = newStyle['--theme-color'];
+
+                if (treeInstance) {
+                    // 更新整个配置对象
+                    const newOptions = {
+                        ...options,
+                        theme: theme.value,
+                        columns: [
+                            {
+                                headerType: 'checkbox' as const,
+                                cellType: 'checkbox' as const,
+                                field: 'check',
+                                width: "11%" as const,
+                                style: {
+                                    checkedFill: themeColor.value,
+                                    checkedStroke: themeColor.value,
+                                    defaultFill: 'transparent',
+                                    defaultStroke: '#d0d0d0'
+                                } as any
+                            },
+                            ...options.columns.slice(1) // 保持其他列
+                        ]
+                    };
+                    treeInstance.updateOption(newOptions);
+                    treeInstance.setCellCheckboxState(0, 0, true);
+                }
+            }
+        },
+        { deep: true }
+    );
 
     watch(() => treeData.value, (newValue) => {
         if (newValue.length > 0 && treeInstance) {
@@ -81,49 +153,8 @@ onMounted(() => {
         treeData.value = newValue.tree
     }, { deep: true, immediate: true });
 
-    let options = reactive({
-        records: treeData,
-        columns: [
-            {
-                headerType: 'checkbox' as const, //指定表头单元格显示为复选框
-                cellType: 'checkbox' as const,
-                field: 'check',
-                width: "11%" as const,
-            },
-            {
-                field: 'typeShow',
-                title: '类型',
-                width: '50%' as const,
-                tree: true,
 
-            },
-            { field: 'name', title: '名称', width: '39%' as const },
-        ],
-        widthMode: 'adaptive' as const,
-        autoFillWidth: true,
-        hierarchyExpandLevel: 6,
-        hierarchyIndent: 2,
-        hierarchyTextStartAlignment: true,
-        defaultRowHeight: 30,
-        select: {
-            highlightMode: 'row' as const,
-        },
-        theme: theme.value,
-        emptyTip: {
-            text: '暂无数据',
-            textStyle: {
-                fontSize: 12,
-                color: '#999'
-            },
-            icon: {
-                width: 0,
-                height: 0,
-                image: ''
-            },
-            displayMode: 'basedOnContainer' as const
-        }
-    })
-    const { CLICK_CELL, } = VTable.ListTable.EVENT_TYPE;
+    const { CLICK_CELL } = VTable.ListTable.EVENT_TYPE;
     treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
     treeInstance.on(CLICK_CELL, (...args) => {
         if (treeInstance) {
@@ -161,13 +192,13 @@ onMounted(() => {
     });
 })
 
-const scrollToRow = (node: any, search: any) => {
+const scrollToRow = (node: any) => {
     if (!treeInstance) return;
     if (!search) return;
     if (typeof node === 'object') {
         let result = search.search(node.expressId).results;
         let row = result[0].range.start.row;
-        let col = 1;
+        let col = 0;
         treeInstance.scrollToCell({ row, col });
         treeInstance.selectCell(col, row);
         return;

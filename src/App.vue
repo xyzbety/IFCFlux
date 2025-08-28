@@ -21,7 +21,7 @@
     }">
       <Dialog :title="'构件树'" :visible="layoutState.showStructureTree" @close="toggleStructureTreeDialog">
         <StructureTree ref="structureTreeRef" :tree-data="pageState.treeData" :visible="layoutState.showStructureTree"
-          @table-cell-click="tableRowClick" @table-checkbox-click="onTableSelectChange" :style="themeStyle"/>
+          @table-cell-click="tableRowClick" @table-checkbox-click="onTableSelectChange" :style="themeStyle" />
       </Dialog>
     </div>
 
@@ -159,6 +159,10 @@ const settingsStore = useSettingsStore();
 const sceneManager = SceneManager.getInstance();
 const ifcPropertyUtils = IfcPropertyUtils.getInstance();
 const modelManager = ModelManager.getInstance();
+const {
+  layoutState, switchToMode, isMode, toggleStructureTree, togglePropertyTable, canToggleComponents,
+  setStructureTreeWidth, setPropertyTableWidth, setInspectResultWidth, LayoutMode: LM,
+} = useLayoutManager();
 const KhanonViewer = shallowRef<any>(null)
 const structureTreeRef = ref()
 const animationControllerRef = ref() // 动画控制器引用
@@ -176,11 +180,6 @@ const pageState = reactive({
   propertyAll: [] as any[],
   property: [] as any[], // 构件特性
 })
-
-const {
-  layoutState, switchToMode, isMode, toggleStructureTree, togglePropertyTable, canToggleComponents,
-  setStructureTreeWidth, setPropertyTableWidth, setInspectResultWidth, LayoutMode: LM,
-} = useLayoutManager();
 
 const themeStyle = computed(() => {
   const currentTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
@@ -471,9 +470,6 @@ const handleFileUploaded = () => {
     structureTreeRef.value.scrollToRow(1)
     structureTreeRef.value.clearSelected();
 
-    // 文件加载后，显示构件树和属性表
-    pageState.structureDialogVisible = true;
-    pageState.propertyDialogVisible = true;
     const ribbon = document.querySelector('smart-ribbon') as any;
     if (ribbon) {
       ribbon.selectTab(0);
@@ -703,6 +699,7 @@ const handleTabChange = (event: any) => {
 }
 
 onMounted(async () => {
+  switchToMode(LM.CANVAS_ONLY);
   setTimeout(() => {
     const initialTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
     const ribbonElement = document.querySelector('#ribbon .smart-ribbon-header');
@@ -719,7 +716,7 @@ onMounted(async () => {
   window.addEventListener("mouse-down", handleHisBefore)
   window.addEventListener("mouse-up", handleHisAfter)
   window.addEventListener("mouse-wheel", handleHisBefore)
-  switchToMode(LM.VIEW);
+
 
   window.addEventListener("resize", async () => {
     if (isTauriEnv) {

@@ -96,9 +96,9 @@ export class RibbonEventManager {
 
             // 爆炸图事件
             {
-                labels: ["清除效果"],
+                labels: ["楼层抽屉","轴向爆炸","清除效果"],
                 type: "explosion-event",
-                params: ["clear"]
+                params: ["drawer","axis","clear"]
             },
 
             // 检查事件
@@ -125,7 +125,7 @@ export class RibbonEventManager {
         this.singleEvents.clear(); // 清空之前的事件
         this.singleEvents.set("构件树", () => this.options!.emit("build-tree"));
         this.singleEvents.set("属性表", () => this.options!.emit("properties-table"));
-        this.singleEvents.set("重置", () => this.options!.emit("light-settings-reset"));
+        this.singleEvents.set("重置光照", () => this.options!.emit("light-settings-reset"));
     }
 
     /**
@@ -138,8 +138,6 @@ export class RibbonEventManager {
             console.warn("RibbonEventManager not initialized. Call initialize() first.");
             return false;
         }
-
-        console.log("按钮被点击:", label);
 
         // 检查单独事件
         const singleEvent = this.singleEvents.get(label);
@@ -213,8 +211,6 @@ export class RibbonEventManager {
             });
         }
 
-        // 绑定爆炸滑块事件
-        this.bindExplosionSliderEvents();
         console.log("绑定成功");
     }
 
@@ -339,40 +335,5 @@ export class RibbonEventManager {
         }
     }
 
-    private bindExplosionSliderEvents() {
-        const explosionSliderX = document.getElementById("explosionSliderX");
-        const explosionSliderY = document.getElementById("explosionSliderY");
-        const explosionSliderZ = document.getElementById("explosionSliderZ");
 
-        if (explosionSliderX) {
-            explosionSliderX.addEventListener('change', (event: any) => {
-                this.explosionX.value = event.detail.value;
-                this.emitExplosion();
-            })
-        }
-
-        if (explosionSliderY) {
-            explosionSliderY.addEventListener('change', (event: any) => {
-                this.explosionY.value = event.detail.value;
-                this.emitExplosion();
-            })
-        }
-
-        if (explosionSliderZ) {
-            explosionSliderZ.addEventListener('change', (event: any) => {
-                this.explosionZ.value = event.detail.value;
-                this.emitExplosion();
-            })
-        }
-    }
-
-    private emitExplosion() {
-        if (this.options) {
-            this.options.emit('explosion-event', {
-                X: this.explosionX.value,
-                Y: this.explosionY.value,
-                Z: this.explosionZ.value
-            });
-        }
-    }
 }

@@ -1,6 +1,6 @@
 <template>
     <div class="check-root" v-show="props.visible">
-        <t-loading :loading="loading" :text="loadingText" fullscreen />
+        <t-loading :text="loadingText" class="loading-container" :loading="loading" />
         <!-- 顶部栏 -->
         <div class="header-bar">
             <span class="header-title">{{ props.inspectType }}检查结果</span>
@@ -90,7 +90,7 @@ const tableColumns = [
     {
         colKey: 'op',
         title: '',
-        cell: (h: any, { row }: { row: any })=>
+        cell: (h: any, { row }: { row: any }) =>
             h(
                 'a',
                 {
@@ -417,6 +417,16 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
     position: relative;
 }
 
+.loading-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 999;
+}
+
 /* 顶部栏 */
 .header-bar {
     width: 100%;
@@ -501,9 +511,11 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
 .t-list {
     overflow: visible;
 }
-.t-list.t-size-s .t-list-item{
+
+.t-list.t-size-s .t-list-item {
     padding: var(--td-comp-paddingTB-m) var(--td-comp-paddingLR-l)
 }
+
 .t-list__inner {
     border-top: 1px solid #eee;
 }

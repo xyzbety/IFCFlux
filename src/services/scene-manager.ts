@@ -7,7 +7,7 @@ import * as GUI from '@babylonjs/gui';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
-  
+
   public scene: BABYLON.Scene | null = null;
   public camera: BABYLON.ArcRotateCamera | null = null;
   public light: BABYLON.DirectionalLight | null = null;
@@ -555,6 +555,7 @@ export class SceneManager {
    * @param type 爆炸参数
    */
   public handleExplosion(type: any) {
+    console.log("爆炸类型", type);
     if (!this.scene || !this.ifcExplosion) return;
 
     if (type === 'clear') {
@@ -562,13 +563,9 @@ export class SceneManager {
       return;
     }
 
-    let axisVec = new BABYLON.Vector3(
-      Number(type.X) || 0,
-      Number(type.Y) || 0,
-      Number(type.Z) || 0
-    );
-
-    this.ifcExplosion.bom(axisVec);
+    if (type === 'axis') {
+      this.ifcExplosion.bom(new BABYLON.Vector3(0, 0.5,0));
+    }
   }
 
   /**

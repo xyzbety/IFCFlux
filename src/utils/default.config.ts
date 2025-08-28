@@ -277,39 +277,34 @@ export default {
         allowedSizes: ['normal']
       }]
     },
-      // {
-      //   label: '层间滑动',
-      //   icon: 'object material-icons',
-      //   ribbonItems: [{
-      //     type: 'group',
-      //     direction: 'horizontal',
-      //     ribbonItems: [{
-      //       type: 'group',
-      //       direction: 'vertical',
-      //       ribbonItems: [{
-      //         label: 'X',
-      //         itemTemplate: '<smart-slider value="0.0" id="explosionSliderX" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
-      //       },
-      //       {
-      //         label: 'Y',
-      //         itemTemplate: '<smart-slider value="0" id="explosionSliderY" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
-      //       },
-      //       {
-      //         label: 'Z',
-      //         itemTemplate: '<smart-slider value="0" id="explosionSliderZ" show-tooltip orientation="horizontal" min="-5" max="5"  scale-position="none"></smart-slider>',
-
-      //       }]
-      //     }]
-      //   },
-      //   {
-      //     label: '清除效果',
-      //     icon: 'measure_clear material-icons',
-      //     type: 'button',
-      //     cssClass: 'flat',
-      //     size: 'normal',
-      //     allowedSizes: ['normal']
-      //   },]
-      // },
+    // {
+    //   label: '楼层爆炸',
+    //   icon: 'floor_explosion material-icons',
+    //   ribbonItems: [{
+    //     label: '楼层抽屉',
+    //     icon: 'floor_drawer material-icons',
+    //     type: 'button',
+    //     cssClass: 'flat',
+    //     size: 'normal',
+    //     allowedSizes: ['normal']
+    //   },
+    //   {
+    //     label: '轴向爆炸',
+    //     icon: 'axis_explosion material-icons',
+    //     type: 'button',
+    //     cssClass: 'flat',
+    //     size: 'normal',
+    //     allowedSizes: ['normal']
+    //   },
+    //   {
+    //     label: '清除效果',
+    //     icon: 'measure_clear material-icons',
+    //     type: 'button',
+    //     cssClass: 'flat',
+    //     size: 'normal',
+    //     allowedSizes: ['normal']
+    //   },]
+    // },
     ]
   },
   {
@@ -467,8 +462,8 @@ export default {
         }]
       },
       {
-        label: '重置',
-        icon: 'measure_clear material-icons',
+        label: '重置光照',
+        icon: 'reset_light material-icons',
         type: 'button',
         cssClass: 'flat',
         size: 'normal',

@@ -40,15 +40,15 @@
 /* 页面加载的loading样式 */
 .loader-container {
   width: 100%;
-  height: 100%;
+  height: calc(100vh - 170px);
   position: absolute;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  top: 130px;
+  top: 170px;
   left: 0;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.7);
   z-index: 999;
   text-align: center;
 }
@@ -525,14 +525,13 @@ smart-ribbon-group[grouped] smart-drop-down-button {
 }
 
 .default_view:after {
-  width: 15px;
-  height: 15px;
+  width: 32px;
+  height: 32px;
   content: "";
   display: block;
   background-image: url(/icons/默认视图.svg);
   background-size: cover;
   background-position: center;
-  transform: scale(2.0);
 }
 
 .top_view:after {
@@ -804,12 +803,39 @@ smart-ribbon-group[grouped] smart-drop-down-button {
   background-size: cover;
   background-position: center;
 }
-.planning_construction:after {
+.properties_table:after {
   width: 32px;
   height: 32px;
   content: "";
   display: block;
-  background-image: url(/icons/规划报建.svg);
+  background-image: url(/icons/属性.svg);
+  background-size: cover;
+  background-position: center;
+}
+.floor_drawer:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/楼层抽屉.svg);
+  background-size: cover;
+  background-position: center;
+}
+.axis_explosion:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/轴向爆炸.svg);
+  background-size: cover;
+  background-position: center;
+}
+.floor_explosion:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/楼层爆炸.svg);
   background-size: cover;
   background-position: center;
 }
@@ -819,6 +845,15 @@ smart-ribbon-group[grouped] smart-drop-down-button {
   content: "";
   display: block;
   background-image: url(/icons/基础数据.svg);
+  background-size: cover;
+  background-position: center;
+}
+.planning_construction:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/规划报建.svg);
   background-size: cover;
   background-position: center;
 }
@@ -855,6 +890,15 @@ smart-ribbon-group[grouped] smart-drop-down-button {
   content: "";
   display: block;
   background-image: url(/icons/合标性检查.svg);
+  background-size: cover;
+  background-position: center;
+}
+.reset_light:after {
+  width: 32px;
+  height: 32px;
+  content: "";
+  display: block;
+  background-image: url(/icons/重置光照.svg);
   background-size: cover;
   background-position: center;
 }

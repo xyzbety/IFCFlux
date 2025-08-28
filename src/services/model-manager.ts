@@ -6,10 +6,12 @@ import { IfcInspect } from "../utils/ifc/IfcInspect.js";
 import { IfcPropertyUtils } from './property-manager.ts';
 import { addFileHistory } from '../utils/indexedDB.ts';
 import { useModelStore } from '../store/index.ts';
+import { useLayoutManager } from '../composables/useLayoutManager.ts';
+const { switchToMode, LayoutMode: LM } = useLayoutManager();
 
 export class ModelManager {
   private static instance: ModelManager | null = null;
-  
+
   private scene: BABYLON.Scene | null = null;
   private loading: Ref<boolean>;
   private progress: Ref<{
@@ -60,20 +62,21 @@ export class ModelManager {
   public async loadModel(file: File, emit: Function): Promise<void> {
     try {
       this.loading.value = true;
+      switchToMode(LM.CANVAS_ONLY);
       await this.addToFileHistory(file);
-      
+
       // 清理现有场景（现在 this.scene 可能不为 null）
       this.clearExistingScene();
-      
+
       console.log("开始加载模型...");
       this.updateProgress(0, 1, "打开文件");
 
       this.scene = this.getActiveScene();
       console.log("新场景已设置:", this.scene);
-      
+
       const ifcLoader = new IfcLoader(file, this.scene);
-          
-      await this.loadWithProgress(ifcLoader,file, emit);
+
+      await this.loadWithProgress(ifcLoader, file, emit);
       console.log("模型加载完成");
     } catch (error) {
       console.error("加载失败:", error);
@@ -98,7 +101,7 @@ export class ModelManager {
 
   private clearExistingScene(): void {
     console.log("开始清理现有场景...", this.scene);
-    
+
     if (!this.scene) {
       console.log("当前没有场景需要清理");
       return;
@@ -111,7 +114,7 @@ export class ModelManager {
     this.scene.textures.slice().forEach(tex => tex?.dispose());
     this.modelStore.clearModel();
     this.modelStore.clearModelInspectData();
-    
+
     // 清理完成后将场景设为 null
     this.scene = null;
     console.log("场景清理完成");
@@ -126,8 +129,8 @@ export class ModelManager {
     return scenes[0].babylon.scene;
   }
 
-  public setupInspectDataListener(file: File,type:number): void {
-    const ifcInspect = new IfcInspect(file,type);
+  public setupInspectDataListener(file: File, type: number): void {
+    const ifcInspect = new IfcInspect(file, type);
     console.log("开始监听模型检查数据...", file);
     const checkInterval = setInterval(() => {
       if (ifcInspect.ifcData) {
@@ -140,7 +143,7 @@ export class ModelManager {
     setTimeout(() => clearInterval(checkInterval), 100000);
   }
 
-  private async loadWithProgress(ifcLoader: IfcLoader,file: File,emit: Function): Promise<void> {
+  private async loadWithProgress(ifcLoader: IfcLoader, file: File, emit: Function): Promise<void> {
     const proxyLoader = new Proxy(ifcLoader, {
       set: (target, prop, value) => {
         const result = Reflect.set(target, prop, value);
@@ -148,8 +151,8 @@ export class ModelManager {
           this.updateProgress(
             value,
             target.totalCount,
-            value === 0 ? "打开文件" : 
-            value === target.totalCount ? "完成" : "创建图元"
+            value === 0 ? "打开文件" :
+              value === target.totalCount ? "完成" : "创建图元"
           );
         }
         return result;
@@ -172,7 +175,7 @@ export class ModelManager {
 
   private handleSceneReady(): void {
     if (!this.scene) return;
-    
+
     this.scene.onReadyObservable.add(async () => {
       await nextTick();
       console.log('场景已就绪', this.scene);

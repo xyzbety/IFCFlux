@@ -21,7 +21,6 @@
     "@tauri-apps/plugin-fs": "^2.4.1",
     "@visactor/vtable": "^1.19.6",
     "@visactor/vtable-search": "^1.19.7",
-    "@visactor/vue-vtable": "^1.19.6",
     "blockly": "^12.2.0",
     "pinia": "^3.0.3",
     "reflect-metadata": "^0.2.2",
