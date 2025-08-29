@@ -14,13 +14,6 @@ export interface MeshHighlightConfig {
   isFocus: boolean;
 }
 
-export interface TreeSyncConfig {
-  treeData: any[];
-  structureTreeRef?: any;
-  pageState: {
-    structureDialogVisible: boolean;
-  };
-}
 
 export class IfcPropertyUtils {
   private static instance: IfcPropertyUtils | null = null;
@@ -360,7 +353,7 @@ export class IfcPropertyUtils {
   public async handleComponentClick(
     expressID: string,
     meshConfig: MeshHighlightConfig,
-    treeConfig?: TreeSyncConfig
+    treeData?: any[]
   ): Promise<boolean> {
     if (!expressID || !meshConfig.scene) {
       console.warn('handleComponentClick: expressID or scene is missing');
@@ -368,7 +361,7 @@ export class IfcPropertyUtils {
     }
 
     try {
-      const highlighted = await this.highlightComponentMesh(expressID, meshConfig, treeConfig?.treeData);
+      const highlighted = await this.highlightComponentMesh(expressID, meshConfig, treeData);
       return highlighted;
     } catch (error) {
       console.error('handleComponentClick error:', error);

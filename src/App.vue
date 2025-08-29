@@ -45,9 +45,8 @@
         height: '100%'
       }">
         <div id="codeInspect" style="flex: 1 1 0;">
-          <Inspect :visible="layoutState.showInspectResult" :should-init="shouldInitInspectData"
-            :inspect-type="inspectType" @update:visible="onInspectVisibleChange" :style="themeStyle" />
-          @update:visible="onInspectVisibleChange" />
+          <Inspect :visible="layoutState.showInspectResult" :inspect-type="inspectType"
+            @update:visible="onInspectVisibleChange" :style="themeStyle" />
         </div>
         <DragBar ref="inspectDragBarRef" v-show="layoutState.showInspectResult" side="inspect"
           :current-width="layoutState.inspectResultWidth" :show-handle="false" @drag-start="handleDragStart" />
@@ -149,7 +148,6 @@ let CoordinateTemp = {
 let selectedMeshIds = new Set<string>(); // 当前选中的mesh
 let originalMaterialProperties = new Map<string, { alpha: number }>(); // 存储原始材质属性
 let isClickVisible = ref(true); // 是否通过点击选择可见
-let shouldInitInspectData = ref(false);
 let inspectType = ref('');
 let lastClickedMeshId: string | null = null; // 记录上次点击的mesh ID
 
@@ -173,8 +171,6 @@ const rightDragBarRef = ref<InstanceType<typeof DragBar> | null>(null)
 const ifcPropertyColumn = shallowRef(markRaw(ifcPropertyColumns[0]))
 const activeTab = ref('property')
 const pageState = reactive({
-  structureDialogVisible: false,  // 场景目录
-  propertyDialogVisible: false,  // 构件特性
   treeData: [] as any[],
   ifcExpressIds: [] as any[],
   propertyAll: [] as any[],
@@ -202,34 +198,44 @@ watch(() => settingsStore.themeColor, (newColor) => {
 // 处理 Ribbon 标签页切换
 const handleRibbonTabChange = (tabIndex: number) => {
   console.log('Ribbon tab changed to:', tabIndex);
+  console.log("当前场景为:", scene);
 
   switch (tabIndex) {
     case 0: // 查看
-      switchToMode(LM.VIEW);
-      shouldInitInspectData.value = false;
+      // 只有在场景存在时才切换到VIEW模式，否则保持CANVAS_ONLY
+      if (scene) {
+        switchToMode(LM.VIEW);
+      } else {
+        switchToMode(LM.CANVAS_ONLY);
+      }
       break;
     case 1: // 检查
       switchToMode(LM.CANVAS_ONLY);
-      shouldInitInspectData.value = false;
       break;
     case 2: // 设置
-      switchToMode(LM.VIEW);
-      shouldInitInspectData.value = false;
+      // 只有在场景存在时才切换到VIEW模式，否则保持CANVAS_ONLY
+      if (scene) {
+        switchToMode(LM.VIEW);
+      } else {
+        switchToMode(LM.CANVAS_ONLY);
+      }
       break;
     case 3: // 测量
       switchToMode(LM.MEASURE);
-      shouldInitInspectData.value = false;
       break;
     case 4: // 动画
       switchToMode(LM.ANIMATION);
-      shouldInitInspectData.value = false;
       if (animationControllerRef.value) {
         animationControllerRef.value.initializeBlockly();
       }
       break;
     default:
-      switchToMode(LM.VIEW);
-      shouldInitInspectData.value = false;
+      // 默认情况下也检查场景状态
+      if (scene) {
+        switchToMode(LM.VIEW);
+      } else {
+        switchToMode(LM.CANVAS_ONLY);
+      }
   }
 };
 
@@ -287,7 +293,6 @@ const onInspectVisibleChange = (visible: boolean) => {
   if (!visible) {
     // 当检查结果组件被关闭时，切换到画布模式（只显示画布）
     switchToMode(LM.CANVAS_ONLY);
-    shouldInitInspectData.value = false;
     inspectType.value = '';
   }
 };
@@ -421,7 +426,6 @@ function resetGlobalVariables() {
   if (animationControllerRef.value) {
     animationControllerRef.value.resetAnimationState();
   }
-  shouldInitInspectData.value = false;
 }
 
 // 文件上传事件
@@ -491,6 +495,7 @@ const handleAnimationClick = (event: string) => {
 };
 const handleInspectClick = async (event: number) => {
   console.log("handleInspectClick", event);
+  if(!scene) return;
 
   // 验证事件参数
   if (![1, 2, 3, 4, 5].includes(event)) {
@@ -505,7 +510,6 @@ const handleInspectClick = async (event: number) => {
     5: "竣工验收"
   } as const
   inspectType.value = map[event as keyof typeof map];
-  shouldInitInspectData.value = true;
   switchToMode(LM.INSPECT);
   console.log("开始检查", modelStore);
 
@@ -672,17 +676,8 @@ const tableRowClick = async (event: any) => {
     isHighlight: isHightlight,
     isFocus
   };
-
-  const treeConfig = {
-    treeData: pageState.treeData,
-    structureTreeRef: structureTreeRef.value,
-    pageState: {
-      structureDialogVisible: pageState.structureDialogVisible
-    }
-  };
-
   // 调用统一的处理方法
-  await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, treeConfig);
+  await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, pageState.treeData);
 }
 
 

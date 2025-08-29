@@ -63,7 +63,7 @@ import { useModelStore } from '../store';
 import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 import { Tooltip as TTooltip } from 'tdesign-vue-next';
 
-const props = defineProps<{ visible: boolean; shouldInit: boolean; inspectType: string }>();
+const props = defineProps<{ visible: boolean; inspectType: string }>();
 
 const emit = defineEmits(['update:visible']);
 const treeExpandAndFoldIcon = (h: any, { type }: { type: string }) => {
