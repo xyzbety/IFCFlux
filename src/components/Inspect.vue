@@ -40,11 +40,12 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
+                    @row-click="handleRowClick" :activeRowKeys="activeRowKeys" :active-row-type="'single'" actived
                     :max-height="'100%'" :table-layout="'auto'" :row-class-name="getRowClassName" rowKey="guid" />
             </div>
         </div>
         <!-- 弹框 -->
-        <t-dialog v-model:visible="dialogVisible" header="属性赋值详情" width="400px" :showOverlay="false" :footer="null">
+        <t-dialog v-model:visible="dialogVisible" header="属性赋值详情" width="400px" :footer="null" ref="dialogRef">
             <div style="max-height:45vh; overflow: auto;">
                 <div style="max-height: 45vh; overflow: auto;">
                     <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
@@ -58,11 +59,12 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { useModelStore } from '../store';
 import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 import { Tooltip as TTooltip } from 'tdesign-vue-next';
-
+import { SceneManager } from '../services/scene-manager';
+import { IfcPropertyUtils } from '../services/property-manager';
 const props = defineProps<{ visible: boolean; inspectType: string }>();
 
 const emit = defineEmits(['update:visible']);
@@ -72,9 +74,13 @@ const treeExpandAndFoldIcon = (h: any, { type }: { type: string }) => {
         : h(ChevronDownIcon);
 };
 let loading = ref(false);
+let activeRowKeys = ref<Array<string>>([]);
 const loadingText = computed(() => `正在进行${props.inspectType}检查，请稍候...`);
 const searchText = ref('');
 const modelStore = useModelStore();
+const sceneManager = SceneManager.getInstance();
+const ifcPropertyUtils = IfcPropertyUtils.getInstance();
+
 const descriptions = ref<string[]>([]);
 const selectedKey = ref<string | null>(null);
 const tableData = ref<any[]>([]);
@@ -83,6 +89,58 @@ const expandedKeys = ref<string[]>([]);
 // 弹框控制和数据
 const dialogVisible = ref(false);
 const dialogTableData = ref<any[]>([]);
+const dialogRef = ref<any>(null);
+// 点击外部关闭弹框的处理函数
+
+const handleGlobalClick = (event: Event) => {
+    console.log('全局点击', event.target,event.target.tagName);
+    // if(sceneManager.scene && event.target.tagName === 'DIV'){
+    //     ifcPropertyUtils.clearAllHighlights(sceneManager.scene)
+    // }
+    const target = event.target as HTMLElement;
+    const clickedRow = target.closest('tbody tr');
+
+    const dialogElement = document.querySelector('.t-dialog__ctx') as HTMLElement;
+
+    if (window.getComputedStyle(dialogElement).display === 'block') {
+        dialogVisible.value = false;
+        console.log('点击弹框外区域，关闭弹框');
+        return;
+    } else {
+        // 弹框未打开时，正常处理表格行高亮逻辑
+        if (!clickedRow && activeRowKeys.value.length > 0) {
+            activeRowKeys.value = [];
+            ifcPropertyUtils.clearAllHighlights(sceneManager.scene)
+            console.log('点击非表格行区域，清除高亮');
+        }
+    }
+};
+const handleRowClick = async (event: any) => {
+    console.log('表格行点击', event)
+    activeRowKeys.value = [event.row.guid];
+    const mesh = sceneManager.scene?.meshes.find(m => m.id === event.row.guid);
+    if (mesh && mesh.name) {
+        console.log('对应的mesh', mesh);
+        console.log(sceneManager.scene)
+        const expressID = mesh.name
+        const modelData = modelStore.modelData
+
+        let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
+        const meshConfig = {
+            scene: sceneManager.scene,
+            selectedMeshId: expressID,
+            globalId: expressID,
+            isHighlight: true,
+            isFocus: false
+        };
+        // 调用统一的处理方法
+        await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
+    } else {
+        alert("未找到对应模型");
+        return;
+    }
+
+}
 const tableColumns = [
     { colKey: 'guid', title: 'GUID', ellipsis: true },
     { colKey: 'name', title: 'Name', ellipsis: true },
@@ -95,7 +153,12 @@ const tableColumns = [
                 'a',
                 {
                     style: 'color: #0052d9; cursor: pointer; display: flex; align-items: center; justify-content: center;',
-                    onClick: () => handleView(row)
+                    onClick: (event: Event) => {
+                        // 阻止事件冒泡，防止触发 handleGlobalClick
+                        event.stopPropagation();
+                        event.preventDefault();
+                        handleView(row);
+                    }
                 },
                 [
                     h('svg', {
@@ -180,6 +243,7 @@ watch(
     (val) => {
         if (val) {
             const data = modelStore.modelInspectData?.data;
+            console.log("模型检查数据为", data);
             if (data && typeof data === 'object') {
                 descriptions.value = Object.entries(data).map(([key]) => key);
                 if (descriptions.value.length > 0) {
@@ -275,6 +339,7 @@ function handleView(row: any) {
     let detail = null;
     if (Array.isArray(currentDataObj.value)) {
         detail = currentDataObj.value.find((item: any) => item.Guid === row.guid);
+        console.log("detail", detail);
     } else if (currentDataObj.value && typeof currentDataObj.value === 'object') {
         // 只有一个对象时直接用
         detail = currentDataObj.value;
@@ -401,6 +466,17 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
     if (!tableData.value || tableData.value.length === 0) return '';
     return row.allGreen === true ? 'green-border' : 'red-border';
 }
+// 组件挂载时添加全局点击监听
+onMounted(() => {
+    document.addEventListener('click', handleGlobalClick);
+});
+
+// 组件卸载时移除监听器
+onUnmounted(() => {
+    document.removeEventListener('click', handleGlobalClick);
+});
+
+
 </script>
 
 
@@ -546,6 +622,11 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
     font-weight: 500 !important;
 }
 
+.t-table.t-table__row--active-single tbody>tr.t-table__row--active,
+.t-table.t-table__row--active-multiple tbody>tr.t-table__row--active {
+    background-color: #e6f7ff;
+}
+
 .check-root :deep(.t-table td) {
     color: #00000080 !important;
 }
@@ -565,6 +646,7 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
     padding-top: 2px !important;
     padding-bottom: 2px !important;
     white-space: nowrap !important;
+    cursor: pointer;
 }
 
 /* 在第一个单元格上添加边框 */
@@ -586,6 +668,11 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
     position: absolute !important;
     top: 270px !important;
     left: 350px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)
+}
+
+.t-dialog__ctx .t-dialog__mask {
+    background-color: rgba(0, 0, 0, 0.015) !important;
 }
 
 .t-dialog--default {

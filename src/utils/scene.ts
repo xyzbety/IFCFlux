@@ -85,7 +85,7 @@ export class SceneMonsters extends SceneInterface {
           }
           window.dispatchEvent(new CustomEvent('mesh-clicked', {
             detail: {
-              expressID: pointerInfo.pickInfo.pickedMesh.id, // 假设 mesh.id 存储了 expressID
+              expressID: pointerInfo.pickInfo.pickedMesh.name, // 假设 mesh.id 存储了 expressID
               mesh: pointerInfo.pickInfo.pickedMesh,
               point: pointerInfo.pickInfo.pickedPoint
             }

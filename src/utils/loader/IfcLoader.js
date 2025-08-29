@@ -77,7 +77,7 @@ export class IfcLoader {
             const processMeshes = async () => {
                 for (let i = 0; i < this.totalCount; i++) {
                     const mesh = flatMeshes.get(i);
-                    this.processGeometryData(mesh); 
+                    this.processGeometryData(mesh);
                     this.loadedCount++;
                     mesh.delete;
                     if (i % 200 === 0) await new Promise(r => setTimeout(r, 0));
@@ -94,6 +94,7 @@ export class IfcLoader {
                         rootMesh.isVisible = false;
                         meshes.forEach((mesh) => {
                             const instance = rootMesh.createInstance(mesh.name);
+                            instance.id = mesh.id;
                             this.processInstancedMeshTransform(mesh.metadata, instance);
                             instance.parent = this.model;
                             instance.metadata = mesh.metadata;
@@ -118,7 +119,7 @@ export class IfcLoader {
             this.loadedCount = this.totalCount;
             this.isComplete = true;
             // 关闭模型并返回结果
-            this.model.setEnabled(true); 
+            this.model.setEnabled(true);
             this.ifcApi.CloseModel(this.modelID);
         }
         catch (error) {
@@ -209,6 +210,7 @@ export class IfcLoader {
         const placedGeometries = flatMeshe.geometries;
         const size = placedGeometries.size();
         const expressID = flatMeshe.expressID;
+        const entity = this.ifcApi.GetLine(this.modelID, expressID);
         if (size > 1) {
             const meshes = [];
             for (let i = 0; i < size; i++) {
@@ -228,12 +230,14 @@ export class IfcLoader {
             }
             const mergedMesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
             mergedMesh.name = `${expressID}`;
-            mergedMesh.id = `${expressID}`;
+            mergedMesh.id = `${entity.GlobalId.value}`;
             mergedMesh.parent = this.model;
         }
         else if (size === 1) {
             const placedGeometry = placedGeometries.get(0);
             const mesh = this.createGeometryMesh(placedGeometry, flatMeshe.expressID);
+            mesh.id = `${entity.GlobalId.value}`;
+            mesh.name = `${expressID}`;
             this.assignMeshMaterial(placedGeometry, mesh);
             if (this.useInstancing) {
                 const geometryKey = mesh.metadata.geometryKey;
