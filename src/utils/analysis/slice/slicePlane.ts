@@ -323,7 +323,7 @@ export class SlicePlane implements IBaseSlice {
     );
     const hit = this.scene.pickWithRay(ray, (mesh: any) => {
       // 排除planeVisualization剖切平面
-      return mesh.id !== 'slicePlane'
+      return mesh.name !== 'slicePlane'
     })
     if (hit.hit && hit.pickedMesh) {
 

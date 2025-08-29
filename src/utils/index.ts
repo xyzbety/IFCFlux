@@ -195,7 +195,7 @@ export function resetModelToInitialState(scene, initialCameraState, camera, orig
             mesh.visibility = 1.0;
             // 还原透明度到原始值
             if (mesh.material) {
-                const originalProps = originalMaterialProperties.get(mesh.id);
+                const originalProps = originalMaterialProperties.get(mesh.name);
                 if (originalProps) {
                     mesh.material.alpha = originalProps.alpha;
                 } else {
