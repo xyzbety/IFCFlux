@@ -226,11 +226,10 @@ async function ifcsgExtractor(file, mapping) {
     await firstPass()
     await secondPass()
 
-    console.log('Entity', entityCount, entityMap.size);
-    console.log('RelDef', relDefCount, relMap.size);
-    console.log('Pset', psetCount, psetMap.size);
-    console.log('Value', valueCount, valueMap.size);
-
+    // console.log('Entity', entityCount, entityMap.size);
+    // console.log('RelDef', relDefCount, relMap.size);
+    // console.log('Pset', psetCount, psetMap.size);
+    // console.log('Value', valueCount, valueMap.size);
 
     const t1 = performance.now()
     console.log('map in:', convertToFloat((t1 - t0) / 1000), 's');
@@ -271,9 +270,9 @@ async function ifcsgExtractor(file, mapping) {
                     continue;
                 }
 
-                pset_result[map.property] = map.value
+                pset_result[ifcToText(map.property)] = map.value
             }
-            obj[pset.pset] = pset_result
+            obj[ifcToText(pset.pset)] = pset_result
         }
         ifcResult.push(obj)
     }
@@ -281,31 +280,23 @@ async function ifcsgExtractor(file, mapping) {
     const t2 = performance.now()
     console.log('completed in:', convertToFloat((t2 - t0) / 1000), 's');
 
-
     const checkResult = {}
 
     for (const item of ifcResult) {
-
-
-
         const nweItem = {
             Entity: item.Entity,
             Guid: item.Guid,
-            Name: typeof item.name == 'string' && item.name.startsWith("\\X2\\", 0) ? ifcToText(item.name) : item.name,
-            PredefinedType: typeof item.PredefinedType == 'string' && item.PredefinedType.startsWith("\\X2\\", 0) ? ifcToText(item.PredefinedType) : item.PredefinedType,
-            ObjectType: typeof item.ObjectType == 'string' && item.ObjectType.startsWith("\\X2\\", 0) ? ifcToText(item.ObjectType) : item.ObjectType,
-            Tag: typeof item.Tag == 'string' && item.Tag.startsWith("\\X2\\", 0) ? ifcToText(item.Tag) : item.Tag,
+            Name: typeof item.name == 'string' ? ifcToText(item.name) : item.name,
+            PredefinedType: typeof item.PredefinedType == 'string' ? ifcToText(item.PredefinedType) : item.PredefinedType,
+            ObjectType: typeof item.ObjectType == 'string' ? ifcToText(item.ObjectType) : item.ObjectType,
+            Tag: typeof item.Tag == 'string' ? ifcToText(item.Tag) : item.Tag,
         }
         const new_bim_entity = JSON.parse(JSON.stringify(mapping[item.Entity]))
         for (const [pset, value] of Object.entries(new_bim_entity)) {
-            const psetName = pset.split('Pset_')[1]
-            const bName = textToIfc(psetName)
-            const hName = `Pset_${bName}`
-            const psetItem = item[hName]
+            const psetItem = item[pset]
             if (psetItem) {
                 for (const [k, v] of Object.entries(value)) {
-                    const p_b = textToIfc(k)
-                    const p_item = psetItem[p_b]
+                    const p_item = psetItem[k]
                     if (p_item) {
                         if (checkIfcType(p_item, v)) {
                             value[k] = [0, p_item, v]
@@ -313,7 +304,7 @@ async function ifcsgExtractor(file, mapping) {
                             value[k] = [3, p_item, v]
                         }
                         // 解码
-                        if (typeof p_item == 'string' && p_item.startsWith("\\X2\\")) {
+                        if (typeof p_item == 'string') {
                             value[k][1] = ifcToText(p_item)
                         }
                     } else {
@@ -460,78 +451,128 @@ async function readFile(file, processline) {
     });
 }
 
-// 将 IFC 编码转换为中文
-function ifcToText(ifcString) {
-    // 检查有效性
-    if (!ifcString.startsWith("\\X2\\") || !ifcString.endsWith("\\X0\\")) {
-        return "无效的 IFC 编码格式";
-    }
-    
-    // 提取十六进制部分
-    const hexPart = ifcString.substring(4, ifcString.length - 4);
-    
-    // 创建字节数组
-    const bytes = [];
-    for (let i = 0; i < hexPart.length; i += 2) {
-        bytes.push(parseInt(hexPart.substr(i, 2), 16));
-    }
-    
-    // 尝试不同的编码方式
-    const encodings = ['utf-16be', 'utf-8', 'utf-16le', 'gbk', 'gb18030'];
-    
-    // 首先尝试浏览器的原生解码
-    for (const encoding of encodings) {
-        try {
-            if (typeof TextDecoder !== 'undefined') {
-                const decoder = new TextDecoder(encoding);
-                const text = decoder.decode(new Uint8Array(bytes));
-                if (text && !/^\s*$/.test(text) && !/[\uFFFD]/.test(text)) {
-                    return text;
-                }
-            }
-        } catch (e) {
-            // 继续尝试下一种编码
-        }
-    }
-    
-    // 手动处理 UTF-16BE
-    try {
-        if (bytes.length % 2 === 0) {
-            let resultUtf16BE = '';
-            for (let i = 0; i < bytes.length; i += 2) {
-                const charCode = (bytes[i] << 8) | bytes[i + 1];
-                resultUtf16BE += String.fromCharCode(charCode);
-            }
-            if (resultUtf16BE && !/^\s*$/.test(resultUtf16BE)) {
-                return resultUtf16BE;
-            }
-        }
-    } catch (e) {
-        // 忽略错误
-    }
-    
-    // 最后的尝试：假设是单字节编码（适用于非Unicode编码的情况）
+function ifcToText(encoded) {
     let result = '';
-    for (let i = 0; i < bytes.length; i++) {
-        result += String.fromCharCode(bytes[i]);
+    let i = 0;
+    while (i < encoded.length) {
+        if (encoded[i] === '\\') {
+            if (i + 1 >= encoded.length) {
+                result += '\\'; // 无效转义，保留
+                break;
+            }
+            const next = encoded[i + 1];
+            if (next === '\\') {
+                result += '\\'; // literal \
+                i += 2;
+                continue;
+            } else if (next === 'S' && i + 2 < encoded.length && encoded[i + 2] === '\\') {
+                // \S\char: ISO 8859-1 扩展，char code + 128
+                const char = encoded[i + 3];
+                if (char) {
+                    const code = char.charCodeAt(0) + 128;
+                    result += String.fromCharCode(code);
+                    i += 4; // \S\char
+                } else {
+                    result += encoded.substr(i, 4); // 无效，保留
+                    i += 4;
+                }
+                continue;
+            } else if (next === 'P' && i + 3 < encoded.length && encoded[i + 2] === 'A' && encoded[i + 3] === '\\') {
+                // \PA\\S\char: 显式 ISO 8859-1
+                if (i + 5 < encoded.length && encoded[i + 4] === 'S' && encoded[i + 5] === '\\') {
+                    const char = encoded[i + 6];
+                    if (char) {
+                        const code = char.charCodeAt(0) + 128;
+                        result += String.fromCharCode(code);
+                        i += 7; // \PA\\S\char
+                    } else {
+                        result += encoded.substr(i, 7); // 无效
+                        i += 7;
+                    }
+                } else {
+                    result += encoded.substr(i); // 无效
+                    break;
+                }
+                continue;
+            } else if (next === 'X' && i + 2 < encoded.length) {
+                if (encoded[i + 2] === '\\') {
+                    // \X\HH: 8位 hex
+                    const hex = encoded.substr(i + 3, 2);
+                    if (/^[0-9A-F]{2}$/i.test(hex)) {
+                        const code = parseInt(hex, 16);
+                        result += String.fromCharCode(code);
+                        i += 5; // \X\HH
+                    } else {
+                        result += encoded.substr(i, 5); // 无效
+                        i += 5;
+                    }
+                } else if (encoded[i + 2] === '2' && encoded[i + 3] === '\\') {
+                    // \X2\HHHH...\X0\: 16位 Unicode
+                    i += 4; // 跳过 \X2\
+                    let hexStr = '';
+                    while (i < encoded.length && !encoded.substr(i, 4).match(/^\\X0\\/i)) {
+                        const chunk = encoded.substr(i, 4);
+                        if (/^[0-9A-F]{4}$/i.test(chunk)) {
+                            hexStr += chunk;
+                            i += 4;
+                        } else {
+                            break; // 无效
+                        }
+                    }
+                    if (encoded.substr(i, 4) === '\\X0\\') {
+                        i += 4; // 跳过 \X0\
+                        for (let j = 0; j < hexStr.length; j += 4) {
+                            const high = parseInt(hexStr.substr(j, 4), 16);
+                            result += String.fromCharCode(high);
+                        }
+                    } else {
+                        result += '\\X2\\' + hexStr; // 无效，保留
+                    }
+                } else if (encoded[i + 2] === '4' && encoded[i + 3] === '\\') {
+                    // \X4\HHHHHHHH...\X0\: 32位 Unicode
+                    i += 4; // 跳过 \X4\
+                    let hexStr = '';
+                    while (i < encoded.length && !encoded.substr(i, 4).match(/^\\X0\\/i)) {
+                        const chunk = encoded.substr(i, 8);
+                        if (/^[0-9A-F]{8}$/i.test(chunk)) {
+                            hexStr += chunk;
+                            i += 8;
+                        } else {
+                            break; // 无效
+                        }
+                    }
+                    if (encoded.substr(i, 4) === '\\X0\\') {
+                        i += 4; // 跳过 \X0\
+                        for (let j = 0; j < hexStr.length; j += 8) {
+                            const code = parseInt(hexStr.substr(j, 8), 16);
+                            if (code <= 0xFFFF) {
+                                result += String.fromCharCode(code);
+                            } else {
+                                // 代理对 for > 0xFFFF
+                                const surrogateHigh = Math.floor((code - 0x10000) / 0x400) + 0xD800;
+                                const surrogateLow = ((code - 0x10000) % 0x400) + 0xDC00;
+                                result += String.fromCharCode(surrogateHigh, surrogateLow);
+                            }
+                        }
+                    } else {
+                        result += '\\X4\\' + hexStr; // 无效，保留
+                    }
+                } else {
+                    result += '\\X'; // 无效
+                    i += 2;
+                }
+                continue;
+            } else {
+                result += '\\' + next; // 其他转义，保留
+                i += 2;
+                continue;
+            }
+        } else {
+            result += encoded[i];
+            i++;
+        }
     }
-    
     return result;
-}
-
-// 将中文转换为 IFC 编码
-function textToIfc(text) {
-    let hexString = "";
-    
-    // 将每个字符转换为十六进制
-    for (let i = 0; i < text.length; i++) {
-        const charCode = text.charCodeAt(i);
-        // 转换为十六进制并确保是两位数（不足两位前面补0）
-        hexString += charCode.toString(16).toUpperCase();
-    }
-    
-    // 添加 IFC 编码的前缀和后缀
-    return "\\X2\\" + hexString + "\\X0\\";
 }
 
 
