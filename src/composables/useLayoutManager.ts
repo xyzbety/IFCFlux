@@ -158,7 +158,7 @@ function createLayoutManager() {
 
       // 同步按钮选中状态
       syncAllButtonStates();
-    } else {
+    } else if (mode !== LayoutMode.CANVAS_ONLY) { // 排除CANVAS_ONLY模式
       // 切换到非查看模式时，清除构件树和属性表的选中状态
       updateButtonSelectedState("构件树", false);
       updateButtonSelectedState("属性表", false);

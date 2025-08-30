@@ -10,8 +10,7 @@ export class RibbonEventManager {
     private static instance: RibbonEventManager | null = null;
 
     private options: RibbonEventsOptions | null = null;
-    private scene: BABYLON.Scene | null = null;
-    private eventMap: Map<string, { type: string; param: string }> = new Map();
+    private eventMap: Map<string, { type: string; param: string | number }> = new Map();
     private singleEvents: Map<string, () => void> = new Map();
 
     // 在内部初始化爆炸参数
@@ -163,13 +162,13 @@ export class RibbonEventManager {
      * @param eventType - 事件类型
      * @param eventParam - 事件参数
      */
-    public addButtonMapping(label: string, eventType: string, eventParam?: string) {
+    public addButtonMapping(label: string, eventType: string, eventParam?: string | number) {
         if (!this.options) {
             console.warn("RibbonEventManager not initialized. Call initialize() first.");
             return;
         }
 
-        if (eventParam) {
+        if (eventParam !== undefined) {
             this.eventMap.set(label, { type: eventType, param: eventParam });
         } else {
             this.singleEvents.set(label, () => this.options!.emit(eventType));
@@ -185,15 +184,6 @@ export class RibbonEventManager {
         this.singleEvents.delete(label);
     }
 
-    public initScene(value: BABYLON.Scene | null) {
-        console.log("初始化场景:", value);
-        this.scene = value;
-    }
-
-    public getCurrentScene(): BABYLON.Scene | null {
-        return this.scene;
-    }
-
     public bindRibbonEvents() {
         const ribbon = document.getElementById('ribbon');
         if (ribbon) {
@@ -202,28 +192,21 @@ export class RibbonEventManager {
             ribbon.removeEventListener('select', this.handleRibbonSelect);
 
             // 添加新的监听器
-            ribbon.addEventListener('click', (event) => {
-                this.handleRibbonClick(event);
-            });
+            ribbon.addEventListener('click', this.handleRibbonClick);
 
-            ribbon.addEventListener('select', (event) => {
-                this.handleRibbonSelect(event);
-            });
+            ribbon.addEventListener('select', this.handleRibbonSelect);
         }
 
         console.log("绑定成功");
     }
 
-    private handleRibbonClick(event: Event) {
-        const fileMenuButton = event.target && (event.target as Element).closest ?
-            (event.target as Element).closest('.smart-ribbon-file-container smart-drop-down-button') : null;
-        const fileMenuDropdown = document.querySelector('.smart-drop-down') as HTMLElement | null;
+    private handleRibbonClick = (event: Event) => {
+        const fileButtonContainer = (event.target as Element).closest('.smart-ribbon-file-container');
 
-        if (fileMenuButton && fileMenuDropdown) {
+        if (fileButtonContainer) {
             event.preventDefault();
             event.stopPropagation();
             this.options?.emit('toggle-file-menu');
-            fileMenuDropdown.style.display = 'none'
             return;
         }
 
@@ -232,11 +215,14 @@ export class RibbonEventManager {
         if (button) {
             const parentLabel = (button.parentNode && (button.parentNode as HTMLElement).getAttribute?.('label')) || '';
             console.log("按钮被点击:", parentLabel);
-            this.handleClick(parentLabel);
+            const handled = this.handleClick(parentLabel);
+            if (handled) {
+                event.stopPropagation();
+            }
         }
     }
 
-    private handleRibbonSelect(event: any) {
+    private handleRibbonSelect = (event: any) => {
         if (event.detail && this.options) {
             console.log("选中了:", event.detail.index);
             this.options.emit('ribbon-tab-change', event.detail.index);
@@ -248,10 +234,7 @@ export class RibbonEventManager {
 
     private handleSettingsTabSelect() {
         try {
-            const scene = this.scene;
-            console.log("场景:", scene);
-
-            if (!scene || !this.options) return;
+            if (!this.options) return;
 
             const handleSliderX = document.getElementById("horizontalSliderX") as HTMLInputElement;
             const handleSliderY = document.getElementById("horizontalSliderY");
@@ -260,13 +243,9 @@ export class RibbonEventManager {
             const checkboxShadow = document.getElementById("checkboxShadow");
             const handleSliderSpeed = document.getElementById("horizontalSliderSpeed") as HTMLInputElement;
             const handleCheckboxFocus = document.getElementById("checkboxFocus") as HTMLInputElement;
-            const light = scene.getLightByName("fillLight") as BABYLON.DirectionalLight
-
-            if (handleSliderX && light) handleSliderX.val(light.direction.x)
-            if (handleSliderY && light) handleSliderY.val(light.direction.y)
-            if (handleSliderZ && light) handleSliderZ.val(light.direction.z)
-            if (inputIndensity && light) inputIndensity.value = String(light.intensity)
-            if (checkboxShadow && light) checkboxShadow.checked = light.shadowEnabled
+            
+            // TODO: When the settings tab is opened, the initial value of the control should be set from the scene.
+            // This logic should be handled by the parent component (e.g., App.vue) listening for the 'ribbon-tab-change' event.
 
             if (handleSliderX) {
                 handleSliderX.addEventListener('change', (event: any) => {
@@ -300,28 +279,24 @@ export class RibbonEventManager {
 
             if (handleSliderSpeed) {
                 handleSliderSpeed.addEventListener('change', (event: any) => {
-                    if (scene) {
-                        const speed = event.detail.value;
-                        console.log("拖动速度:", speed);
-                        this.options?.emit('scene-settings', { dragSpeed: speed });
-                    }
+                    const speed = event.detail.value;
+                    console.log("拖动速度:", speed);
+                    this.options?.emit('scene-settings', { dragSpeed: speed });
                 });
             }
 
             if (handleCheckboxFocus) {
                 handleCheckboxFocus.addEventListener('change', (event: any) => {
-                    if (scene) {
-                        const isChecked = event.detail.value;
-                        console.log("Focus mode:", isChecked);
-                        this.options?.emit('scene-settings', { focusMode: isChecked });
-                    }
+                    const isChecked = event.detail.value;
+                    console.log("Focus mode:", isChecked);
+                    this.options?.emit('scene-settings', { focusMode: isChecked });
                 });
             }
 
-            const handleColorPicker = document.getElementById("colorPicker")
-            const khanonjs = document.getElementById("khanonjs") as HTMLCanvasElement;
-            if (handleColorPicker && khanonjs) {
-                const bgColor = window.getComputedStyle(khanonjs).backgroundColor;
+            const handleColorPicker = document.getElementById("colorPicker") as HTMLInputElement;
+            const viewerCanvas = document.getElementById("viewer") as HTMLCanvasElement;
+            if (handleColorPicker && viewerCanvas) {
+                const bgColor = window.getComputedStyle(viewerCanvas).backgroundColor;
                 handleColorPicker.value = bgColor;
                 handleColorPicker.addEventListener('change', (event: any) => {
                     const color = event.detail.value;

@@ -1,6 +1,6 @@
 <template>
   <smart-ribbon id="ribbon"></smart-ribbon>
-  <input id="fileInput" type="file" style="display: none;" accept=".ifc, .ifcXML, .ifcZIP" />
+  <input id="fileInput" type="file" style="display: none;" accept=".ifc" />
   <ProgressBar :loading="loading" :progress="progress" />
 </template>
 
@@ -52,7 +52,7 @@ onMounted(() => {
     await nextTick();
     // 禁用按钮动画
     const buttons = document.querySelectorAll('smart-button');
-    buttons.forEach((button: Element) => {
+    buttons.forEach((button: any) => { // Use any to bypass TypeScript error
       button.animation = 'none'
     });
     eventManager.bindRibbonEvents();
@@ -66,13 +66,9 @@ onMounted(() => {
       if (!files || files.length === 0) {
         loading.value = false;
         return;
-      } 
-      try {
-        await modelManager.loadModel(files[0], emit);
-        eventManager.initScene(modelManager.currentScene);
-      } catch (error) {
-        console.error("加载失败:", error);
       }
+      // Emit the file to the parent component (App.vue) which will handle the loading
+      emit('file-uploaded', files[0]);
     });
   }
 });

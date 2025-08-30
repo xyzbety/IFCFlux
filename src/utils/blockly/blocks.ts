@@ -936,8 +936,8 @@ export function defineBlocks(colour: string, scene?: BABYLON.Scene) {
 
 export function initBlocks(scene?: BABYLON.Scene) {
   Blockly.setLocale(zh);
-  const khanonjs = document.getElementById("khanonjs") as HTMLCanvasElement;
-  const bgColor = window.getComputedStyle(khanonjs).backgroundColor;
+  const viewerCanvas = document.getElementById("viewer") as HTMLCanvasElement;
+  const bgColor = window.getComputedStyle(viewerCanvas).backgroundColor;
   // 如果已存在 workspace，先销毁
   if (workspace) {
     workspace.dispose();

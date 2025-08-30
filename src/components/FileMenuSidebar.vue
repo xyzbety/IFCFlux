@@ -248,10 +248,8 @@ const handleThemeChange = (color: string) => {
   settingsStore.setThemeColor(color);
   close();
 };
-const handleFileClick = async (item: any) => {
+const handleFileClick = (item: any) => {
   close();
-  await modelManager.loadModel(item.file, emit);
-  console.log("文件加载完成事件已发送，当前场景为", modelManager.currentScene);
-  eventManager.initScene(modelManager.currentScene);
+  emit('file-uploaded', item.file);
 };
 </script>

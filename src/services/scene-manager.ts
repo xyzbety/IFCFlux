@@ -1,9 +1,12 @@
 import * as BABYLON from '@babylonjs/core';
-import { CubeView } from '../utils/plugin/viewer/cubeView';
-import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils/index.js';
-import { CameraHistoryManager } from './camera-history-manager';
-import { Measure } from '../utils/analysis/measure.js';
+import * as BABYLON from '@babylonjs/core';
+import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils';
+import { CameraHistoryManager } from './history-manager';
+import { Measure } from '../utils/analysis/measure';
 import * as GUI from '@babylonjs/gui';
+import { SlicePlane } from '../utils/analysis/slice/slicePlane';
+import { IfcExplosion } from '../utils/ifc/IfcExplosion';
+import { useSceneStore } from '../store/scene-store';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -19,11 +22,12 @@ export class SceneManager {
   } | null = null;
 
   private cameraHistoryManager: CameraHistoryManager;
-  private slicePlane: any = null; // SlicePlane 类型需要导入
-  private ifcExplosion: any = null; // IfcExplosion 类型需要导入
+  private slicePlane: SlicePlane | null = null;
+  private ifcExplosion: IfcExplosion | null = null;
   private hiddenMeshIds: Set<string> = new Set(); // 存储已隐藏的mesh ID
   private isolatedMeshIds: Set<string> = new Set(); // 存储已隔离的mesh ID
   private transparentMeshIds: Set<string> = new Set(); // 存储已半透明的mesh ID
+  private sceneStore = useSceneStore();
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -49,13 +53,109 @@ export class SceneManager {
    */
   public initializeScene(scene: BABYLON.Scene) {
     this.scene = scene;
-    this.camera = scene.activeCamera as BABYLON.ArcRotateCamera;
 
-    // 设置相机历史管理器的相机实例
+    // --- Scene Properties ---
+    this.scene.useRightHandedSystem = true;
+    this.scene.autoClear = false;
+
+    // --- Camera Creation ---
+    const canvas = scene.getEngine().getRenderingCanvas();
+    this.camera = new BABYLON.ArcRotateCamera('camera', 2 * Math.PI / 3, Math.PI / 3, 150, BABYLON.Vector3.Zero(), scene);
+    if (canvas) {
+      this.camera.attachControl(canvas, true);
+    }
+    this.camera.inertia = 0;
+    this.camera.wheelDeltaPercentage = 0.05;
+    this.camera.panningInertia = 0;
+    this.camera.panningSensibility = 20;
+    this.scene.activeCamera = this.camera;
+
+    // Enable depth renderer after camera is set
+    this.scene.enableDepthRenderer();
+
+    // --- Light Creation ---
+    const mainlight = new BABYLON.DirectionalLight("mainLight", new BABYLON.Vector3(-1, -1, -1), this.scene);
+    mainlight.intensity = 0.5;
+    mainlight.shadowEnabled = true;
+    this.light = mainlight; // Assign main light for shadows
+
+    const fillLight = new BABYLON.DirectionalLight('fillLight', new BABYLON.Vector3(1, -0.5, 0.5), this.scene);
+    fillLight.intensity = 0.75;
+
+    const ambientLight = new BABYLON.HemisphericLight("ambientLight", new BABYLON.Vector3(0, 1, 0), this.scene);
+    ambientLight.intensity = 0.1;
+
+    const bottomLight = new BABYLON.HemisphericLight("bottomLight", new BABYLON.Vector3(0, -1, 0), this.scene);
+    bottomLight.intensity = 0.5;
+
+    // --- Pointer Events ---
+    let isDragging = false;
+    this.scene.onPointerObservable.add((pointerInfo: BABYLON.PointerInfo) => {
+      if (!this.camera) return;
+
+      if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERTAP) {
+        if (pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh) {
+          let parent = pointerInfo.pickInfo.pickedMesh.parent;
+          while (parent) {
+            parent.isVisible = true;
+            parent = parent.parent;
+          }
+          window.dispatchEvent(new CustomEvent('mesh-clicked', {
+            detail: {
+              expressID: pointerInfo.pickInfo.pickedMesh.name,
+              mesh: pointerInfo.pickInfo.pickedMesh,
+              point: pointerInfo.pickInfo.pickedPoint
+            }
+          }));
+        } else {
+          window.dispatchEvent(new CustomEvent('mesh-clicked', {
+            detail: { expressID: '', mesh: '', point: '' }
+          }));
+        }
+      }
+
+      switch (pointerInfo.type) {
+        case BABYLON.PointerEventTypes.POINTERDOWN:
+          window.dispatchEvent(new CustomEvent('mouse-down', {
+            detail: {
+              alpha: this.camera.alpha,
+              beta: this.camera.beta,
+              radius: this.camera.radius,
+              target: this.camera.target,
+            }
+          }));
+          isDragging = true;
+          break;
+
+        case BABYLON.PointerEventTypes.POINTERUP:
+          this.sceneStore.setCameraState({ position: this.camera.position, target: this.camera.target });
+          window.dispatchEvent(new CustomEvent('mouse-up', {
+            detail: {
+              alpha: this.camera.alpha,
+              beta: this.camera.beta,
+              radius: this.camera.radius,
+              target: this.camera.target,
+            }
+          }));
+          isDragging = false;
+          break;
+
+        case BABYLON.PointerEventTypes.POINTERWHEEL:
+          this.sceneStore.setCameraState({ position: this.camera.position, target: this.camera.target });
+          window.dispatchEvent(new CustomEvent('mouse-wheel', {
+            detail: {
+              alpha: this.camera.alpha,
+              beta: this.camera.beta,
+              radius: this.camera.radius,
+              target: this.camera.target,
+            }
+          }));
+          break;
+      }
+    });
+
+    // --- Final Setup ---
     this.cameraHistoryManager.setCamera(this.camera);
-
-    // 初始化cubeView
-    new CubeView(scene);
 
     scene.onBeforeRenderObservable.add(() => {
       scene.getEngine().resize();
@@ -107,10 +207,6 @@ export class SceneManager {
     const linkMesh = BABYLON.MeshBuilder.CreateBox("linkMesh", { size: 0.1 }, this.scene);
     linkMesh.position = this.initialCameraState.target;
     linkMesh.setEnabled(false); // 不显示链接点
-
-    // 初始化cubeView
-    new CubeView(this.scene);
-    console.log('scene loaded', new CubeView(this.scene));
 
     this.scene.onBeforeRenderObservable.add(() => {
       this.scene!.getEngine().resize();
@@ -174,7 +270,7 @@ export class SceneManager {
       this.cameraHistoryManager.setInitialState(this.initialCameraState);
 
       // 设置光照
-      this.light = this.scene.getLightByName("fillLight") as BABYLON.DirectionalLight;
+      // The light is now created in initializeScene and stored in this.light
       console.log('场景灯光设置', this.light);
       if (this.light) {
         const shadowGenerator = new BABYLON.ShadowGenerator(2048, this.light);
@@ -198,40 +294,57 @@ export class SceneManager {
    * @param action 导航操作类型
    */
   public handleNavigate(action: 'pan' | 'rotate' | 'zoomIn' | 'zoomOut' | 'rotateRight' | 'rotateLeft') {
-    if (!this.scene || !this.camera) return;
+    if (!this.camera) {
+      console.error("Camera is not initialized. Cannot handle navigation.");
+      return;
+    }
+    
+    // 确保相机输入已附加
+    const inputs = this.camera.inputs;
+    if (!inputs.attached.pointers) {
+        inputs.attachInput(inputs.attached.pointers);
+    }
+
+    const pointers = inputs.attached.pointers as BABYLON.ArcRotateCameraPointersInput;
 
     switch (action) {
-      case 'pan':
-        this.camera._panningMouseButton = 0;
-        break;
-      case 'rotate':
-        this.camera._panningMouseButton = 2;
-        break;
-      case 'zoomIn':
-        this.camera.radius -= 10;
-        break;
-      case 'zoomOut':
-        this.camera.radius += 10;
-        break;
-      case 'rotateLeft':
-        this.camera.alpha += 0.3;
-        break;
-      case 'rotateRight':
-        this.camera.alpha -= 0.3;
-        break;
+        case 'pan':
+            pointers.panningMouseButton = 0; // 左键平移
+            pointers.buttons = [1, 2]; // 中键和右键旋转
+            break;
+        case 'rotate':
+            pointers.buttons = [0, 1]; // 左键和中键旋转
+            pointers.panningMouseButton = 2; // 右键平移
+            break;
+        case 'zoomIn':
+            this.camera.radius *= 0.9; // 缩小半径以放大
+            break;
+        case 'zoomOut':
+            this.camera.radius *= 1.1; // 增大半径以缩小
+            break;
+        case 'rotateLeft':
+            this.camera.alpha -= 0.1;
+            break;
+        case 'rotateRight':
+            this.camera.alpha += 0.1;
+            break;
     }
+
+    this.sceneStore.setCameraState({ position: this.camera.position, target: this.camera.target });
 
     // 记录当前状态
     this.cameraHistoryManager.recordCurrentState(this.camera);
-  }
+}
 
   /**
    * 处理视图切换
    * @param view 视图类型
    */
   public handleView(view: 'default' | 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right') {
-    if (!this.scene || !this.camera) return;
-
+    if (!this.camera) {
+      console.error("Camera is not initialized. Cannot handle view change.");
+      return;
+    }
     // 视角参数映射
     const viewParams: Record<string, { alpha?: number, beta?: number }> = {
       top: { alpha: Math.PI / 2, beta: 0 },
@@ -244,14 +357,17 @@ export class SceneManager {
     };
 
     const params = viewParams[view] || {};
-    const t = (this.initialCameraState?.target?.clone ?
-      this.initialCameraState.target.clone() :
-      this.initialCameraState?.target) ?? new BABYLON.Vector3(0, 0, 0);
-
-    this.camera.setTarget(t);
+    if (this.initialCameraState && this.initialCameraState.target) {
+      const t = this.initialCameraState.target.clone();
+      this.camera.setTarget(t);
+    } else {
+      this.camera.setTarget(BABYLON.Vector3.Zero());
+    }
     this.camera.alpha = params.alpha ?? this.initialCameraState?.alpha ?? 2 * Math.PI / 3;
     this.camera.beta = params.beta ?? this.initialCameraState?.beta ?? Math.PI / 3;
     this.camera.radius = this.initialCameraState?.radius ?? 150;
+
+    this.sceneStore.setCameraState({ position: this.camera.position, target: this.camera.target });
 
     // 记录当前状态
     this.cameraHistoryManager.recordCurrentState(this.camera);
@@ -522,7 +638,7 @@ export class SceneManager {
    * 设置剖切面
    * @param action 剖切操作
    */
-  public handleSlice(action: 'visible' | 'reset' | 'x' | 'y' | 'z', SlicePlaneClass: any) {
+  public handleSlice(action: 'visible' | 'reset' | 'x' | 'y' | 'z') {
     if (!this.scene) return;
 
     if (action === 'visible') {
@@ -546,7 +662,7 @@ export class SceneManager {
       this.slicePlane = null;
     }
 
-    this.slicePlane = new SlicePlaneClass(this.scene, 80);
+    this.slicePlane = new SlicePlane(this.scene, 80);
     this.slicePlane.start(action);
   }
 
@@ -617,9 +733,9 @@ export class SceneManager {
   public setSceneSettings(data: any) {
     if (!this.scene) return;
 
-    const khanonjs = document.getElementById("khanonjs") as HTMLCanvasElement;
-    if (data.backgroundColor) {
-      khanonjs.style.backgroundColor = data.backgroundColor;
+    const viewer = document.getElementById("viewer") as HTMLDivElement;
+    if (data.backgroundColor && viewer) {
+      viewer.style.backgroundColor = data.backgroundColor;
     }
 
     if (data.focusMode !== undefined) {

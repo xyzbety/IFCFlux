@@ -40,7 +40,7 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
-                    @row-click="handleRowClick" :activeRowKeys="activeRowKeys" :active-row-type="'single'" actived
+                    @row-click="handleRowClick" v-model:activeRowKeys="activeRowKeys" :active-row-type="'single'" actived
                     :max-height="'100%'" :table-layout="'auto'" :row-class-name="getRowClassName" rowKey="guid" />
             </div>
         </div>
@@ -93,11 +93,12 @@ const dialogRef = ref<any>(null);
 // 点击外部关闭弹框的处理函数
 
 const handleGlobalClick = (event: Event) => {
-    console.log('全局点击', event.target,event.target.tagName);
+    if (!event.target) return;
+    const target = event.target as HTMLElement;
+    console.log('全局点击', target, target.tagName);
     // if(sceneManager.scene && event.target.tagName === 'DIV'){
     //     ifcPropertyUtils.clearAllHighlights(sceneManager.scene)
     // }
-    const target = event.target as HTMLElement;
     const clickedRow = target.closest('tbody tr');
 
     const dialogElement = document.querySelector('.t-dialog__ctx') as HTMLElement;
@@ -110,16 +111,17 @@ const handleGlobalClick = (event: Event) => {
         // 弹框未打开时，正常处理表格行高亮逻辑
         if (!clickedRow && activeRowKeys.value.length > 0) {
             activeRowKeys.value = [];
-            ifcPropertyUtils.clearAllHighlights(sceneManager.scene)
+            if (sceneManager.scene) {
+                ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
+            }
             console.log('点击非表格行区域，清除高亮');
         }
     }
 };
 const handleRowClick = async (event: any) => {
     console.log('表格行点击', event)
-    activeRowKeys.value = [event.row.guid];
     const mesh = sceneManager.scene?.meshes.find(m => m.id === event.row.guid);
-    if (mesh && mesh.name) {
+    if (mesh && mesh.name && sceneManager.scene) {
         console.log('对应的mesh', mesh);
         console.log(sceneManager.scene)
         const expressID = mesh.name

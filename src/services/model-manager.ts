@@ -1,17 +1,16 @@
-import { nextTick, ref, Ref } from 'vue';
-import { Core } from '@khanonjs/engine/base/core/core';
+import { ref, Ref } from 'vue';
 import * as BABYLON from '@babylonjs/core/index.js';
 import { IfcLoader } from '../utils/loader/IfcLoader.js';
-import { IfcInspect } from "../utils/ifc/IfcInspect.js";
-import { IfcPropertyUtils } from './property-manager.ts';
 import { addFileHistory } from '../utils/indexedDB.ts';
 import { useModelStore } from '../store/index.ts';
 import { useLayoutManager } from '../composables/useLayoutManager.ts';
+import { SceneManager } from './scene-manager.ts';
+import { IfcInspect } from '../utils/ifc/IfcInspect.js';
+
 const { switchToMode, LayoutMode: LM } = useLayoutManager();
 
 export class ModelManager {
   private static instance: ModelManager | null = null;
-
   private scene: BABYLON.Scene | null = null;
   private loading: Ref<boolean>;
   private progress: Ref<{
@@ -21,19 +20,17 @@ export class ModelManager {
     text: string;
   }>;
   private modelStore = useModelStore();
-  private ifcPropertyUtils = IfcPropertyUtils.getInstance();
 
-  private constructor() { // 私有构造函数
+  private constructor() {
     this.loading = ref(false);
     this.progress = ref({
       percent: 0,
       current: 0,
       total: 100,
-      text: "打开文件"
+      text: "准备就绪"
     });
   }
 
-  // 获取单例实例
   public static getInstance(): ModelManager {
     if (!ModelManager.instance) {
       ModelManager.instance = new ModelManager();
@@ -41,9 +38,8 @@ export class ModelManager {
     return ModelManager.instance;
   }
 
-  // 重置单例（如果需要）
-  public static resetInstance(): void {
-    ModelManager.instance = null;
+  public initialize(scene: BABYLON.Scene) {
+    this.scene = scene;
   }
 
   public get isLoading() {
@@ -54,35 +50,58 @@ export class ModelManager {
     return this.progress;
   }
 
-  public get currentScene() {
-    console.log("获取当前场景:", this.scene);
-    return this.scene;
-  }
+  public async loadModel(file: File, onModelLoaded: () => void): Promise<void> {
+    if (!this.scene) {
+      console.error("ModelManager not initialized with a scene.");
+      return;
+    }
 
-  public async loadModel(file: File, emit: Function): Promise<void> {
     try {
       this.loading.value = true;
       switchToMode(LM.CANVAS_ONLY);
       await this.addToFileHistory(file);
 
-      // 清理现有场景（现在 this.scene 可能不为 null）
       this.clearExistingScene();
+      
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
-      console.log("开始加载模型...");
-      this.updateProgress(0, 1, "打开文件");
+      if (fileExtension === 'ifc') {
+        this.updateProgress(0, 100, "打开文件");
+        const ifcLoader = new IfcLoader(file, this.scene);
+        
+        const onProgressCallback = (loaded: number, total: number) => {
+            this.updateProgress(loaded, total, "加载模型");
+        };
 
-      this.scene = this.getActiveScene();
-      console.log("新场景已设置:", this.scene);
+        await ifcLoader.load(0, 0, 0, onProgressCallback);
 
-      const ifcLoader = new IfcLoader(file, this.scene);
+        this.modelStore.setModel(file, {
+            tree: ifcLoader.ifcTree,
+            properties: ifcLoader.properties,
+            ifcExpressIds: ifcLoader.ifcExpressIds,
+            ifcManager: ifcLoader.ifcApi,
+            modelID: ifcLoader.modelID
+        });
+        
+        this.updateProgress(100, 100, "完成");
 
-      await this.loadWithProgress(ifcLoader, file, emit);
-      console.log("模型加载完成");
+      } else {
+        throw new Error(`Unsupported file format: ${fileExtension}`);
+      }
+
+      if (onModelLoaded) {
+        onModelLoaded();
+      }
+
     } catch (error) {
       console.error("加载失败:", error);
+      this.updateProgress(100, 100, "加载失败");
       throw error;
     } finally {
-      this.handleSceneReady();
+      // Give the UI a moment to show the 100% "完成" status before hiding the progress bar.
+      setTimeout(() => {
+        this.loading.value = false;
+      }, 500);
     }
   }
 
@@ -100,33 +119,28 @@ export class ModelManager {
   }
 
   private clearExistingScene(): void {
-    console.log("开始清理现有场景...", this.scene);
-
-    if (!this.scene) {
-      console.log("当前没有场景需要清理");
-      return;
+    if (this.scene) {
+      const sceneManager = SceneManager.getInstance();
+      // Dispose only meshes that are not the camera or lights managed by SceneManager
+      this.scene.meshes.slice().forEach(mesh => {
+          if (mesh.name !== 'camera' && !mesh.name.toLowerCase().includes('light')) {
+              mesh.dispose();
+          }
+      });
+      this.scene.materials.slice().forEach(mat => mat.dispose());
+      this.scene.textures.slice().forEach(tex => tex.dispose());
+      this.modelStore.clearModel();
+      this.modelStore.clearModelInspectData();
     }
-
-    console.log("清理现有场景:", this.scene);
-    this.ifcPropertyUtils.restoreMaterials(this.scene);
-    this.scene.meshes.slice().forEach(mesh => mesh?.dispose());
-    this.scene.materials.slice().forEach(mat => mat?.dispose());
-    this.scene.textures.slice().forEach(tex => tex?.dispose());
-    this.modelStore.clearModel();
-    this.modelStore.clearModelInspectData();
-
-    // 清理完成后将场景设为 null
-    this.scene = null;
-    console.log("场景清理完成");
   }
 
-
-  private getActiveScene(): BABYLON.Scene {
-    const scenes = Array.from(Core.getActiveScenes());
-    if (!scenes.length) {
-      throw new Error("没有活动的场景");
-    }
-    return scenes[0].babylon.scene;
+  private updateProgress(percent: number, total: number, text: string): void {
+    this.progress.value = {
+      percent: Math.floor((percent / total) * 100),
+      current: percent,
+      total,
+      text
+    };
   }
 
   public setupInspectDataListener(file: File, type: number): void {
@@ -141,45 +155,5 @@ export class ModelManager {
       }
     }, 100);
     setTimeout(() => clearInterval(checkInterval), 100000);
-  }
-
-  private async loadWithProgress(ifcLoader: IfcLoader, file: File, emit: Function): Promise<void> {
-    const proxyLoader = new Proxy(ifcLoader, {
-      set: (target, prop, value) => {
-        const result = Reflect.set(target, prop, value);
-        if (prop === "loadedCount") {
-          this.updateProgress(
-            value,
-            target.totalCount,
-            value === 0 ? "打开文件" :
-              value === target.totalCount ? "完成" : "创建图元"
-          );
-        }
-        return result;
-      }
-    });
-
-    await proxyLoader.load();
-    this.modelStore.setModel(file, ifcLoader.ifcTree);
-    emit('file-uploaded');
-  }
-
-  private updateProgress(current: number, total: number, text: string): void {
-    this.progress.value = {
-      percent: Math.floor((current / total) * 100),
-      current,
-      total,
-      text
-    };
-  }
-
-  private handleSceneReady(): void {
-    if (!this.scene) return;
-
-    this.scene.onReadyObservable.add(async () => {
-      await nextTick();
-      console.log('场景已就绪', this.scene);
-      this.loading.value = false;
-    });
   }
 }

@@ -64,7 +64,7 @@ export class CubeView {
       </div>
 
     `;
-        const parent = document.getElementById('khanonjs');
+        const parent = document.getElementById('viewer');
         parent?.appendChild(container);
         const cube = document.createElement('m-cube');
         cube.setAttribute('data-node-ref', 'cubeNode');

@@ -47,26 +47,33 @@ export class IfcLoader {
         this.enableDebugVisualization = false;
         // 是否解析ifc树
         this.isParser = true;
+        this.ifcTree = null; // 用于存储解析后的IFC树
+        this.properties = null;
+        this.ifcExpressIds = null;
         this.url = url;
         this.scene = scene;
         this.camera = this.scene.getCameraByName("EarthCamera");
         this.worldOrigin = EarthTool.worldOrigin;
         this.model = new BABYLON.Mesh('modelMesh', this.scene);
         this.ifcApi = new WEBIFC.IfcAPI();
-        this.ifcApi.SetWasmPath('./', false);
+        this.ifcApi.SetWasmPath('/web-ifc/', true);
+        this.ifcParser = new IfcParser(this.ifcApi);
     }
     /**
      * 加载并解析IFC模型
+     * @param onProgress - a callback function that will be called with the loading progress
      * @returns 返回包含模型的根网格或null（加载失败时）
      */
-    async load(longitude = 0, latitude = 0, height = 0) {
+    async load(longitude = 0, latitude = 0, height = 0, onProgress = null) {
         this.longitude = longitude;
         this.latitude = latitude;
         this.height = height;
         await this.loadFileToArrayBuffer();
         if (this.isParser) {
-            const ifcParser = new IfcParser(this.ifcApi);
-            this.ifcTree = await ifcParser.load(null, this.modelID);
+            const parsedData = await this.ifcParser.load(null, this.modelID);
+            this.ifcTree = parsedData.tree;
+            this.properties = parsedData.properties;
+            this.ifcExpressIds = parsedData.ifcExpressIds;
             console.log('IFC树已加载,解析完成');
         }
         this.totalCount = this.ifcApi.GetIfcEntityList(this.modelID).length;
@@ -79,6 +86,9 @@ export class IfcLoader {
                     const mesh = flatMeshes.get(i);
                     this.processGeometryData(mesh);
                     this.loadedCount++;
+                    if (onProgress) {
+                        onProgress(this.loadedCount, this.totalCount);
+                    }
                     mesh.delete;
                     if (i % 200 === 0) await new Promise(r => setTimeout(r, 0));
                 }

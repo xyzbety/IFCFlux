@@ -1,6 +1,7 @@
 import { getIfcChineseName } from '../utils/ifc/ifcMap';
 import * as BABYLON from '@babylonjs/core';
 import { getBoundingBoxForMeshes } from '../utils';
+import { EffectManager } from './effect-manager';
 
 /**
  * IFC属性处理工具函数
@@ -20,7 +21,7 @@ export class IfcPropertyUtils {
   
   public static rootExpressId = '0';
   private hiddenNodeIds = new Set<string>();
-  private highlightLayer: any = null;
+  private effectManager: EffectManager | null = null;
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -412,89 +413,38 @@ export class IfcPropertyUtils {
 
     // 高亮mesh
     if (isHighlight && isVisibleMeshHighlight && exactMatches.length > 0) {
-      this.highlightMeshes(exactMatches, scene, isFocus);
+      if (!this.effectManager) {
+        this.effectManager = EffectManager.getInstance(scene);
+      }
+      this.effectManager.applyHighlight(exactMatches);
+
+      // 自动聚焦
+      if (isFocus) {
+        try {
+          const bbox = getBoundingBoxForMeshes(exactMatches);
+          scene.activeCamera!.setTarget(bbox.center);
+          scene.activeCamera!.radius = bbox.maximum.subtract(bbox.minimum).length() * 1.8;
+        } catch (e) {
+          console.error("Focus error:", e);
+        }
+      }
       return true;
     }
 
     return false;
   }
 
-  private highlightMeshes(meshes: BABYLON.AbstractMesh[], scene: BABYLON.Scene, isFocus: boolean) {
-    this.restoreMaterials(scene);
 
-    // 创建高亮层（只创建一次）
-    if (!this.highlightLayer) {
-      this.highlightLayer = new BABYLON.HighlightLayer("highlightLayer", scene, {
-        mainTextureFixedSize: 1024,        // 提高纹理分辨率
-        alphaBlendingMode: BABYLON.Engine.ALPHA_COMBINE,
-      });
-      this.highlightLayer.outerGlow = false;
-      this.highlightLayer.innerGlow = true;
-      console.log("创建高亮层", this.highlightLayer);
-    }
-
-    meshes.forEach(mesh => {
-      if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
-        return;
-      }
-      if (!mesh.metadata) mesh.metadata = {};
-
-      // 保存原始状态
-      mesh.metadata.originalMaterial = mesh.material;
-      mesh.metadata.originalVisibility = mesh.isVisible;
-      mesh.metadata.clonedMeshes = []; // 保存克隆的引用
-
-      mesh.renderOverlay = true; // 确保启用覆盖渲染
-      mesh.overlayColor = new BABYLON.Color4(0.68, 1.0, 1.0, 0.5); // 浅蓝色
-      mesh.isVisible = true;
-      this.highlightLayer!.addMesh(mesh, new BABYLON.Color3(0.0, 1.0, 1.0)); // 浅蓝色高亮
-      mesh.renderingGroupId = 1;
-    });
-
-    // 自动聚焦（保持原有逻辑）
-    if (isFocus && meshes.length > 0) {
-      try {
-        const bbox = getBoundingBoxForMeshes(meshes);
-        scene.activeCamera!.setTarget(bbox.center);
-        scene.activeCamera!.radius = bbox.maximum.subtract(bbox.minimum).length() * 1.8;
-      } catch (e) {
-        console.error("Focus error:", e);
-      }
-    }
-  }
-
-  public restoreMaterials(scene: BABYLON.Scene) {
-    // 清除高亮层
-    if (this.highlightLayer) {
-      this.highlightLayer.removeAllMeshes();
-      this.highlightLayer.dispose();
-      this.highlightLayer = null;
-    }
-
-    scene.meshes.forEach(mesh => {
-      if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
-        return;
-      }
-      if (mesh.metadata?.originalMaterial !== undefined) {
-        // 恢复材质
-        mesh.material = mesh.metadata.originalMaterial;
-        mesh.isVisible = mesh.metadata.originalVisibility !== false;
-        mesh.renderingGroupId = 0; // 恢复渲染组
-        mesh.renderOverlay = false; // 关闭覆盖渲染
-        // 清理metadata
-        delete mesh.metadata.originalMaterial;
-        delete mesh.metadata.originalVisibility;
-        delete mesh.metadata.isHighlighted;
-      }
-    });
-  }
 
   /**
    * 清除所有高亮效果
    * @param scene - 场景对象
    */
   public clearAllHighlights(scene: BABYLON.Scene): void {
-    this.restoreMaterials(scene);
+    if (!this.effectManager) {
+      this.effectManager = EffectManager.getInstance(scene);
+    }
+    this.effectManager.clearAll();
   }
 
   public findAllChildExpressIds(nodes: any[], targetExpressId: string, result: string[] = []): string[] {
