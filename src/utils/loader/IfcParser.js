@@ -56,7 +56,7 @@ export class IfcParser {
      * @param data IFC文件数据
      * @returns 解析后的模型对象
      */
-    async load(data = null, modelID = null) {
+    async load(data = null, modelID = null, onProgress = null) {
         if (data === null && modelID === null) {
             throw new Error('Either data or modelID must be provided');
         }
@@ -83,7 +83,7 @@ export class IfcParser {
         this.getAllElementCategories(model.modelID);
         this.generateModelData(model);
         this.groupByEntityType(model);
-        model.properties = await this.getModelProperties(model.modelID);
+        model.properties = await this.getModelProperties(model.modelID, onProgress);
         const spatialTree = getSpatialTree({
             expandedIds: [],
             properties: model.properties,
@@ -164,13 +164,14 @@ export class IfcParser {
      * @param modelID 模型ID
      * @returns 包含所有非几何元素属性的对象
      */
-    async getModelProperties(modelID) {
+    async getModelProperties(modelID, onProgress = null) {
         const geometriesIDs = await this.getAllGeometriesIDs(modelID, this.webIfc);
         let properties = {};
         properties.coordinationMatrix = this.webIfc.GetCoordinationMatrix(modelID);
         const allLinesIDs = await this.webIfc.GetAllLines(modelID);
         const linesCount = allLinesIDs.size();
-        let counter = 0;
+        const BATCH_SIZE = 1000;
+
         for (let i = 0; i < linesCount; i++) {
             const id = allLinesIDs.get(i);
             if (!geometriesIDs.has(id)) {
@@ -180,7 +181,11 @@ export class IfcParser {
                 catch (e) {
                     console.log(`Properties of the element ${id} could not be processed`);
                 }
-                counter++;
+            }
+
+            if (i % BATCH_SIZE === 0) {
+                // Silent processing
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
         }
         return properties;
@@ -342,7 +347,7 @@ export class IfcParser {
             return;
         for (const key of keys[0]) {
             const fragmentID = group.keyFragments[key];
-            console.log('>>>keys', fragmentID);
+            // console.log('>>>keys', fragmentID);
             if (fragmentID) {
                 const system = group._groupSystems[systemName];
                 if (!system[className]) {

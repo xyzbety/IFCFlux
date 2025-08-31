@@ -1,11 +1,4 @@
-export interface Theme {
-  name: string;
-  value: string;
-  hover: string;
-  active: string;
-}
-
-export const themeColors: Theme[] = [
+export const themeColors = [
     { name: '绀青', value: '#185abd', hover: '#144da1', active: '#1a63d0' },
     { name: '石青', value: '#177cb0', hover: '#136a96', active: '#1988c2' },
     { name: '景泰蓝', value: '#2775b6', hover: '#21649b', active: '#2b82c9' },

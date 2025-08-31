@@ -1,21 +1,30 @@
 import { defineStore } from 'pinia';
 
+import { themeColors } from '../utils/themeColors';
+
+export interface Theme {
+  name: string;
+  value: string;
+  hover: string;
+  active: string;
+}
+
 export interface SettingsState {
   language: 'zh-CN' | 'en-US';
-  themeColor: string;
+  theme: Theme;
 }
 
 export const useSettingsStore = defineStore('settings', {
   state: (): SettingsState => ({
     language: 'zh-CN',
-    themeColor: '#185ABD', // 默认主题色
+    theme: themeColors[0], // 默认主题
   }),
   actions: {
     setLanguage(lang: 'zh-CN' | 'en-US') {
       this.language = lang;
     },
-    setThemeColor(color: string) {
-      this.themeColor = color;
+    setTheme(theme: Theme) {
+      this.theme = theme;
     },
   },
 });

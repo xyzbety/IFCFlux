@@ -1,21 +1,4 @@
-@font-face {
-  font-family: 'SarasaUiSC';
-  /* 所有字重都使用相同的字体家族名称 */
-  src: url('/fonts/SarasaUiSC-Regular.woff2') format('woff2');
-  /* 请确保路径正确 */
-  font-weight: normal;
-  /* 或 400 */
-  font-style: normal;
-  font-display: swap;
-  /* 优化字体加载体验 */
-}
 
-@font-face {
-  font-family: 'Material Icons';
-  font-style: normal;
-  font-weight: 400;
-  src: url('/fonts/SarasaUiSC-Regular.woff2') format('woff2');
-}
 
 .material-icons {
   font-family: 'Material Icons';
@@ -60,31 +43,6 @@
   width: 356px;
   text-align: left;
 }
-
-/* 进度条样式 */
-:root {
-  --smart-border-radius: 0px;
-  --smart-font-family: 'SarasaUiSC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'WenQuanYi Zen Hei', sans-serif !important;
-}
-
-smart-progress-bar>.smart-container {
-  border-color: rgb(227, 222, 222);
-}
-
-smart-progress-bar {
-  height: 16px;
-  width: 360px;
-}
-
-smart-progress-bar .smart-value {
-  background: rgb(105, 137, 218);
-}
-
-smart-progress-bar .smart-label {
-  color: var(--td-text-color-secondary);
-  font-size: 13px;
-}
-
 
 #watermark {
   /* 隐藏水印 */
@@ -232,15 +190,15 @@ smart-color-picker {
 
 /* ribbon组件header整体样式 */
 #ribbon .smart-ribbon-header {
-  --smart-primary-rgb: var(--theme-color);
+  --smart-primary-rgb: var(--theme-color-primary);
   --smart-primary: white;
-  --smart-surface: var(--theme-color);
+  --smart-surface: var(--theme-color-primary);
   --smart-surface-color: white;
   --smart-ui-state-color-active: var(--smart-primary);
   --smart-ui-state-selected: var(--smart-primary);
   --smart-ui-state-border-active: var(--smart-surface);
   --smart-ui-state-color-selected: var(--smart-surface);
-  --smart-ui-state-hover: var(--theme-hover-color);
+  --smart-ui-state-hover: var(--theme-color-hover);
   --smart-ui-state-color-hover: var(--smart-primary);
   --smart-border-width: 0px;
 }
@@ -445,460 +403,146 @@ smart-ribbon-group[grouped] smart-drop-down-button {
 }
 
 .select:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/选择.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/选择.svg');
 }
-
 .pan_tool:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/平移.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/平移.svg');
 }
-
 .rotate:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/旋转.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/旋转.svg');
 }
-
 .rotate_left:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/向左旋转.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/向左旋转.svg');
 }
-
 .rotate_right:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/向右旋转.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/向右旋转.svg');
 }
-
 .zoom_out_map:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/放大.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/放大.svg');
 }
-
 .zoom_in_map:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/缩小.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/缩小.svg');
 }
-
 .view:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/视图.svg');
 }
-
 .default_view:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/默认视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/默认视图.svg');
 }
-
 .top_view:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/顶视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/顶视图.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .front_view:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/前视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/前视图.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .left_view:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/左视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/左视图.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .bottom_view:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/底视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/底视图.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .back_view:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/后视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/后视图.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .right_view:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/右视图.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/右视图.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .hide_selected:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/隐藏选中.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/隐藏选中.svg');
 }
-
 .isolate-selected:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/隔离选中.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/隔离选中.svg');
 }
-
 .transprent_other:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/半透明选中.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/半透明选中.svg');
 }
-
 .visible:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/可见性.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/可见性.svg');
 }
-
 .show_all:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/显示全部.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/显示全部.svg');
 }
-
 .measure:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/测量.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/测量.svg');
 }
-
 .measure_distance:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/距离.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/距离.svg');
 }
-
 .measure_angle:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/角度.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/角度.svg');
 }
-
 .measure_area:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/面积.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/面积.svg');
 }
-
 .measure_coordinate:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/坐标.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/坐标.svg');
 }
-
 .measure_clear:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/清除测量.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/清除测量.svg');
 }
-
-
 .x_axis:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/yz剖面.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/yz剖面.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .y_axis:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/xz剖面.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/xz剖面.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .z_axis:after {
-  width: 15px;
-  height: 15px;
-  content: "";
-  display: block;
-  background-image: url(/icons/xy剖面.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/xy剖面.svg', 15px, 15px);
   transform: scale(1.15);
 }
-
 .slice_display:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/剖面显隐.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/剖面显隐.svg');
 }
-
 .slice_reset:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/结束剖切.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/结束剖切.svg');
 }
-
 .slice:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/剖切.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/剖切.svg');
 }
-
 .object:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/对象.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/对象.svg');
 }
-
 .build_tree:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/结构.svg);
-  background-size: cover;
-  background-position: center;
-}
-
-.properties_table:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/属性.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/结构.svg');
 }
 .properties_table:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/属性.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/属性.svg');
 }
 .floor_drawer:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/楼层抽屉.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/楼层抽屉.svg');
 }
 .axis_explosion:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/轴向爆炸.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/轴向爆炸.svg');
 }
 .floor_explosion:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/楼层爆炸.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/楼层爆炸.svg');
 }
 .base_data:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/基础数据.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/基础数据.svg');
 }
 .planning_construction:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/规划报建.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/规划报建.svg');
 }
 .construction_review:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/施工图审查.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/施工图审查.svg');
 }
 .smart_site_supervision:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/智慧工地监管.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/智慧工地监管.svg');
 }
 .completion_acceptance:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/竣工验收.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/竣工验收.svg');
 }
 .compliance_inspection:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/合标性检查.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/合标性检查.svg');
 }
 .reset_light:after {
-  width: 32px;
-  height: 32px;
-  content: "";
-  display: block;
-  background-image: url(/icons/重置光照.svg);
-  background-size: cover;
-  background-position: center;
+  .icon-background('/icons/重置光照.svg');
 }

@@ -1,5 +1,5 @@
 <template>
-    <div class="container-title" data-tauri-drag-region :style="themeStyle">
+    <div class="container-title" data-tauri-drag-region>
         <div class="title-left">
             <img src="/logo.png" alt="logo" style="padding: 0 5px;margin-left: 0px;" />
             <span>IFCFlux</span>
@@ -17,11 +17,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { themeColors } from '../styles/themes';
-import { useSettingsStore } from '../store/settings';
+import { useSettingsStore } from '../../store/settings';
 
 const isTauriEnv = isTauri();
 const settingsStore = useSettingsStore();
@@ -36,14 +34,7 @@ const emit = defineEmits<{
     (e: 'redo'): void
 }>();
 
-const themeStyle = computed(() => {
-    const currentTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
-    return {
-        '--theme-color': currentTheme.value,
-        '--theme-hover-color': currentTheme.hover,
-        '--td-brand-color': currentTheme.value
-    };
-});
+
 // 最大化窗口
 const maximize = async () => {
   if (isTauriEnv) {

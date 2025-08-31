@@ -1,8 +1,8 @@
 <template>
   <div v-if="visible" class="sidebar-overlay" @click.self="close">
-    <div class="sidebar-container" :style="themeVars">
+    <div class="sidebar-container">
       <TLayout style="height: 100%">
-        <TAside style="width: 220px; background-color: #f0f0f0; border-right: 1px solid #e8e8e8;">
+        <TAside style="width: 220px; background-color: #f0f0f0; border-right: 1px solid #e0e0e0;">
           <TMenu v-model="activeMenu" style="height: 100%; background-color: #f0f0f0;" theme="light">
             <TMenuItem value="open">
               <template #icon>
@@ -74,7 +74,7 @@
                   <TIconLanguage class="card-icon" />
                   <div class="card-text">
                     <p class="title">简体中文</p>
-                    <p class="description">界面语言将设置为简体中文。</p>
+                    <p class="description">界面语言将设置为简体中文</p>
                   </div>
                 </div>
               </div>
@@ -84,7 +84,7 @@
                   <TIconLanguage class="card-icon" />
                   <div class="card-text">
                     <p class="title">English</p>
-                    <p class="description">The interface language will be set to English.</p>
+                    <p class="description">The interface language will be set to English</p>
                   </div>
                 </div>
               </div>
@@ -95,7 +95,7 @@
             <h4 class="t-typography__title">配色方案</h4>
             <div class="setting-cards-container">
               <div v-for="color in themeColors" :key="color.value" class="setting-card theme-card"
-                :class="{ active: settingsStore.themeColor === color.value }" @click="handleThemeChange(color.value)">
+                :class="{ active: settingsStore.theme.value === color.value }" @click="handleThemeChange(color)">
                 <div class="card-content">
                   <div class="color-swatch-large" :style="{ backgroundColor: color.value }"></div>
                   <div class="card-text">
@@ -124,14 +124,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
-import { ModelManager } from '../services/model-manager';
-import { useSettingsStore } from '../store/settings';
-import { useModelStore } from "../store/index.ts";
-import { getFileHistory } from '../utils/indexedDB';
-import { RibbonEventManager } from "../composables/useRibbonEvent.ts";
-import { themeColors } from '../styles/themes';
-import ProgressBar from "./ProgressBar.vue";
+import { ref, watch } from 'vue';
+import type { Theme } from '../store/settings';
+import { ModelManager } from '../../services/model-manager';
+import { useSettingsStore } from '../../store/settings';
+import { useModelStore } from "../../store/index.ts";
+import { getFileHistory } from '../../utils/indexedDB';
+import { RibbonEventManager } from "../../composables/useRibbonEvent.ts";
+import { themeColors } from '../../utils/themeColors';
+import ProgressBar from "../ProgressBar.vue";
 import {
   Layout as TLayout,
   Aside as TAside,
@@ -151,7 +152,7 @@ import {
   PaletteIcon as TIconPalette,
   HelpCircleIcon as TIconHelpCircle,
 } from 'tdesign-icons-vue-next';
-import './../styles/file-menu-sidebar.css';
+
 
 const props = defineProps({
   visible: {
@@ -171,29 +172,7 @@ const progress = modelManager.loadProgress;
 let eventManager = RibbonEventManager.getInstance();
 eventManager.initialize({ modelStore, emit });
 
-const currentTheme = computed(() => themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0]);
 
-const themeVars = computed(() => {
-  const theme = currentTheme.value;
-  const hexToRgba = (hex: string, alpha: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-  return {
-    // Left Menu
-    '--menu-active-color': theme.active,
-    '--menu-active-bg': hexToRgba(theme.active, 0.3),
-    '--menu-hover-bg': hexToRgba(theme.value, 0.3),
-
-    // Right Cards
-    '--card-active-border-color': theme.active,
-    '--card-hover-border-color': theme.hover,
-    '--card-bg-color': '#fafafa',
-    '--card-active-shadow-color': hexToRgba(theme.active, 0.2)
-  };
-});
 
 watch(() => props.visible, async (newValue) => {
   if (newValue) {
@@ -244,8 +223,8 @@ const handleLanguageChange = (value: any) => {
   close();
 };
 
-const handleThemeChange = (color: string) => {
-  settingsStore.setThemeColor(color);
+const handleThemeChange = (theme: Theme) => {
+  settingsStore.setTheme(theme);
   close();
 };
 const handleFileClick = (item: any) => {

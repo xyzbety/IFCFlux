@@ -138,7 +138,7 @@ const handleRowClick = async (event: any) => {
         // 调用统一的处理方法
         await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
     } else {
-        alert("未找到对应模型");
+        console.log("未找到对应构件");
         return;
     }
 
@@ -258,7 +258,7 @@ watch(
                 tableData.value = [];
                 selectedKey.value = null;
             }
-            console.log("数据更新了1");
+            console.log("数据已更新");
         }
     },
     { immediate: true, deep: true }
@@ -270,7 +270,7 @@ watch(dialogTableData, (val) => {
 }, { immediate: true });
 
 watch(() => props.inspectType, (val) => {
-    console.log("检查类型变了", val);
+    console.log("检查规则已加载", val);
     searchText.value = '';
     descriptions.value = [];
     tableData.value = [];

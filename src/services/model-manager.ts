@@ -66,14 +66,14 @@ export class ModelManager {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
       if (fileExtension === 'ifc') {
-        this.updateProgress(0, 100, "打开文件");
+        this.updateProgress(0, "打开文件");
         const ifcLoader = new IfcLoader(file, this.scene);
         
-        const onProgressCallback = (loaded: number, total: number) => {
-            this.updateProgress(loaded, total, "加载模型");
+        const onProgressCallback = (progress: number, text: string, current?: number, total?: number) => {
+            this.updateProgress(progress, text, current, total);
         };
 
-        await ifcLoader.load(0, 0, 0, onProgressCallback);
+        await ifcLoader.load(onProgressCallback);
 
         this.modelStore.setModel(file, {
             tree: ifcLoader.ifcTree,
@@ -83,7 +83,7 @@ export class ModelManager {
             modelID: ifcLoader.modelID
         });
         
-        this.updateProgress(100, 100, "完成");
+        this.updateProgress(100, "完成");
 
       } else {
         throw new Error(`Unsupported file format: ${fileExtension}`);
@@ -95,7 +95,7 @@ export class ModelManager {
 
     } catch (error) {
       console.error("加载失败:", error);
-      this.updateProgress(100, 100, "加载失败");
+      this.updateProgress(100, "加载失败");
       throw error;
     } finally {
       // Give the UI a moment to show the 100% "完成" status before hiding the progress bar.
@@ -134,12 +134,12 @@ export class ModelManager {
     }
   }
 
-  private updateProgress(percent: number, total: number, text: string): void {
+  private updateProgress(percent: number, text: string, current?: number, total?: number): void {
     this.progress.value = {
-      percent: Math.floor((percent / total) * 100),
-      current: percent,
-      total,
-      text
+      percent: Math.floor(percent),
+      current: current ?? 0,
+      total: total ?? 0,
+      text: text
     };
   }
 

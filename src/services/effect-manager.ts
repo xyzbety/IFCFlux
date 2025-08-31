@@ -41,9 +41,9 @@ export class EffectManager {
       );
 
       const keys = [];
-      keys.push({ frame: 0, value: new BABYLON.Color3(0.0, 0.3, 0.3) });
-      keys.push({ frame: totalFrames / 2, value: new BABYLON.Color3(0.0, 0.6, 0.6) });
-      keys.push({ frame: totalFrames, value: new BABYLON.Color3(0.0, 0.3, 0.3) });
+      keys.push({ frame: 0, value: new BABYLON.Color3(0.0, 0.6, 0.6) });
+      keys.push({ frame: totalFrames / 2, value: new BABYLON.Color3(0.0, 0.8, 0.8) });
+      keys.push({ frame: totalFrames, value: new BABYLON.Color3(0.0, 0.6, 0.6) });
 
       breathingAnimation.setKeys(keys);
       if (!this.highlightMaterial.animations) {
@@ -70,7 +70,7 @@ export class EffectManager {
 
       // 启用边缘渲染
       mesh.enableEdgesRendering();
-      mesh.edgesWidth = 4.0;
+      mesh.edgesWidth = 5.0;
       mesh.edgesColor = new BABYLON.Color4(0, 1, 1, 1);
     });
   }

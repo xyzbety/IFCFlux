@@ -24,13 +24,7 @@ const props = defineProps({
   },
   progress: {
     type: Object,
-    required: true,
-    default: () => ({
-      percent: 0,
-      current: 0,
-      total: 100,
-      text: "处理中"
-    })
+    required: true
   }
 });
 
@@ -57,13 +51,12 @@ watch(
   height: 120px;
   padding: 15px;
   background-color: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.05);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: none;
+  border: 1px solid #ececec;
 }
 
 .label {
@@ -87,6 +80,7 @@ watch(
 
 :deep(.t-progress__inner) {
   border-radius: 0;
+  transition: none;
 }
 
 </style>

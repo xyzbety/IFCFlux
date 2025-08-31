@@ -50,7 +50,7 @@
       <div id="rightArea" :style="{ flex: layoutState.showAnimationPanel ? '2 1 0' : '1 1 0' }">
         <div id="viewer" style="position: relative; width: 100%; height: 100%;">
           <component :is="BabylonViewer" ref="babylonViewerRef" v-show="BabylonViewer"></component>
-          <ProgressBar :loading="modelStore.loading" :progress="modelStore.progress" />
+          <ProgressBar :loading="modelStore.loading || false" :progress="modelStore.progress || { percent: 0, current: 0, total: 100, text: '' }" />
         </div>
       </div>
     </div>
@@ -75,10 +75,10 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import FileMenuSidebar from './components/FileMenuSidebar.vue';
-import TitleBar from './components/TitleBar.vue';
+import FileMenuSidebar from './components/menu/MenuSidebar.vue';
+import TitleBar from './components/menu/TitleBar.vue';
 import DragBar from './components/DragBar.vue';
-import Ribbon from "./components/Ribbon.vue";
+import Ribbon from "./components/menu/Ribbon.vue";
 import AnimationController from './components/AnimationController.vue';
 import Dialog from './components/Dialog.vue';
 import Inspect from './components/Inspect.vue';
@@ -88,7 +88,6 @@ import ProgressBar from './components/ProgressBar.vue';
 import { useAppCore } from './composables/useAppCore';
 import { useModelStore } from './store';
 import { eventManager } from './services/event-manager';
-import './styles/app.css';
 
 const {
   isMaximized, isFileMenuVisible, layoutState, babylonViewerRef, structureTreeRef, animationControllerRef,

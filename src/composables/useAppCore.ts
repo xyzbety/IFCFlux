@@ -18,7 +18,6 @@ import { useDragResize } from './useDragResize';
 import { IfcPropertyUtils } from '../services/property-manager';
 import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
-import { themeColors } from '../styles/themes';
 import { eventManager } from '../services/event-manager';
 
 // Global declarations
@@ -86,23 +85,37 @@ export function useAppCore() {
         property: [] as any[],
     });
 
-    const themeStyle = computed(() => {
-        const currentTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
-        return {
-            '--theme-color': currentTheme.value,
-            '--theme-hover-color': currentTheme.hover,
-            '--td-brand-color': currentTheme.value
-        };
-    });
+    const themeStyle = computed(() => ({
+        '--theme-color-primary': settingsStore.theme.value,
+        '--td-brand-color': settingsStore.theme.value
+    }));
 
-    watch(() => settingsStore.themeColor, (newColor) => {
-        const currentTheme = themeColors.find(t => t.value === newColor) || themeColors[0];
-        const ribbonElement = document.querySelector('#ribbon .smart-ribbon-header');
-        if (ribbonElement) {
-            (ribbonElement as HTMLElement).style.setProperty('--smart-surface', currentTheme.value);
-            (ribbonElement as HTMLElement).style.setProperty('--smart-ui-state-hover', currentTheme.hover);
+    const hexToRgba = (hex: string, alpha: number) => {
+        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!result) return hex;
+        const r = parseInt(result[1], 16);
+        const g = parseInt(result[2], 16);
+        const b = parseInt(result[3], 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    watch(() => settingsStore.theme, (newTheme) => {
+        if (newTheme && newTheme.value && newTheme.hover && newTheme.active) {
+            const root = document.documentElement;
+            root.style.setProperty('--theme-color-primary', newTheme.value);
+            root.style.setProperty('--theme-color-hover', newTheme.hover);
+            root.style.setProperty('--theme-color-active', newTheme.active);
+
+            // Set background colors for menu items directly from the theme object
+            root.style.setProperty('--theme-color-active-bg', newTheme.active);
+            root.style.setProperty('--theme-color-hover-bg', newTheme.hover);
+            
+            // Set the shadow color for active setting cards
+            root.style.setProperty('--theme-color-active-shadow', hexToRgba(newTheme.active, 0.3));
         }
-    });
+    }, { deep: true, immediate: true });
 
     const handleRibbonTabChange = (tabIndex: number) => {
         if (!sceneManager.scene) {
@@ -260,7 +273,8 @@ export function useAppCore() {
     };
 
     const handleSpaceGenerate = async (action: 'generate' | 'export') => {
-        if (modelStore.file) {
+        if (modelStore.file && sceneManager.scene) {
+            const scene = sceneManager.scene;
             const gen = new IfcSpaceGen(modelStore.file);
             const result = await gen.generateSpaces();
             if (action === 'generate') {
@@ -269,13 +283,15 @@ export function useAppCore() {
                     const vertexData = new BABYLON.VertexData();
                     vertexData.positions = mesh.vertexData.flat();
                     vertexData.indices = mesh.faceData.flat();
-                    vertexData.normals = new Array(vertexData.positions.length).fill(0);
-                    BABYLON.VertexData.ComputeNormals(vertexData.positions, vertexData.indices, vertexData.normals);
-                    vertexData.applyToMesh(customMesh);
-                    const mat = new BABYLON.StandardMaterial(`mat_${idx}`, scene);
-                    mat.diffuseColor = new BABYLON.Color3(1, 0, 0);
-                    mat.alpha = 1;
-                    customMesh.material = mat;
+                    if (vertexData.positions && vertexData.indices) {
+                        vertexData.normals = new Array(vertexData.positions.length).fill(0);
+                        BABYLON.VertexData.ComputeNormals(vertexData.positions, vertexData.indices, vertexData.normals);
+                        vertexData.applyToMesh(customMesh);
+                        const mat = new BABYLON.StandardMaterial(`mat_${idx}`, scene);
+                        mat.diffuseColor = new BABYLON.Color3(1, 0, 0);
+                        mat.alpha = 1;
+                        customMesh.material = mat;
+                    }
                 });
                 alert("生成空间成功");
             } else if (action === 'export') {
@@ -290,10 +306,11 @@ export function useAppCore() {
     };
 
     const onTableSelectChange = (event: any) => {
+        if (!sceneManager.scene) return;
         let expressId = event.args[0]?.originData?.expressId;
         const isChecked = event.selectState;
         if (event.args[0].cellLocation === 'columnHeader') expressId = IfcPropertyUtils.rootExpressId;
-        if (expressId) ifcPropertyUtils.updateModelVisibilityByCheckbox(scene, expressId, isChecked, pageState.treeData);
+        if (expressId) ifcPropertyUtils.updateModelVisibilityByCheckbox(sceneManager.scene, expressId, isChecked, pageState.treeData);
     };
 
     const tableRowClick = async (event: any) => {
@@ -374,14 +391,10 @@ export function useAppCore() {
         ribbonManager.bindRibbonEvents();
 
         switchToMode(LM.CANVAS_ONLY);
-        setTimeout(() => {
-            const initialTheme = themeColors.find(t => t.value === settingsStore.themeColor) || themeColors[0];
-            const ribbonElement = document.querySelector('#ribbon .smart-ribbon-header');
-            if (ribbonElement) {
-                (ribbonElement as HTMLElement).style.setProperty('--smart-surface', initialTheme.value);
-                (ribbonElement as HTMLElement).style.setProperty('--smart-ui-state-hover', initialTheme.hover);
-            }
-        }, 550);
+        // This logic is now handled by the watcher and CSS variables.
+        // The setTimeout might have been for waiting for the ribbon component to render.
+        // If direct CSS variable application is not enough, we might need to re-evaluate,
+        // but for now, the watcher with `immediate: true` should cover it.
 
         const module = await import('../components/BabylonViewer.vue');
         BabylonViewer.value = module.default;

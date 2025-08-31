@@ -1,6 +1,5 @@
 import * as WEBIFC from "web-ifc";
 import * as BABYLON from "@babylonjs/core";
-import { EarthTool } from "./EarthTool";
 import { cacheDB } from './CacheDB';
 import { IfcParser } from "./IfcParser";
 import { GeometryTypes } from "../ifc/ifc-geometry-types";
@@ -12,21 +11,11 @@ export class IfcLoader {
      * 构造函数，初始化加载器
      * @param url IFC文件URL或File对象
      * @param scene Babylon.js场景实例
-     * @param isEarth 是否显示地球
      */
     constructor(url, scene) {
         this.materialsMap = new Map(); // 材质映射表（按颜色ID分组存储网格）
         this.materialCache = new Map(); // 材质缓存（避免重复创建）
         this.geometryCache = new Map();
-        this.camera = null; //摄像机对象，用于获取当前视角和位置 */
-        // 经度
-        this.longitude = 0;
-        // 纬度
-        this.latitude = 0;
-        // 高度
-        this.height = 0;
-        // 是否显示地球
-        this.isEarth = false;
         // 已加载数量
         this.loadedCount = 0;
         // 总数量
@@ -52,8 +41,6 @@ export class IfcLoader {
         this.ifcExpressIds = null;
         this.url = url;
         this.scene = scene;
-        this.camera = this.scene.getCameraByName("EarthCamera");
-        this.worldOrigin = EarthTool.worldOrigin;
         this.model = new BABYLON.Mesh('modelMesh', this.scene);
         this.ifcApi = new WEBIFC.IfcAPI();
         this.ifcApi.SetWasmPath('/web-ifc/', true);
@@ -64,40 +51,51 @@ export class IfcLoader {
      * @param onProgress - a callback function that will be called with the loading progress
      * @returns 返回包含模型的根网格或null（加载失败时）
      */
-    async load(longitude = 0, latitude = 0, height = 0, onProgress = null) {
-        this.longitude = longitude;
-        this.latitude = latitude;
-        this.height = height;
+    async load(onProgress = null) {
         await this.loadFileToArrayBuffer();
+
         if (this.isParser) {
-            const parsedData = await this.ifcParser.load(null, this.modelID);
+            // Pass null for onProgress to make property parsing silent
+            const parsedData = await this.ifcParser.load(null, this.modelID, null);
             this.ifcTree = parsedData.tree;
             this.properties = parsedData.properties;
             this.ifcExpressIds = parsedData.ifcExpressIds;
             console.log('IFC树已加载,解析完成');
         }
-        this.totalCount = this.ifcApi.GetIfcEntityList(this.modelID).length;
-        try {
-            this.model.setEnabled(false); // 禁用模型网格，避免加载时渲染
-            const flatMeshes = this.ifcApi.LoadAllGeometry(this.modelID);
-            this.totalCount = flatMeshes.size();
-            const processMeshes = async () => {
-                for (let i = 0; i < this.totalCount; i++) {
-                    const mesh = flatMeshes.get(i);
-                    this.processGeometryData(mesh);
-                    this.loadedCount++;
+
+        return new Promise(async (resolve, reject) => {
+            try {
+                this.model.setEnabled(false);
+
+                const flatMeshes = this.ifcApi.LoadAllGeometry(this.modelID);
+                const geometryCount = flatMeshes.size();
+                let loadedGeometries = 0;
+                
+                const processMeshes = async () => {
+                    // Start progress from 0 for geometry loading
                     if (onProgress) {
-                        onProgress(this.loadedCount, this.totalCount);
+                        onProgress(0, "正在创建图元", 0, geometryCount);
                     }
-                    mesh.delete;
-                    if (i % 200 === 0) await new Promise(r => setTimeout(r, 0));
-                }
-                // 清理资源
-                flatMeshes.delete();
-            };
-            await processMeshes();
-            // 处理同一几何，创建实例（webifc中 相同geometryExpressID 指向同一几何数据）
-            if (this.useInstancing) {
+
+                    for (let i = 0; i < geometryCount; i++) {
+                        const mesh = flatMeshes.get(i);
+                        this.processGeometryData(mesh);
+                        
+                        loadedGeometries++;
+                        if (onProgress) {
+                            const percent = (loadedGeometries / geometryCount) * 100;
+                            onProgress(percent, "正在创建图元", loadedGeometries, geometryCount);
+                        }
+
+                        mesh.delete;
+                        if (i % 200 === 0) await new Promise(r => setTimeout(r, 0));
+                    }
+                    flatMeshes.delete();
+                };
+
+                await processMeshes();
+
+                if (this.useInstancing) {
                 this.geometryCache.forEach((meshes) => {
                     if (meshes.length >= this.instanceThreshold) {
                         const rootMesh = meshes[0];
@@ -125,17 +123,16 @@ export class IfcLoader {
                 });
                 this.geometryCache.clear();
             }
-            this.loadedCount = this.totalCount;
-            this.loadedCount = this.totalCount;
             this.isComplete = true;
-            // 关闭模型并返回结果
             this.model.setEnabled(true);
             this.ifcApi.CloseModel(this.modelID);
+            resolve();
         }
         catch (error) {
             console.error("IFC加载过程中发生错误:", error);
-            return null;
+            reject(error);
         }
+      });
     }
     isWebUrl(url) {
         try {
@@ -232,9 +229,6 @@ export class IfcLoader {
                     if (this.isFreezeTransformMatrix) {
                         mesh.freezeWorldMatrix();
                     }
-                    if (this.isEarth) {
-                        mesh.renderingGroupId = 17;
-                    }
                     meshes.push(mesh);
                 }
             }
@@ -264,9 +258,6 @@ export class IfcLoader {
                 mesh.isVisible = true;
                 if (this.isFreezeTransformMatrix) {
                     mesh.freezeWorldMatrix();
-                }
-                if (this.isEarth) {
-                    mesh.renderingGroupId = 17;
                 }
             }
         }
