@@ -1,5 +1,5 @@
 <template>
-  <FileMenuSidebar :visible="isFileMenuVisible" @update:visible="isFileMenuVisible = $event"
+  <Sidebar :visible="isSidebarVisible" @update:visible="isSidebarVisible = $event"
     @request-open-file="handleOpenFile" @file-uploaded="handleFileUploaded($event)" />
   <div class="container-title" data-tauri-drag-region :style="themeStyle">
     <TitleBar :is-maximized="isMaximized" @open-file="handleOpenFile" @replay="handleReplay" @redo="handleRedo" />
@@ -75,22 +75,22 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import FileMenuSidebar from './components/menu/MenuSidebar.vue';
+import Sidebar from './components/menu/Sidebar.vue';
 import TitleBar from './components/menu/TitleBar.vue';
 import DragBar from './components/DragBar.vue';
 import Ribbon from "./components/menu/Ribbon.vue";
 import AnimationController from './components/AnimationController.vue';
 import Dialog from './components/Dialog.vue';
-import Inspect from './components/Inspect.vue';
-import StructureTree from './components/StructureTree.vue';
-import PropertyTable from './components/PropertyTable.vue';
+import Inspect from './components/check/InspectionReport.vue';
+import StructureTree from './components/view/StructureTree.vue';
+import PropertyTable from './components/view/PropertyTable.vue';
 import ProgressBar from './components/ProgressBar.vue';
 import { useAppCore } from './composables/useAppCore';
 import { useModelStore } from './store';
 import { eventManager } from './services/event-manager';
 
 const {
-  isMaximized, isFileMenuVisible, layoutState, babylonViewerRef, structureTreeRef, animationControllerRef,
+  isMaximized, isSidebarVisible, layoutState, babylonViewerRef, structureTreeRef, animationControllerRef,
   leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
   themeStyle, BabylonViewer, inspectType,
   handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,

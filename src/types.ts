@@ -36,23 +36,23 @@ export type RibbonItem = {
 /**
  * 文件菜单配置
  * @property {'dropdown'} type - 固定为下拉菜单类型
- * @property {RibbonFileMenuItem[]} items - 菜单项集合
+ * @property {SidebarItem[]} items - 菜单项集合
  */
 export type RibbonFileMenu = {
   type: 'dropdown',
-  items: RibbonFileMenuItem[]
+  items: SidebarItem[]
 }
 
 /**
  * 文件菜单项
  * @property {string} label - 菜单项文本
  * @property {string} shortcut - 快捷键显示文本
- * @property {RibbonFileMenuItem[]} [items] - 子菜单项
+ * @property {SidebarItem[]} [items] - 子菜单项
  */
-export type RibbonFileMenuItem = {
+export type SidebarItem = {
   label: 'Open Containing Folder',
   shortcut: string,
-  items?: RibbonFileMenuItem[],
+  items?: SidebarItem[],
 }
 
 /**

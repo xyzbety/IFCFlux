@@ -5,7 +5,14 @@ export const useModelStore = defineStore('model', {
     state: () => ({
         file: null as File | null,
         modelData: null as any,
-        modelInspectData: null as any
+        modelInspectData: null as any,
+        loading: false,
+        progress: {
+            text: 'Loading...',
+            current: 0,
+            total: 0,
+            percent: 0,
+        }
     }),
     actions: {
         setModel(file: File, modelData: any) {
@@ -21,6 +28,12 @@ export const useModelStore = defineStore('model', {
         },
         clearModelInspectData() {
             this.modelInspectData = null
+        },
+        setLoading(loading: boolean) {
+            this.loading = loading;
+        },
+        setProgress(progress: any) {
+            this.progress = { ...this.progress, ...progress };
         }
     }
 })

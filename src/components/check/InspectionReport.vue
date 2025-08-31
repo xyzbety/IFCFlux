@@ -60,11 +60,11 @@
 
 <script lang="ts" setup>
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { useModelStore } from '../store';
+import { useModelStore } from '../../store';
 import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 import { Tooltip as TTooltip } from 'tdesign-vue-next';
-import { SceneManager } from '../services/scene-manager';
-import { IfcPropertyUtils } from '../services/property-manager';
+import { SceneManager } from '../../services/scene-manager';
+import { IfcPropertyUtils } from '../../services/property-manager';
 const props = defineProps<{ visible: boolean; inspectType: string }>();
 
 const emit = defineEmits(['update:visible']);

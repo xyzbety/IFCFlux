@@ -14,9 +14,6 @@ importers:
       '@babylonjs/gui':
         specifier: ^8.25.0
         version: 8.25.0(@babylonjs/core@8.25.0)
-      '@babylonjs/loaders':
-        specifier: ^8.25.0
-        version: 8.25.0(@babylonjs/core@8.25.0)(babylonjs-gltf2interface@8.25.0)
       '@babylonjs/materials':
         specifier: ^8.25.0
         version: 8.25.0(@babylonjs/core@8.25.0)
@@ -50,9 +47,6 @@ importers:
       pinia:
         specifier: ^3.0.3
         version: 3.0.3(typescript@5.9.2)(vue@3.5.20(typescript@5.9.2))
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
       smart-webcomponents:
         specifier: ~23.1.1
         version: 23.1.1
@@ -128,12 +122,6 @@ packages:
     resolution: {integrity: sha512-dIEmeZPca0TvGN0tKUtV0Ky8AsE2AgEhdJAl15oLdg2YfqUz50m17RKtpOs6FrJXHlubYLRKY1z5Vh0FwG3/Yg==}
     peerDependencies:
       '@babylonjs/core': ^8.0.0
-
-  '@babylonjs/loaders@8.25.0':
-    resolution: {integrity: sha512-hoXE/AwOli7l+R3Nz7cmUsnt5cSrIRQWaGaUjmQ4dZJNI0JqzmkxUuQq9eJfNUtjDnjEM1RfXzIlt2QdFg4KoA==}
-    peerDependencies:
-      '@babylonjs/core': ^8.0.0
-      babylonjs-gltf2interface: ^8.0.0
 
   '@babylonjs/materials@8.25.0':
     resolution: {integrity: sha512-DyJ3Ghh0pqgpU6nMZyAuWChxW0B/UgpZXYqGghnEpy2CtlepvUi9jfYD/YvSJ/iDry3xdR++Gv8FU4ci66tuoQ==}
@@ -1315,9 +1303,6 @@ packages:
   array-source@0.0.4:
     resolution: {integrity: sha512-frNdc+zBn80vipY+GdcJkLEbMWj3xmzArYApmUGxoiV8uAu/ygcs9icPdsGdA26h0MkHUMW6EN2piIvVx+M5Mw==}
 
-  babylonjs-gltf2interface@8.25.0:
-    resolution: {integrity: sha512-yB0T/TWBUmHKvEtpELoMXZJrmaPciZzsfbbUfj0nLKcZ+TkgLq/dy0Nb/+O2u05dWZRwAC+4lfv1CdeEfrUk0g==}
-
   before-after-hook@4.0.0:
     resolution: {integrity: sha512-q6tR3RPqIB1pMiTRMFcZwuG5T8vwp+vUvEG0vuI6B+Rikh5BfPp2fQ82c925FOs+b0lcFQ8CFrL+KbilfZFhOQ==}
 
@@ -2420,9 +2405,6 @@ packages:
     resolution: {integrity: sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==}
     engines: {node: '>= 6'}
 
-  reflect-metadata@0.2.2:
-    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
-
   registry-auth-token@5.1.0:
     resolution: {integrity: sha512-GdekYuwLXLxMuFTwAPg5UKGLW/UXzQrZvH/Zj791BQif5T05T0RsaLfHc9q3ZOKi7n+BoprPD9mJ0O0k4xzUlw==}
     engines: {node: '>=14'}
@@ -2989,11 +2971,6 @@ snapshots:
   '@babylonjs/gui@8.25.0(@babylonjs/core@8.25.0)':
     dependencies:
       '@babylonjs/core': 8.25.0
-
-  '@babylonjs/loaders@8.25.0(@babylonjs/core@8.25.0)(babylonjs-gltf2interface@8.25.0)':
-    dependencies:
-      '@babylonjs/core': 8.25.0
-      babylonjs-gltf2interface: 8.25.0
 
   '@babylonjs/materials@8.25.0(@babylonjs/core@8.25.0)':
     dependencies:
@@ -4885,8 +4862,6 @@ snapshots:
 
   array-source@0.0.4: {}
 
-  babylonjs-gltf2interface@8.25.0: {}
-
   before-after-hook@4.0.0: {}
 
   bignumber.js@9.3.1: {}
@@ -5930,8 +5905,6 @@ snapshots:
       inherits: 2.0.4
       string_decoder: 1.3.0
       util-deprecate: 1.0.2
-
-  reflect-metadata@0.2.2: {}
 
   registry-auth-token@5.1.0:
     dependencies:

@@ -72,7 +72,7 @@ pnpm tauri build
 ## 项目结构
 
 ```
-ifc-viewer/
+ifcflux/
 ├── .gitignore              # Git忽略文件配置
 ├── .npmrc                  # npm配置文件
 ├── index.html              # 入口HTML文件
@@ -80,94 +80,38 @@ ifc-viewer/
 ├── pnpm-lock.yaml          # pnpm依赖锁文件
 ├── README.md               # 项目说明文档
 ├── tsconfig.json           # TypeScript配置
-├── tsconfig.node.json      # Node.js TypeScript配置
-├── vite.config.ts          # Vite配置
-├── public/                 # 静态资源
-│   ├── extractor.worker.js # Web Worker文件
+├── tsconfig.node.json      # Node.js环境的TypeScript配置
+├── vite.config.ts          # Vite构建工具配置
+├── public/                 # 静态资源目录
+│   ├── extractor.worker.js # Web Worker脚本
 │   ├── favicon.png         # 网站图标
 │   ├── logo.png            # 应用Logo
 │   ├── fonts/              # 字体文件
-│   │   ├── SarasaUiSC-Bold.woff2
-│   │   └── SarasaUiSC-Regular.woff2
-│   ├── icons/              # SVG图标文件
-│   │   ├── 测量.svg
-│   │   ├── 视图.svg
-│   │   ├── 属性.svg
-│   │   ├── 结构.svg
-│   │   ├── arrow-down.svg
-│   │   ├── arrow-right.svg
-│   │   └── ... (更多功能图标)
-│   └── textures/           # 纹理资源
-│       └── tex_1.png
-├── src/                    # 前端源代码
+│   ├── icons/              # SVG图标
+│   ├── rules/              # 检查规则文件
+│   ├── textures/           # 3D纹理资源
+│   └── web-ifc/            # Web-IFC库相关文件
+├── src/                    # 前端源代码目录
 │   ├── App.vue             # 主应用组件
 │   ├── main.ts             # 应用入口文件
-│   ├── types.ts            # TypeScript类型定义
-│   ├── vite-env.d.ts       # Vite环境类型声明
-│   ├── blockly/            # Blockly可视化编程
-│   │   ├── animation.ts    # 动画相关
-│   │   ├── blocks.ts       # 自定义块定义
-│   │   ├── generator.ts    # 代码生成器
-│   │   └── toolbox.ts      # 工具箱配置
+│   ├── shims-js.d.ts       # JS模块的TypeScript声明文件
+│   ├── types.ts            # 全局TypeScript类型定义
+│   ├── vite-env.d.ts       # Vite环境变量的类型声明
 │   ├── components/         # Vue组件
-│   │   ├── Check.vue       # 检查结果组件
-│   │   ├── Dialog.vue      # 通用对话框组件
-│   │   ├── DialogR.vue     # 右侧对话框组件
-│   │   ├── KhanonViewer.vue # 3D查看器组件
-│   │   ├── PropertyTable.vue # 属性表组件
-│   │   ├── Ribbon.vue      # 功能区组件
-│   │   ├── StructureTree.vue # 构件树组件
-│   │   └── check/          # 检查相关子组件
-│   │       ├── circleProgress.vue # 圆形进度条
-│   │       ├── demo.vue    # 演示组件
-│   │       ├── info.vue    # 信息展示
-│   │       ├── ruleDetail.vue # 规则详情
-│   │       └── ruleTree.vue # 规则树
-│   ├── store/              # Pinia状态管理
-│   │   └── index.ts        # 主状态存储
-│   ├── style/              # 样式文件
-│   │   ├── font-family.less # 字体样式
-│   │   ├── index.less      # 主样式文件
-│   │   ├── layout.less     # 布局样式
-│   │   ├── reset.less      # 重置样式
-│   │   └── variables.less  # 样式变量
+│   ├── composables/        # Vue组合式函数 (Hooks)
+│   ├── services/           # 应用的核心服务
+│   ├── store/              # 状态管理
+│   ├── styles/             # 全局样式和变量
 │   └── utils/              # 工具函数
-│       ├── camera.ts       # 相机控制
-│       ├── config.ts       # 表格配置
-│       ├── default.config.ts # 默认配置
-│       ├── ifc-api.ts      # IFC API封装
-│       ├── ifcMap.ts       # IFC类型映射表
-│       ├── ifcspacegen.ts  # IFC空间生成
-│       ├── scene.ts        # 场景管理
-│       ├── ifcLoader/      # IFC文件加载器
-│       │   ├── IfcExplosion.ts # 爆炸视图
-│       │   └── IfcLoader.js # 主加载器
-│       ├── measure/        # 测量工具
-│       │   ├── measure.d.ts # 类型定义
-│       │   └── measure.js  # 测量实现
-│       └── slice/          # 剖切工具
-│           ├── sliceBox.ts # 盒式剖切
-│           ├── slicePlane.ts # 平面剖切
-│           ├── type.ts     # 类型定义
-│           └── utils.ts    # 工具函数
-└── src-tauri/              # Tauri桌面应用代码
-    ├── .gitignore          # Tauri Git忽略配置
-    ├── build.rs            # 构建脚本
+└── src-tauri/              # Tauri桌面应用源代码
+    ├── .gitignore          # Tauri相关的Git忽略配置
+    ├── build.rs            # Rust构建脚本
     ├── Cargo.lock          # Rust依赖锁文件
-    ├── Cargo.toml          # Rust依赖配置
-    ├── tauri.conf.json     # Tauri配置文件
-    ├── capabilities/       # Tauri权限配置
-    │   └── default.json    # 默认权限
+    ├── Cargo.toml          # Rust项目和依赖配置
+    ├── tauri.conf.json     # Tauri应用配置文件
+    ├── capabilities/       # Tauri能力和权限配置
     ├── icons/              # 应用图标
-    │   ├── 32x32.png
-    │   ├── 128x128.png
-    │   ├── icon.ico
-    │   ├── icon.png
-    │   ├── android/        # Android平台图标
-    │   └── ios/            # iOS平台图标
     └── src/                # Rust源代码
-        ├── lib.rs          # 库文件
-        └── main.rs         # 主程序入口
 ```
 
 ## ⚙️ 配置

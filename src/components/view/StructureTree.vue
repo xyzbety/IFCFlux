@@ -4,7 +4,7 @@
 <script setup lang="ts">
 import * as VTable from '@visactor/vtable'
 import { watch, ref, reactive, computed } from 'vue'
-import { useModelStore } from '../store';
+import { useModelStore } from '../../store';
 import { onMounted } from 'vue';
 import { SearchComponent } from '@visactor/vtable-search';
 const emit = defineEmits(['table-cell-click', 'table-checkbox-click']);

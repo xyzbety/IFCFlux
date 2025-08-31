@@ -41,7 +41,7 @@ export function useAppCore() {
 
     const isTauriEnv = isTauri();
     let isMaximized = ref(true);
-    let isFileMenuVisible = ref(false);
+    let isSidebarVisible = ref(false);
     let selectedMeshId: any;
     let isHightlight = true;
     let isFocus = false;
@@ -167,8 +167,8 @@ export function useAppCore() {
         }
     };
 
-    const toggleFileMenu = () => isFileMenuVisible.value = !isFileMenuVisible.value;
-    const handleRibbonInteraction = () => { if (isFileMenuVisible.value) isFileMenuVisible.value = false; };
+    const toggleFileMenu = () => isSidebarVisible.value = !isSidebarVisible.value;
+    const handleRibbonInteraction = () => { if (isSidebarVisible.value) isSidebarVisible.value = false; };
     const handleNavigate = (action: any) => sceneManager.handleNavigate(action);
     const handleView = (view: any) => sceneManager.handleView(view);
     const handleSlice = (action: any) => {
@@ -314,7 +314,7 @@ export function useAppCore() {
     };
 
     const tableRowClick = async (event: any) => {
-        if (!sceneManager.scene) return;
+        if (!sceneManager.scene || !modelStore.modelData) return;
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
         let expressID: string | null = null;
@@ -421,7 +421,7 @@ export function useAppCore() {
     });
 
     return {
-        isMaximized, isFileMenuVisible, layoutState, babylonViewerRef, structureTreeRef, animationControllerRef,
+        isMaximized, isSidebarVisible, layoutState, babylonViewerRef, structureTreeRef, animationControllerRef,
         leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
         themeStyle, BabylonViewer, inspectType,
         handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
