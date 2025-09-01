@@ -203,12 +203,16 @@ export class RibbonEventManager {
     private handleRibbonClick = (event: Event) => {
         const fileButtonContainer = (event.target as Element).closest('.smart-ribbon-file-container');
 
-        if (fileButtonContainer) {
+        const fileMenuDropdown = document.querySelector('.smart-drop-down') as HTMLElement | null;
+
+        if (fileButtonContainer && fileMenuDropdown) {
             event.preventDefault();
             event.stopPropagation();
             this.options?.emit('toggle-file-menu');
+            fileMenuDropdown.style.display = 'none'
             return;
         }
+
 
         const button = event.target && (event.target as Element).closest ?
             (event.target as Element).closest('smart-button') : null;
@@ -294,7 +298,7 @@ export class RibbonEventManager {
             }
 
             const handleColorPicker = document.getElementById("colorPicker") as HTMLInputElement;
-            const viewerCanvas = document.getElementById("viewer") as HTMLCanvasElement;
+            const viewerCanvas = document.getElementById("viewer-canvas") as HTMLCanvasElement;
             if (handleColorPicker && viewerCanvas) {
                 const bgColor = window.getComputedStyle(viewerCanvas).backgroundColor;
                 handleColorPicker.value = bgColor;
