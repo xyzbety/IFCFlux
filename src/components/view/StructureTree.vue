@@ -36,7 +36,7 @@ const theme = computed(() => {
             checkedStroke: themeColor.value,
         },
         scrollStyle: {
-            visible: 'always'
+            visible: 'always',
         }
     });
 });
@@ -137,10 +137,10 @@ onMounted(() => {
                 table: treeInstance as any,
                 autoJump: true,
                 highlightCellStyle: {
-                    bgColor: 'rgba(231, 229, 251, 0)'
+                    bgColor: 'rgba(231, 229, 251, 0.0)'
                 },
                 focuseHighlightCellStyle: {
-                    bgColor: 'rgba(231, 229, 251, 0)'
+                    bgColor: 'rgba(231, 229, 251, 0.0)'
                 }
             });
             search.clear()
@@ -197,6 +197,7 @@ const scrollToRow = (node: any) => {
     if (!search) return;
     if (typeof node === 'object') {
         let result = search.search(node.expressId).results;
+        treeInstance.updateTheme(theme.value);
         let row = result[0].range.start.row;
         let col = 0;
         treeInstance.scrollToCell({ row, col });
@@ -205,6 +206,7 @@ const scrollToRow = (node: any) => {
     } else if (typeof node === 'number') {
         treeInstance.scrollToCell({ row: node, col: 1 });
         treeInstance.selectCell(1, node);
+        treeInstance.updateTheme(theme.value);
         return;
     }
 }
