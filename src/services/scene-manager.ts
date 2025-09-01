@@ -1,5 +1,4 @@
 import * as BABYLON from '@babylonjs/core';
-import * as BABYLON from '@babylonjs/core';
 import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils';
 import { CameraHistoryManager } from './history-manager';
 import { Measure } from '../utils/analysis/measure';
@@ -77,10 +76,11 @@ export class SceneManager {
     const mainlight = new BABYLON.DirectionalLight("mainLight", new BABYLON.Vector3(-1, -1, -1), this.scene);
     mainlight.intensity = 0.5;
     mainlight.shadowEnabled = true;
-    this.light = mainlight; // Assign main light for shadows
+    
 
     const fillLight = new BABYLON.DirectionalLight('fillLight', new BABYLON.Vector3(1, -0.5, 0.5), this.scene);
     fillLight.intensity = 0.75;
+    this.light = fillLight; // Assign main light for shadows
 
     const ambientLight = new BABYLON.HemisphericLight("ambientLight", new BABYLON.Vector3(0, 1, 0), this.scene);
     ambientLight.intensity = 0.1;
@@ -298,23 +298,13 @@ export class SceneManager {
       console.error("Camera is not initialized. Cannot handle navigation.");
       return;
     }
-    
-    // 确保相机输入已附加
-    const inputs = this.camera.inputs;
-    if (!inputs.attached.pointers) {
-        inputs.attachInput(inputs.attached.pointers);
-    }
-
-    const pointers = inputs.attached.pointers as BABYLON.ArcRotateCameraPointersInput;
 
     switch (action) {
         case 'pan':
-            pointers.panningMouseButton = 0; // 左键平移
-            pointers.buttons = [1, 2]; // 中键和右键旋转
+            this.camera._panningMouseButton = 0; // 左键平移
             break;
         case 'rotate':
-            pointers.buttons = [0, 1]; // 左键和中键旋转
-            pointers.panningMouseButton = 2; // 右键平移
+            this.camera._panningMouseButton = 2; // 右键平移
             break;
         case 'zoomIn':
             this.camera.radius *= 0.9; // 缩小半径以放大
@@ -707,6 +697,7 @@ export class SceneManager {
    * 重置灯光设置
    */
   public resetLightSettings() {
+    console.log("重置灯光设置");
     if (!this.light) return;
 
     this.light.direction = new BABYLON.Vector3(1, -0.5, 0.5);

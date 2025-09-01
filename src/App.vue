@@ -1,6 +1,6 @@
 <template>
-  <Sidebar :visible="isSidebarVisible" @update:visible="isSidebarVisible = $event"
-    @request-open-file="handleOpenFile" @file-uploaded="handleFileUploaded($event)" />
+  <Sidebar :visible="isSidebarVisible" @update:visible="isSidebarVisible = $event" @request-open-file="handleOpenFile"
+    @file-uploaded="handleFileUploaded($event)" />
   <div class="container-title" data-tauri-drag-region :style="themeStyle">
     <TitleBar :is-maximized="isMaximized" @open-file="handleOpenFile" @replay="handleReplay" @redo="handleRedo" />
   </div>
@@ -26,9 +26,10 @@
       <!-- 动画控制器组件 -->
       <div v-show="layoutState.showAnimationPanel"
         :style="{ width: layoutState.animationPanelWidth, minWidth: layoutState.showAnimationPanel ? '300px' : '0' }">
-        <AnimationController ref="animationControllerRef" :is-visible="layoutState.showAnimationPanel" :scene="sceneManager.scene"
-          :initial-camera-state="sceneManager.initialCameraState" :camera="sceneManager.camera"
-          :original-material-properties="originalMaterialProperties" @animation-event="handleAnimationEvent" />
+        <AnimationController ref="animationControllerRef" :is-visible="layoutState.showAnimationPanel"
+          :scene="sceneManager.scene" :initial-camera-state="sceneManager.initialCameraState"
+          :camera="sceneManager.camera" :original-material-properties="originalMaterialProperties"
+          @animation-event="handleAnimationEvent" />
       </div>
 
       <!-- 检查结果区域 -->
@@ -49,8 +50,9 @@
       <!-- 主画布区域 -->
       <div id="rightArea" :style="{ flex: layoutState.showAnimationPanel ? '2 1 0' : '1 1 0' }">
         <div id="viewer" style="position: relative; width: 100%; height: 100%;">
-          <component :is="BabylonViewer" ref="babylonViewerRef" v-show="BabylonViewer"></component>
-          <ProgressBar :loading="modelStore.loading || false" :progress="modelStore.progress || { percent: 0, current: 0, total: 100, text: '' }" />
+          <BabylonViewer></BabylonViewer>
+          <ProgressBar :loading="modelStore.loading || false"
+            :progress="modelStore.progress || { percent: 0, current: 0, total: 100, text: '' }" />
         </div>
       </div>
     </div>
@@ -85,14 +87,15 @@ import Inspect from './components/check/InspectionReport.vue';
 import StructureTree from './components/view/StructureTree.vue';
 import PropertyTable from './components/view/PropertyTable.vue';
 import ProgressBar from './components/ProgressBar.vue';
+import BabylonViewer from './components/BabylonViewer.vue';
 import { useAppCore } from './composables/useAppCore';
 import { useModelStore } from './store';
 import { eventManager } from './services/event-manager';
 
 const {
-  isMaximized, isSidebarVisible, layoutState, babylonViewerRef, structureTreeRef, animationControllerRef,
+  isMaximized, isSidebarVisible, layoutState, structureTreeRef, animationControllerRef,
   leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
-  themeStyle, BabylonViewer, inspectType,
+  themeStyle, inspectType,
   handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
   toggleStructureTreeDialog, togglePropertyTableDialog, tableRowClick, onTableSelectChange,
   handleDragStart, onInspectVisibleChange, handleTabChange,

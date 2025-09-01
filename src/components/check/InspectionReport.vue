@@ -95,7 +95,7 @@ const dialogRef = ref<any>(null);
 const handleGlobalClick = (event: Event) => {
     if (!event.target) return;
     const target = event.target as HTMLElement;
-    console.log('全局点击', target, target.tagName);
+    // console.log('全局点击', target, target.tagName);
     // if(sceneManager.scene && event.target.tagName === 'DIV'){
     //     ifcPropertyUtils.clearAllHighlights(sceneManager.scene)
     // }

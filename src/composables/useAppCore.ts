@@ -68,8 +68,6 @@ export function useAppCore() {
         setStructureTreeWidth, setPropertyTableWidth, setInspectResultWidth, LayoutMode: LM,
     } = useLayoutManager();
 
-    const BabylonViewer = shallowRef<any>(null);
-    const babylonViewerRef = ref<any>(null);
     const structureTreeRef = ref();
     const animationControllerRef = ref();
     const leftDragBarRef = ref<any>(null);
@@ -314,6 +312,7 @@ export function useAppCore() {
     };
 
     const tableRowClick = async (event: any) => {
+        console.log("tableRowClick:", event);
         if (!sceneManager.scene || !modelStore.modelData) return;
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
@@ -396,8 +395,6 @@ export function useAppCore() {
         // If direct CSS variable application is not enough, we might need to re-evaluate,
         // but for now, the watcher with `immediate: true` should cover it.
 
-        const module = await import('../components/BabylonViewer.vue');
-        BabylonViewer.value = module.default;
         window.addEventListener('mesh-clicked', tableRowClick);
         window.addEventListener("mouse-down", handleHisBefore);
         window.addEventListener("mouse-up", handleHisAfter);
@@ -421,9 +418,9 @@ export function useAppCore() {
     });
 
     return {
-        isMaximized, isSidebarVisible, layoutState, babylonViewerRef, structureTreeRef, animationControllerRef,
+        isMaximized, isSidebarVisible, layoutState, structureTreeRef, animationControllerRef,
         leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
-        themeStyle, BabylonViewer, inspectType,
+        themeStyle, inspectType,
         handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
         toggleStructureTreeDialog, togglePropertyTableDialog, tableRowClick, onTableSelectChange,
         handleDragStart, onInspectVisibleChange, handleTabChange,
