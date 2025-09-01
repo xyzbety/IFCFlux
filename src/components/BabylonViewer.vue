@@ -41,6 +41,7 @@ onMounted(() => {
 #viewer-canvas {
   width: 100%;
   height: 100%;
+  background-color: rgb(236, 241, 245);
   outline: none;
 }
 </style>

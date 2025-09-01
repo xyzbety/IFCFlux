@@ -733,7 +733,7 @@ export class SceneManager {
   public setSceneSettings(data: any) {
     if (!this.scene) return;
 
-    const viewer = document.getElementById("viewer") as HTMLDivElement;
+    const viewer = document.getElementById("viewer-canvas") as HTMLDivElement;
     if (data.backgroundColor && viewer) {
       viewer.style.backgroundColor = data.backgroundColor;
     }
