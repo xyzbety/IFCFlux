@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils';
 import { CameraHistoryManager } from './history-manager';
 import { Measure } from '../utils/analysis/measure';
+import { CubeView } from '../utils/plugin/viewer/cubeView.js';
 import * as GUI from '@babylonjs/gui';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
@@ -214,6 +215,7 @@ export class SceneManager {
       this.scene!.getEngine().setDepthWrite(true);
       this.scene!.getEngine().setDepthFunction(BABYLON.Engine.LEQUAL);
     });
+    new CubeView(this.scene);
   }
 
   /**

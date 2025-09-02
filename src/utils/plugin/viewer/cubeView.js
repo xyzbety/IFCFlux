@@ -22,6 +22,7 @@ export class CubeView {
                 // 应用旋转角度到cube元素
                 this.cubeElement.rotateY = rotateY - this.cubeElement.rotateY > 180 ? rotateY - 360 : rotateY;
                 this.cubeElement.rotateX = rotateX - 90;
+                this.cubeElement.updateTransform() 
                 // 更新缓存值
                 this.lastAlpha = this.camera.alpha;
                 this.lastBeta = this.camera.beta;
@@ -39,7 +40,7 @@ export class CubeView {
         // 将角度转换为弧度
         const alpha = (heading + 90) * Math.PI / 180;
         const beta = (tilt) * Math.PI / 180;
-        camera.radius = distance;
+        // camera.radius = distance;
         camera.alpha = alpha;
         camera.beta = beta;
     }

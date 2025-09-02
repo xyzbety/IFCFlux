@@ -1,0 +1,471 @@
+/* @import url("../public/font_icons/index.css"); */
+/* @import url("./font_icon/iconfont.css"); */
+@import url('./index.less');
+
+:root,
+:root[ui-next-theme="light"] {
+  --m-base-size: 1;
+
+  /* 品牌颜色 */
+  --m-brand-color-1: #f2f3ff;
+  --m-brand-color-2: #d9e1ff;
+  --m-brand-color-3: #b5c7ff;
+  --m-brand-color-4: #8eabff;
+  --m-brand-color-5: #618dff;
+  --m-brand-color-6: #366ef4;
+  --m-brand-color-7: #0052d9;
+  --m-brand-color-8: #003cab;
+  --m-brand-color-9: #002a7c;
+  --m-brand-color-10: #001a57;
+  --m-brand-color-balance: #366ef4;
+  --m-brand-color-light: var(--m-brand-color-1);
+  --m-brand-color-focus: var(--m-brand-color-2);
+  --m-brand-color-disabled: var(--m-brand-color-3);
+  --m-brand-color-hover: var(--m-brand-color-6);
+  --m-brand-color: var(--m-brand-color-7);
+  --m-brand-color-active: var(--m-brand-color-8);
+  --m-brand-color-light-hover: var(--m-brand-color-2);
+
+  /* 错误颜色 */
+  --m-error-color-1: #fff0ed;
+  --m-error-color-2: #ffd8d2;
+  --m-error-color-3: #ffb9b0;
+  --m-error-color-4: #ff9285;
+  --m-error-color-5: #f6685d;
+  --m-error-color-6: #d54941;
+  --m-error-color-7: #ad352f;
+  --m-error-color-8: #881f1c;
+  --m-error-color-9: #68070a;
+  --m-error-color-10: #490002;
+  --m-error-color: var(--m-error-color-6);
+  --m-error-color-hover: var(--m-error-color-5);
+  --m-error-color-focus: var(--m-error-color-2);
+  --m-error-color-active: var(--m-error-color-7);
+  --m-error-color-disabled: var(--m-error-color-3);
+  --m-error-color-light: var(--m-error-color-1);
+  --m-error-color-light-hover: var(--m-error-color-2);
+
+  /* 成功颜色 */
+  --m-success-color-1: #e3f9e9;
+  --m-success-color-2: #c6f3d7;
+  --m-success-color-3: #92dab2;
+  --m-success-color-4: #56c08d;
+  --m-success-color-5: #2ba471;
+  --m-success-color-6: #008858;
+  --m-success-color-7: #006c45;
+  --m-success-color-8: #005334;
+  --m-success-color-9: #003b23;
+  --m-success-color-10: #002515;
+  --m-success-color: var(--m-success-color-5);
+  --m-success-color-hover: var(--m-success-color-4);
+  --m-success-color-focus: var(--m-success-color-2);
+  --m-success-color-active: var(--m-success-color-6);
+  --m-success-color-disabled: var(--m-success-color-3);
+  --m-success-color-light: var(--m-success-color-1);
+  --m-success-color-light-hover: var(--m-success-color-2);
+
+  /* 警告颜色 */
+  --m-warning-color-1: #fff1e9;
+  --m-warning-color-2: #ffd9c2;
+  --m-warning-color-3: #ffb98c;
+  --m-warning-color-4: #fa9550;
+  --m-warning-color-5: #e37318;
+  --m-warning-color-6: #be5a00;
+  --m-warning-color-7: #954500;
+  --m-warning-color-8: #713300;
+  --m-warning-color-9: #532300;
+  --m-warning-color-10: #3b1700;
+  --m-warning-color: var(--m-warning-color-5);
+  --m-warning-color-hover: var(--m-warning-color-4);
+  --m-warning-color-focus: var(--m-warning-color-2);
+  --m-warning-color-active: var(--m-warning-color-6);
+  --m-warning-color-disabled: var(--m-warning-color-3);
+  --m-warning-color-light: var(--m-warning-color-1);
+  --m-warning-color-light-hover: var(--m-warning-color-2);
+
+  /* 基础颜色 */
+  --m-gray-color-0: rgba(172, 172, 172, 0.4);
+  --m-gray-color-1: #f3f3f3;
+  --m-gray-color-2: #eee;
+  --m-gray-color-3: #e7e7e7;
+  --m-gray-color-4: #dcdcdc;
+  --m-gray-color-5: #c5c5c5;
+  --m-gray-color-6: #a6a6a6;
+  --m-gray-color-7: #8b8b8b;
+  --m-gray-color-8: #777;
+  --m-gray-color-9: #5e5e5e;
+  --m-gray-color-10: #4b4b4b;
+  --m-gray-color-11: #383838;
+  --m-gray-color-12: #2c2c2c;
+  --m-gray-color-13: #242424;
+  --m-gray-color-14: #181818;
+  --m-gray-color-15: #000000;
+
+  /* 背景颜色 */
+  --m-bg-color-page: var(--m-gray-color-2);
+  --m-bg-color-opacity-container: rgba(255, 255, 255, 0.7);
+  --m-bg-color-opacity-50-container: rgba(255, 255, 255, 0.5);
+  --m-bg-color-opacity-40-container: rgba(255, 255, 255, 0.4);
+  --m-bg-color-opacity-10-container: rgba(255, 255, 255, 0.1);
+  --m-bg-color-container: #fff;
+  --m-bg-color-container-hover: var(--m-gray-color-1);
+  --m-bg-color-container-active: var(--m-gray-color-3);
+  --m-bg-color-container-select: #fff;
+  --m-bg-color-secondarycontainer: var(--m-gray-color-1);
+  --m-bg-color-secondarycontainer-hover: var(--m-gray-color-2);
+  --m-bg-color-secondarycontainer-active: var(--m-gray-color-4);
+  --m-bg-color-component: var(--m-gray-color-3);
+  --m-bg-color-component-hover: var(--m-gray-color-4);
+  --m-bg-color-component-active: var(--m-gray-color-6);
+  --m-bg-color-secondarycomponent: var(--m-gray-color-4);
+  --m-bg-color-secondarycomponent-hover: var(--m-gray-color-5);
+  --m-bg-color-secondarycomponent-active: var(--m-gray-color-6);
+  --m-bg-color-component-disabled: var(--m-gray-color-2);
+  --m-bg-color-fixed-container: #edf2f8;
+  --m-bg-color-shallow-container: #e7e7e7;
+
+  --m-component-stroke: var(--m-gray-color-3);
+  --m-component-border: var(--m-gray-color-6);
+
+  /* 字体颜色 */
+  --m-font-white-1: rgba(255, 255, 255, 1);
+  --m-font-white-2: rgba(255, 255, 255, 0.55);
+  --m-font-white-3: rgba(255, 255, 255, 0.35);
+  --m-font-white-4: rgba(255, 255, 255, 0.22);
+  --m-font-gray-1: rgba(0, 0, 0, 0.9);
+  --m-font-gray-2: rgba(0, 0, 0, 0.6);
+  --m-font-gray-3: rgba(0, 0, 0, 0.4);
+  --m-font-gray-4: rgba(0, 0, 0, 0.26);
+  --m-table-shadow-color: rgba(0, 0, 0, 8%);
+  --m-scrollbar-thumb-color: rgba(0, 0, 0, 0.5);
+  --m-scrollbar-track-color: rgba(0, 0, 0, 0.1);
+  --m-scrollbar-hover-color: rgba(0, 0, 0, 30%);
+  --m-scroll-track-color: #fff;
+  --m-bg-color-specialcomponent: #fff;
+  --m-border-level-1-color: var(--m-gray-color-3);
+  --m-border-level-2-color: var(--m-gray-color-4);
+  --m-shadow-inset-top: inset 0 0.5px 0 #dcdcdc;
+  --m-shadow-inset-right: inset 0.5px 0 0 #dcdcdc;
+  --m-shadow-inset-bottom: inset 0 -0.5px 0 #dcdcdc;
+  --m-shadow-inset-left: inset -0.5px 0 0 #dcdcdc;
+  --m-mask-active: rgba(0, 0, 0, 0.6);
+  --m-mask-disabled: rgba(255, 255, 255, 0.6);
+
+  /* 字体配置 */
+  --m-font-family: PingFang SC, Microsoft YaHei, Arial Regular;
+  --m-font-family-medium: PingFang SC, Microsoft YaHei, Arial Medium;
+
+  /* 字体大小 */
+  --m-font-size-link-small: calc(12px * var(--m-base-size));
+  --m-font-size-link-medium: calc(14px * var(--m-base-size));
+  --m-font-size-link-large: calc(16px * var(--m-base-size));
+  --m-font-size-mark-small: calc(12px * var(--m-base-size));
+  --m-font-size-mark-medium: calc(14px * var(--m-base-size));
+  --m-font-size-body-small: calc(12px * var(--m-base-size));
+  --m-font-size-body-medium: calc(14px * var(--m-base-size));
+  --m-font-size-body-large: calc(16px * var(--m-base-size));
+  --m-font-size-title-small: calc(14px * var(--m-base-size));
+  --m-font-size-title-medium: calc(16px * var(--m-base-size));
+  --m-font-size-title-large: calc(20px * var(--m-base-size));
+  --m-font-size-headline-small: calc(24px * var(--m-base-size));
+  --m-font-size-headline-medium: calc(28px * var(--m-base-size));
+  --m-font-size-headline-large: calc(36px * var(--m-base-size));
+  --m-font-size-display-medium: calc(48px * var(--m-base-size));
+  --m-font-size-display-large: calc(64px * var(--m-base-size));
+
+  /* 行高 */
+  --m-line-height-common: calc(8px * var(--m-base-size));
+  --m-item-height-common: calc(40px * var(--m-base-size));
+  --m-line-height-link-small: calc(var(--m-font-size-link-small) + var(--m-line-height-common));
+  --m-line-height-link-medium: calc(var(--m-font-size-link-medium) + var(--m-line-height-common));
+  --m-line-height-link-large: calc(var(--m-font-size-link-large) + var(--m-line-height-common));
+  --m-line-height-mark-small: calc(var(--m-font-size-mark-small) + var(--m-line-height-common));
+  --m-line-height-mark-medium: calc(var(--m-font-size-mark-medium) + var(--m-line-height-common));
+  --m-line-height-body-small: calc(var(--m-font-size-body-small) + var(--m-line-height-common));
+  --m-line-height-body-medium: calc(var(--m-font-size-body-medium) + var(--m-line-height-common));
+  --m-line-height-body-large: calc(var(--m-font-size-body-large) + var(--m-line-height-common));
+  --m-line-height-title-small: calc(var(--m-font-size-title-small) + var(--m-line-height-common));
+  --m-line-height-title-medium: calc(var(--m-font-size-title-medium) + var(--m-line-height-common));
+  --m-line-height-title-large: calc(var(--m-font-size-title-medium) + var(--m-line-height-common));
+  --m-line-height-headline-small: calc(var(--m-font-size-headline-small) + var(--m-line-height-common));
+  --m-line-height-headline-medium: calc(var(--m-font-size-headline-medium) + var(--m-line-height-common));
+  --m-line-height-headline-large: calc(var(--m-font-size-headline-large) + var(--m-line-height-common));
+  --m-line-height-display-medium: calc(var(--m-font-size-display-medium) + var(--m-line-height-common));
+  --m-line-height-display-large: calc(var(--m-font-size-display-large) + var(--m-line-height-common));
+
+  /* 字体 token 集合font-size与line-height 适应于 font 属性 推荐使用 */
+  --m-font-link-small: var(--m-font-size-link-small) / var(--m-line-height-link-small) var(--m-font-family);
+  --m-font-link-medium: var(--m-font-size-link-medium) / var(--m-line-height-link-medium) var(--m-font-family);
+  --m-font-link-large: var(--m-font-size-link-large) / var(--m-line-height-link-large) var(--m-font-family);
+  --m-font-mark-small: 600 var(--m-font-size-mark-small) / var(--m-line-height-mark-small) var(--m-font-family);
+  --m-font-mark-medium: 600 var(--m-font-size-mark-medium) / var(--m-line-height-mark-medium) var(--m-font-family);
+  --m-font-body-small: var(--m-font-size-body-small) / var(--m-line-height-body-small) var(--m-font-family);
+  --m-font-body-medium: var(--m-font-size-body-medium) / var(--m-line-height-body-medium) var(--m-font-family);
+  --m-font-body-large: var(--m-font-size-body-large) / var(--m-line-height-body-large) var(--m-font-family);
+  --m-font-title-small: var(--m-font-size-title-small) / var(--m-line-height-title-small) var(--m-font-family);
+  --m-font-title-medium: var(--m-font-size-title-medium) / var(--m-line-height-title-medium) var(--m-font-family);
+  --m-font-title-large: var(--m-font-size-title-large) / var(--m-line-height-title-large) var(--m-font-family);
+  --m-font-headline-small: var(--m-font-size-headline-small) / var(--m-line-height-headline-small) var(--m-font-family);
+  --m-font-headline-medium: var(--m-font-size-headline-medium) / var(--m-line-height-headline-medium) var(--m-font-family);
+  --m-font-headline-large: var(--m-font-size-headline-large) / var(--m-line-height-headline-large) var(--m-font-family);
+  --m-font-display-medium: var(--m-font-size-display-medium) / var(--m-line-height-display-medium) var(--m-font-family);
+  --m-font-display-large: var(--m-font-size-display-large) / var(--m-line-height-display-large) var(--m-font-family);
+
+  /* 字体颜色 */
+  --m-text-color-primary: var(--m-font-gray-1);
+  --m-text-color-secondary: var(--m-font-gray-2);
+  --m-text-color-secondary-reverse: var(--m-font-white-2);
+  --m-text-color-placeholder: var(--m-font-gray-3);
+  --m-text-color-disabled: var(--m-font-gray-4);
+  --m-text-color-anti: #fff;
+  --m-text-color-brand: var(--m-brand-color);
+  --m-text-color-link: var(--m-brand-color);
+  --m-text-color-deep: var(--m-gray-color-15);
+  /* end 字体配置 */
+
+
+  --m-text-color-weight-normal: normal;
+
+  /* 圆角配置 */
+  --m-radius-small: calc(2px * var(--m-base-size));
+  --m-radius-default: calc(3px * var(--m-base-size));
+  --m-radius-medium: calc(6px * var(--m-base-size));
+  --m-radius-large: calc(9px * var(--m-base-size));
+  --m-radius-extraLarge: calc(12px * var(--m-base-size));
+  --m-radius-round: 999px;
+  --m-radius-circle: 50%;
+  /* end 圆角配置 */
+
+  /* 阴影配置 */
+  --m-shadow-1: 0 1px 10px rgba(0, 0, 0, 0.05), 0 4px 5px rgba(0, 0, 0, 8%), 0 2px 4px -1px rgba(0, 0, 0, 12%);
+  --m-shadow-2: 0 3px 14px 2px rgba(0, 0, 0, 0.05), 0 8px 10px 1px rgba(0, 0, 0, 6%), 0 5px 5px -3px rgba(0, 0, 0, 10%);
+  --m-shadow-3: 0 6px 30px 5px rgba(0, 0, 0, 0.05), 0 16px 24px 2px rgba(0, 0, 0, 4%), 0 8px 10px -5px rgba(0, 0, 0, 8%);
+  /* end 阴影配置 */
+
+  /* 尺寸配置 */
+  --m-size-0: calc(1px * var(--m-base-size));
+  --m-size-1: calc(2px * var(--m-base-size));
+  --m-size-2: calc(4px * var(--m-base-size));
+  --m-size-3: calc(6px * var(--m-base-size));
+  --m-size-4: calc(8px * var(--m-base-size));
+  --m-size-5: calc(12px * var(--m-base-size));
+  --m-size-6: calc(16px * var(--m-base-size));
+  --m-size-7: calc(20px * var(--m-base-size));
+  --m-size-8: calc(24px * var(--m-base-size));
+  --m-size-9: calc(28px * var(--m-base-size));
+  --m-size-10: calc(32px * var(--m-base-size));
+  --m-size-11: calc(36px * var(--m-base-size));
+  --m-size-12: calc(40px * var(--m-base-size));
+  --m-size-13: calc(48px * var(--m-base-size));
+  --m-size-14: calc(56px * var(--m-base-size));
+  --m-size-15: calc(64px * var(--m-base-size));
+  --m-size-16: calc(72px * var(--m-base-size));
+
+  /* 全局 component 组件尺寸高度相关 */
+  --m-comp-size-xxxs: var(--m-size-6);
+  --m-comp-size-xxs: var(--m-size-7);
+  --m-comp-size-xs: var(--m-size-8);
+  --m-comp-size-s: var(--m-size-9);
+  --m-comp-size-m: var(--m-size-10);
+  --m-comp-size-l: var(--m-size-11);
+  --m-comp-size-xl: var(--m-size-12);
+  --m-comp-size-xxl: var(--m-size-13);
+  --m-comp-size-xxxl: var(--m-size-14);
+  --m-comp-size-xxxxl: var(--m-size-15);
+  --m-comp-size-xxxxxl: var(--m-size-16);
+
+  /* 全局 popup 弹出层整体边距 */
+  --m-pop-padding-xxs: var(--m-size-0);
+  --m-pop-padding-xs: var(--m-size-1);
+  --m-pop-padding-s: var(--m-size-2);
+  --m-pop-padding-m: var(--m-size-3);
+  --m-pop-padding-l: var(--m-size-4);
+  --m-pop-padding-xl: var(--m-size-5);
+  --m-pop-padding-xxl: var(--m-size-6);
+
+  /* 全局 component 组件左右边距 */
+  --m-comp-paddingLR-xxs: var(--m-size-1);
+  --m-comp-paddingLR-xs: var(--m-size-2);
+  --m-comp-paddingLR-s: var(--m-size-4);
+  --m-comp-paddingLR-m: var(--m-size-5);
+  --m-comp-paddingLR-l: var(--m-size-6);
+  --m-comp-paddingLR-xl: var(--m-size-8);
+  --m-comp-paddingLR-xxl: var(--m-size-10);
+
+  /* 全局 component 组件上下边距 */
+  --m-comp-paddingTB-xxs: var(--m-size-1);
+  --m-comp-paddingTB-xs: var(--m-size-2);
+  --m-comp-paddingTB-s: var(--m-size-4);
+  --m-comp-paddingTB-m: var(--m-size-5);
+  --m-comp-paddingTB-l: var(--m-size-6);
+  --m-comp-paddingTB-xl: var(--m-size-8);
+  --m-comp-paddingTB-xxl: var(--m-size-10);
+
+  /* 全局 component 组件间距 */
+  --m-comp-margin-xxs: var(--m-size-1);
+  --m-comp-margin-xs: var(--m-size-2);
+  --m-comp-margin-s: var(--m-size-4);
+  --m-comp-margin-m: var(--m-size-5);
+  --m-comp-margin-l: var(--m-size-6);
+  --m-comp-margin-xl: var(--m-size-7);
+  --m-comp-margin-xxl: var(--m-size-8);
+  --m-comp-margin-xxxl: var(--m-size-10);
+  --m-comp-margin-xxxxl: var(--m-size-12);
+  /* end 尺寸配置 */
+
+  --m-filter-blur: blur(8px);
+  --m-filter-invert: invert(0);
+
+  --m-button-background: #dbdbdb80;
+}
+
+:root[ui-next-theme="dark"] {
+  --brand-main: var(--m-brand-color);
+  --m-brand-color-1: #1b2f51;
+  --m-brand-color-2: #173463;
+  --m-brand-color-3: #143975;
+  --m-brand-color-4: #103d88;
+  --m-brand-color-5: #0d429a;
+  --m-brand-color-6: #054bbe;
+  --m-brand-color-7: #2667d4;
+  --m-brand-color-8: #4582e6;
+  --m-brand-color-9: #699ef5;
+  --m-brand-color-10: #96bbf8;
+  --m-brand-color-balance: #96bbf8;
+  --m-brand-color-light: var(--m-brand-color-1);
+  --m-brand-color-focus: var(--m-brand-color-2);
+  --m-brand-color-disabled: var(--m-brand-color-3);
+  --m-brand-color-hover: var(--m-brand-color-7);
+  --m-brand-color: var(--m-brand-color-8);
+  --m-brand-color-active: var(--m-brand-color-9);
+  --m-warning-color-1: #4f2a1d;
+  --m-warning-color-2: #582f21;
+  --m-warning-color-3: #733c23;
+  --m-warning-color-4: #a75d2b;
+  --m-warning-color-5: #cf6e2d;
+  --m-warning-color-6: #dc7633;
+  --m-warning-color-7: #e8935c;
+  --m-warning-color-8: #ecbf91;
+  --m-warning-color-9: #eed7bf;
+  --m-warning-color-10: #f3e9dc;
+  --m-warning-color: var(--m-warning-color-5);
+  --m-warning-color-hover: var(--m-warning-color-4);
+  --m-warning-color-focus: var(--m-warning-color-2);
+  --m-warning-color-active: var(--m-warning-color-6);
+  --m-warning-color-disabled: var(--m-warning-color-3);
+  --m-warning-color-light: var(--m-warning-color-1);
+  --m-error-color-1: #472324;
+  --m-error-color-2: #5e2a2d;
+  --m-error-color-3: #703439;
+  --m-error-color-4: #83383e;
+  --m-error-color-5: #a03f46;
+  --m-error-color-6: #c64751;
+  --m-error-color-7: #de6670;
+  --m-error-color-8: #ec888e;
+  --m-error-color-9: #edb1b6;
+  --m-error-color-10: #eeced0;
+  --m-error-color: var(--m-error-color-6);
+  --m-error-color-hover: var(--m-error-color-5);
+  --m-error-color-focus: var(--m-error-color-2);
+  --m-error-color-active: var(--m-error-color-7);
+  --m-error-color-disabled: var(--m-error-color-3);
+  --m-error-color-light: var(--m-error-color-1);
+  --m-success-color-1: #193a2a;
+  --m-success-color-2: #1a4230;
+  --m-success-color-3: #17533d;
+  --m-success-color-4: #0d7a55;
+  --m-success-color-5: #059465;
+  --m-success-color-6: #43af8a;
+  --m-success-color-7: #46bf96;
+  --m-success-color-8: #80d2b6;
+  --m-success-color-9: #b4e1d3;
+  --m-success-color-10: #deede8;
+  --m-success-color: var(--m-success-color-5);
+  --m-success-color-hover: var(--m-success-color-4);
+  --m-success-color-focus: var(--m-success-color-2);
+  --m-success-color-active: var(--m-success-color-6);
+  --m-success-color-disabled: var(--m-success-color-3);
+  --m-success-color-light: var(--m-success-color-1);
+
+  --m-gray-color-0: rgba(172, 172, 172, 0.4);
+  --m-gray-color-1: #f3f3f3;
+  --m-gray-color-2: #eee;
+  --m-gray-color-3: #e7e7e7;
+  --m-gray-color-4: #dcdcdc;
+  --m-gray-color-5: #c5c5c5;
+  --m-gray-color-6: #a6a6a6;
+  --m-gray-color-7: #8b8b8b;
+  --m-gray-color-8: #777;
+  --m-gray-color-9: #5e5e5e;
+  --m-gray-color-10: #4b4b4b;
+  --m-gray-color-11: #383838;
+  --m-gray-color-12: #2c2c2c;
+  --m-gray-color-13: #242424;
+  --m-gray-color-14: #181818;
+  --m-gray-color-15: #000000;
+  --m-bg-color-page: var(--m-gray-color-14);
+
+  --m-bg-color-opacity-90-container: rgba(0, 0, 0, 0.9);
+  --m-bg-color-opacity-container: rgba(0, 0, 0, 0.7);
+  --m-bg-color-opacity-50-container: rgba(0, 0, 0, 0.5);
+  --m-bg-color-opacity-40-container: rgba(0, 0, 0, 0.4);
+  --m-bg-color-opacity-10-container: rgba(0, 0, 0, 0.1);
+  --m-bg-color-container: var(--m-gray-color-13);
+  --m-bg-color-container-hover: var(--m-gray-color-12);
+  --m-bg-color-container-active: var(--m-gray-color-10);
+  --m-bg-color-container-select: var(--m-gray-color-9);
+  --m-bg-color-secondarycontainer: var(--m-gray-color-12);
+  --m-bg-color-secondarycontainer-hover: var(--m-gray-color-11);
+  --m-bg-color-secondarycontainer-active: var(--m-gray-color-9);
+  --m-bg-color-component: var(--m-gray-color-11);
+  --m-bg-color-component-hover: var(--m-gray-color-10);
+  --m-bg-color-component-active: var(--m-gray-color-9);
+  --m-bg-color-secondarycomponent: var(--m-gray-color-10);
+  --m-bg-color-secondarycomponent-hover: var(--m-gray-color-9);
+  --m-bg-color-secondarycomponent-active: var(--m-gray-color-8);
+  --m-bg-color-component-disabled: var(--m-gray-color-12);
+  --m-bg-color-fixed-container: #3b4045;
+  --m-bg-color-shallow-container: #4b4b4bdb;
+
+  --m-component-stroke: var(--m-gray-color-11);
+  --m-component-border: var(--m-gray-color-9);
+  --m-font-white-1: rgba(255, 255, 255, 0.9);
+  --m-font-white-2: rgba(255, 255, 255, 0.55);
+  --m-font-white-3: rgba(255, 255, 255, 0.35);
+  --m-font-white-4: rgba(255, 255, 255, 0.22);
+  --m-font-gray-1: rgba(0, 0, 0, 0.9);
+  --m-font-gray-2: rgba(0, 0, 0, 0.6);
+  --m-font-gray-3: rgba(0, 0, 0, 0.4);
+  --m-font-gray-4: rgba(0, 0, 0, 0.26);
+  --m-text-color-primary: var(--m-font-white-1);
+  --m-text-color-secondary: var(--m-font-white-2);
+  --m-text-color-secondary-reverse: var(--m-font-gray-3);
+  --m-text-color-placeholder: var(--m-font-white-3);
+  --m-text-color-disabled: var(--m-font-white-4);
+  --m-text-color-anti: #fff;
+  --m-text-color-brand: var(--m-brand-color);
+  --m-text-color-link: var(--m-brand-color);
+  --m-text-color-deep: var(--m-font-white-1);
+
+  --m-shadow-1: 0 4px 6px rgba(0, 0, 0, 0.06), 0 1px 10px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.12);
+  --m-shadow-2: 0 8px 10px rgba(0, 0, 0, 0.12), 0 3px 14px rgba(0, 0, 0, 0.10), 0 5px 5px rgba(0, 0, 0, 0.16);
+  --m-shadow-3: 0 16px 24px rgba(0, 0, 0, 0.14), 0 6px 30px rgba(0, 0, 0, 0.12), 0 8px 10px rgba(0, 0, 0, 0.20);
+  --m-shadow-inset-top: inset 0 0.5px 0 #5e5e5e;
+  --m-shadow-inset-right: inset 0.5px 0 0 #5e5e5e;
+  --m-shadow-inset-bottom: inset 0 -0.5px 0 #5e5e5e;
+  --m-shadow-inset-left: inset -0.5px 0 0 #5e5e5e;
+  --m-table-shadow-color: rgba(0, 0, 0, 55%);
+  --m-scrollbar-thumb-color: rgba(0, 0, 0, 0.1);
+  --m-scrollbar-track-color: rgba(0, 0, 0, 0.03);
+  --m-scrollbar-hover-color: rgba(255, 255, 255, 30%);
+  --m-scroll-track-color: #333;
+  --m-bg-color-specialcomponent: transparent;
+  --m-border-level-1-color: var(--m-gray-color-11);
+  --m-border-level-2-color: var(--m-gray-color-9);
+  --m-mask-active: rgba(0, 0, 0, 0.4);
+  --m-mask-disabled: rgba(0, 0, 0, 0.6);
+
+  --m-filter-invert: invert(1);
+
+  --m-button-background: #605f5f61;
+}
