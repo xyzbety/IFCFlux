@@ -28,12 +28,14 @@ export class SlicePlane implements IBaseSlice {
   _isReverse: boolean = false
 
   gizmoManager: any
+  utilLayer: any
 
   _isOperatingHandle: boolean = true
 
   _isShowPlane: boolean = true
 
   size: number = 10
+
   set isShowPlane(value: boolean) {
     this._isShowPlane = value;
     if (this.plane) {
@@ -41,9 +43,13 @@ export class SlicePlane implements IBaseSlice {
     }
     if (this.gizmoManager) {
       if (value && this._isOperatingHandle) {
-        this.gizmoManager.attachToMesh(this.plane);
+        if (this.gizmoManager.rotationGizmo) {
+          this.gizmoManager.rotationGizmo.attachedMesh = this.plane;
+        }
       } else {
-        this.gizmoManager.attachToMesh(null);
+        if (this.gizmoManager.rotationGizmo) {
+          this.gizmoManager.rotationGizmo.attachedMesh = null;
+        }
       }
     }
   }
@@ -54,8 +60,10 @@ export class SlicePlane implements IBaseSlice {
   set isOperatingHandle(value: boolean) {
     this._isOperatingHandle = value
     if (this.gizmoManager) {
-      const mesh = this._isOperatingHandle ? this.plane : null
-      this.gizmoManager.attachToMesh(mesh);
+      const mesh = this._isOperatingHandle ? this.plane : null;
+      if (this.gizmoManager.rotationGizmo) {
+        this.gizmoManager.rotationGizmo.attachedMesh = mesh;
+      }
     }
   }
   get isOperatingHandle() {
@@ -108,7 +116,7 @@ export class SlicePlane implements IBaseSlice {
     this.scene = scene
     this.size = size
     // this.createClipPlane(shape, styleProps)
-    this._tranformListen()
+         this._tranformListen()
 
     // this.mousePointer()
   }
@@ -160,7 +168,6 @@ export class SlicePlane implements IBaseSlice {
 
     const style = deepMerge(DEFAULT_SHAPE_STYLE, styleProps)
     // console.log('style', style);
-
     const plane = BABYLON.MeshBuilder.CreatePlane("slicePlane", {
       size: this.size,
       sideOrientation: BABYLON.Mesh.DOUBLESIDE
@@ -194,7 +201,11 @@ export class SlicePlane implements IBaseSlice {
     material.alpha = style.fill.opacity;
     material.backFaceCulling = false
     plane.material = material
-
+    const pointerDragBehavior = new BABYLON.PointerDragBehavior();
+    pointerDragBehavior.onDragEndObservable.add(() => {
+      this.updateClipPlane()
+    });
+    plane.addBehavior(pointerDragBehavior);
     this.plane = plane
     this.plane.isVisible = this.isShowPlane
   }
@@ -209,8 +220,7 @@ export class SlicePlane implements IBaseSlice {
     this.plane.computeWorldMatrix(true);   // 强制更新世界矩阵 
     this.updateClipPlane()
     if (this.isOperatingHandle) {
-      this.gizmoManager.attachableMeshes = [this.plane];
-      this.gizmoManager.attachToMesh(this.plane);
+      this.gizmoManager.attachedMesh = this.plane
     }
 
 
@@ -224,7 +234,6 @@ export class SlicePlane implements IBaseSlice {
     this.plane.computeWorldMatrix(true);
     // 获取平面法线
     const normal = this.plane.getFacetNormal(0);
-
     // 从几何平面中获取sourcePlane，用于设置剖切面
     const sourcePlane = BABYLON.Plane.FromPositionAndNormal(this.plane.position, normal);
     if (!this._isReverse) {
@@ -238,35 +247,38 @@ export class SlicePlane implements IBaseSlice {
     this.planetoSceneClip(sourcePlane)
   }
 
-  /**
-   * 监听鼠标控制剖切盒子变化
-   */
   _tranformListen() {
-    // 注意：临时写法，gizmoManager(物体操作控件)应该在场景中只存在一个较好。
-    const gizmoManager = new BABYLON.GizmoManager(this.scene);
-    gizmoManager.positionGizmoEnabled = true;
-    gizmoManager.usePointerToAttachGizmos = false;
-    gizmoManager.rotationGizmoEnabled = true;
-
-    if (gizmoManager.gizmos.positionGizmo) {
-      gizmoManager.gizmos.positionGizmo.scaleRatio = 1; // 设置位置 Gizmo 标记的大小
-      gizmoManager.gizmos.positionGizmo.onDragObservable.add(() => {
-        this.updateClipPlane()
-      });
+    // 先清理现有的gizmo
+    if (this.gizmoManager) {
+      this.gizmoManager.dispose();
     }
 
-    if (gizmoManager.gizmos.rotationGizmo) {
-      gizmoManager.gizmos.rotationGizmo.scaleRatio = 1; // 设置缩放 Gizmo 标记的大小
-      gizmoManager.gizmos.rotationGizmo.onDragObservable.add(() => {
-        this.updateClipPlane()
-      });
-    }
-    this.gizmoManager = gizmoManager
+    this.utilLayer = new BABYLON.UtilityLayerRenderer(this.scene);
+
+    const rotationGizmo = new BABYLON.RotationGizmo(this.utilLayer);
+
+    rotationGizmo.xGizmo.isEnabled = true;
+    rotationGizmo.yGizmo.isEnabled = true;
+    rotationGizmo.zGizmo.isEnabled = false
+
+    // 设置拖动结束时更新剖切平面
+    const updateCallback = () => this.updateClipPlane();
+
+    rotationGizmo.xGizmo.dragBehavior.onDragEndObservable.add(updateCallback);
+    rotationGizmo.yGizmo.dragBehavior.onDragEndObservable.add(updateCallback);
+
+
+    // 保存gizmo引用
+    this.gizmoManager = {
+      rotationGizmo: rotationGizmo,
+      dispose: () => {
+        rotationGizmo.dispose();
+      }
+    };
   }
-
   /**
-   * 处理鼠标控制创建剖切面
-   */
+ * 处理鼠标控制创建剖切面
+ */
   start(type?: string) {
     let isPointerUp = false
     let isDragging = false;
@@ -279,8 +291,10 @@ export class SlicePlane implements IBaseSlice {
             this.snapPlane(type)
             this.updateClipPlane()
             if (this.isOperatingHandle) {
-              this.gizmoManager.attachableMeshes = [this.plane];
-              this.gizmoManager.attachToMesh(this.plane);
+              // 适配新的gizmoManager结构
+              if (this.gizmoManager.rotationGizmo) {
+                this.gizmoManager.rotationGizmo.attachedMesh = this.plane;
+              }
             }
 
             // 移除鼠标指针监听器
@@ -384,8 +398,13 @@ export class SlicePlane implements IBaseSlice {
     this.border = null as any;
     this.fill = null as any;
     this.plane = null;
-    this.gizmoManager.dispose()
+
+    // 适配新的gizmoManager结构
+    if (this.gizmoManager && this.gizmoManager.dispose) {
+      this.gizmoManager.dispose();
+    }
     this.gizmoManager = null as any;
+
     // 4. 移除事件监听
     if (this._pointerObservable) {
       this.scene.onPointerObservable.remove(this._pointerObservable);

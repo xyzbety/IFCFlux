@@ -58,6 +58,7 @@ export class EffectManager {
 
     meshes.forEach(mesh => {
       if (!mesh.metadata) mesh.metadata = {};
+      if(mesh.name ==='slicePlane') return;
 
       // 保存原始状态
       mesh.metadata.originalMaterial = mesh.material;
@@ -71,6 +72,8 @@ export class EffectManager {
       // 启用边缘渲染
       mesh.enableEdgesRendering();
       mesh.edgesWidth = 5.0;
+      mesh.edgesShareWithInstances = true;
+      mesh.edgesRenderer.lineShader.options.useClipPlane = true;
       mesh.edgesColor = new BABYLON.Color4(0, 1, 1, 1);
     });
   }
