@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { eventManager } from '../services/event-manager';
 
 export interface DragConfig {
   minWidth: number;
@@ -44,9 +45,9 @@ export const useDragResize = (config: DragConfig, callbacks: DragCallbacks) => {
     callbacks.onDragStart?.(side);
     
     // 添加全局事件监听器
-    document.addEventListener('mousemove', onDrag);
-    document.addEventListener('mouseup', stopDrag);
-    document.addEventListener('mouseleave', stopDrag); // 鼠标离开文档时也停止拖拽
+    eventManager.add('mousemove', onDrag);
+    eventManager.add('mouseup', stopDrag);
+    eventManager.add('mouseleave', stopDrag); // 鼠标离开文档时也停止拖拽
   };
 
   const onDrag = (event: MouseEvent) => {
@@ -95,9 +96,10 @@ export const useDragResize = (config: DragConfig, callbacks: DragCallbacks) => {
     document.body.style.userSelect = '';
     
     // 移除事件监听器
-    document.removeEventListener('mousemove', onDrag);
-    document.removeEventListener('mouseup', stopDrag);
-    document.removeEventListener('mouseleave', stopDrag);
+    eventManager.remove('mousemove');
+    eventManager.remove('mouseup');
+    eventManager.remove('mouseleave');
+
         
     // 调用拖拽结束回调
     callbacks.onDragEnd?.(side);

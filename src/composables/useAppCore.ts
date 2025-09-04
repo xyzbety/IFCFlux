@@ -22,10 +22,10 @@ import { eventManager } from '../services/event-manager';
 
 // Global declarations
 declare global {
-  interface Window {
-    isAnimationStopped: boolean;
-    [key: string]: any;
-  }
+    interface Window {
+        isAnimationStopped: boolean;
+        [key: string]: any;
+    }
 }
 
 export function useAppCore() {
@@ -109,7 +109,7 @@ export function useAppCore() {
             // Set background colors for menu items directly from the theme object
             root.style.setProperty('--theme-color-active-bg', newTheme.active);
             root.style.setProperty('--theme-color-hover-bg', newTheme.hover);
-            
+
             // Set the shadow color for active setting cards
             root.style.setProperty('--theme-color-active-shadow', hexToRgba(newTheme.active, 0.3));
         }
@@ -171,6 +171,7 @@ export function useAppCore() {
     const handleView = (view: any) => sceneManager.handleView(view);
     const handleSlice = (action: any) => {
         isHightlight = action === 'reset';
+        console.log('handleSlice', action,isHightlight);
         sceneManager.handleSlice(action);
     };
     const handleVisibility = (mode: any) => {
@@ -369,6 +370,12 @@ export function useAppCore() {
     const handleReplay = () => sceneManager.undo();
     const handleRedo = () => sceneManager.redo();
 
+    const handleResize = async () => {
+        if (isTauriEnv) {
+            isMaximized.value = await getCurrentWindow().isMaximized();
+        }
+    };
+
     onMounted(async () => {
         const ribbonManager = RibbonEventManager.getInstance();
         ribbonManager.initialize({
@@ -395,14 +402,11 @@ export function useAppCore() {
         // If direct CSS variable application is not enough, we might need to re-evaluate,
         // but for now, the watcher with `immediate: true` should cover it.
 
-        window.addEventListener('mesh-clicked', tableRowClick);
-        window.addEventListener("mouse-down", handleHisBefore);
-        window.addEventListener("mouse-up", handleHisAfter);
-        window.addEventListener("mouse-wheel", handleHisBefore);
-
-        window.addEventListener("resize", async () => {
-            if (isTauriEnv) isMaximized.value = await getCurrentWindow().isMaximized();
-        });
+        eventManager.add('mesh-clicked', tableRowClick);
+        eventManager.add('mouse-down', handleHisBefore);
+        eventManager.add('mouse-up', handleHisAfter);
+        eventManager.add('mouse-wheel', handleHisBefore);
+        eventManager.add("resize", handleResize);
 
         if (isTauriEnv) invoke('show_mainscreen').catch(console.error);
 
@@ -411,10 +415,11 @@ export function useAppCore() {
 
     onUnmounted(() => {
         cleanup();
-        window.removeEventListener('mesh-clicked', tableRowClick);
-        window.removeEventListener("mouse-down", handleHisBefore);
-        window.removeEventListener("mouse-up", handleHisAfter);
-        window.removeEventListener("mouse-wheel", handleHisBefore);
+        eventManager.remove('mesh-clicked');
+        eventManager.remove('mouse-down');
+        eventManager.remove('mouse-up');
+        eventManager.remove('mouse-wheel');
+        eventManager.remove('resize');
     });
 
     return {

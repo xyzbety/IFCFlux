@@ -40,8 +40,9 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
-                    @row-click="handleRowClick" v-model:activeRowKeys="activeRowKeys" :active-row-type="'single'" actived
-                    :max-height="'100%'" :table-layout="'auto'" :row-class-name="getRowClassName" rowKey="guid" />
+                    @row-click="handleRowClick" v-model:activeRowKeys="activeRowKeys" :active-row-type="'single'"
+                    actived :max-height="'100%'" :table-layout="'auto'" :row-class-name="getRowClassName"
+                    rowKey="guid" />
             </div>
         </div>
         <!-- 弹框 -->
@@ -65,6 +66,7 @@ import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 import { Tooltip as TTooltip } from 'tdesign-vue-next';
 import { SceneManager } from '../../services/scene-manager';
 import { IfcPropertyUtils } from '../../services/property-manager';
+import { eventManager } from '../../services/event-manager';
 const props = defineProps<{ visible: boolean; inspectType: string }>();
 
 const emit = defineEmits(['update:visible']);
@@ -470,12 +472,12 @@ function getRowClassName({ row }: { row: { allGreen: boolean } }) {
 }
 // 组件挂载时添加全局点击监听
 onMounted(() => {
-    document.addEventListener('click', handleGlobalClick);
+    eventManager.add('click', handleGlobalClick);
 });
 
 // 组件卸载时移除监听器
 onUnmounted(() => {
-    document.removeEventListener('click', handleGlobalClick);
+    eventManager.remove('click', handleGlobalClick);
 });
 
 

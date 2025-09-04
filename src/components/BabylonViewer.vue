@@ -7,6 +7,7 @@ import { onMounted, ref } from 'vue';
 import * as BABYLON from '@babylonjs/core';
 import { SceneManager } from '../services/scene-manager';
 import { ModelManager } from '../services/model-manager';
+import { eventManager } from '../services/event-manager';
 
 const bjsCanvas = ref<HTMLCanvasElement | null>(null);
 
@@ -29,8 +30,8 @@ onMounted(() => {
       scene.render();
     });
 
-    // Handle window resize
-    window.addEventListener('resize', () => {
+    // Handle window 
+    eventManager.add("resize", () => {
       engine.resize();
     });
   }

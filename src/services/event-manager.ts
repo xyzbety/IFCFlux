@@ -1,8 +1,10 @@
 type EventHandler = (...args: any[]) => void;
+type EventType = 'mesh-clicked' | 'mouseup' | 'mousemove' | 'mouseleave' | 'resize' | 'click' | 'mouse-down' | 'mouse-up' | 'mouse-wheel'
 
 class EventManager {
   private static instance: EventManager;
   private events: Map<string, EventHandler[]>;
+  private handlers: Record<string, EventHandler> = {};
 
   private constructor() {
     this.events = new Map();
@@ -36,6 +38,18 @@ class EventManager {
     const handlers = this.events.get(eventName);
     if (handlers) {
       handlers.forEach(handler => handler(...args));
+    }
+  }
+  public add(eventType: EventType, handler: EventHandler) {
+    this.remove(eventType);
+    this.handlers[eventType] = handler;
+    window.addEventListener(eventType, handler);
+  }
+
+  public remove(eventType: EventType) {
+    if (this.handlers[eventType]) {
+      window.removeEventListener(eventType, this.handlers[eventType]);
+      delete this.handlers[eventType];
     }
   }
 }
