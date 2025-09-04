@@ -4,6 +4,7 @@ export class EffectManager {
   private static instance: EffectManager | null = null;
   private highlightMaterial: BABYLON.StandardMaterial | null = null;
   private highlightAnimation: BABYLON.Animatable | null = null;
+  private highlightLayer: BABYLON.HighlightLayer | null = null;
 
   private constructor(private scene: BABYLON.Scene) {
     // 私有构造函数
@@ -19,6 +20,19 @@ export class EffectManager {
   public applyHighlight(meshes: BABYLON.AbstractMesh[]): void {
     this.clearAll();
 
+    // 创建高亮层（只创建一次）
+    if (!this.highlightLayer) {
+      this.highlightLayer = new BABYLON.HighlightLayer("highlightLayer", this.scene, {
+        mainTextureFixedSize: 4096,  // 增加纹理分辨率
+        blurHorizontalSize: 1,       // 减小水平模糊
+        blurVerticalSize: 1,         // 减小垂直模糊
+        alphaBlendingMode: BABYLON.Engine.ALPHA_COMBINE
+      });
+
+      this.highlightLayer.outerGlow = true;
+      this.highlightLayer.innerGlow = true;
+      console.log("创建高亮层", this.highlightLayer);
+    }
     // 创建一个共享的高亮材质（如果还不存在）
     if (!this.highlightMaterial) {
       const highlightMaterial = new BABYLON.StandardMaterial("highlightMat", this.scene);
@@ -51,14 +65,14 @@ export class EffectManager {
       }
       this.highlightMaterial.animations.push(breathingAnimation);
     }
-    
+
     // 启动呼吸动画
     const totalFrames = 30 * 3;
     this.highlightAnimation = this.scene.beginAnimation(this.highlightMaterial, 0, totalFrames, true);
 
     meshes.forEach(mesh => {
       if (!mesh.metadata) mesh.metadata = {};
-      if(mesh.name ==='slicePlane') return;
+      if (mesh.name === 'slicePlane') return;
 
       // 保存原始状态
       mesh.metadata.originalMaterial = mesh.material;
@@ -68,17 +82,28 @@ export class EffectManager {
       mesh.material = this.highlightMaterial;
       mesh.isVisible = true;
       mesh.renderingGroupId = 1;
+      this.highlightLayer!.addMesh(mesh as BABYLON.Mesh, new BABYLON.Color3(0.0, 1.0, 1.0)); // 浅蓝色高亮
+      // mesh.renderOutline = true;
+      // mesh.outlineWidth = 0.25;
+      // mesh.outlineColor = new BABYLON.Color4(0, 0, 1, 1);
 
-      // 启用边缘渲染
-      mesh.enableEdgesRendering();
-      mesh.edgesWidth = 5.0;
-      mesh.edgesShareWithInstances = true;
-      mesh.edgesRenderer.lineShader.options.useClipPlane = true;
-      mesh.edgesColor = new BABYLON.Color4(0, 1, 1, 1);
+      // // 启用边缘渲染
+      // mesh.enableEdgesRendering();
+      // mesh.edgesWidth = 5.0;
+      // mesh.edgesRenderer?.render()
+      // console.log("启用边缘渲染", mesh.edgesRenderer?.isReady(),mesh.edgesRenderer?.isEnabled);
+      // mesh.edgesShareWithInstances = true;
+      // mesh.edgesRenderer.lineShader.options.useClipPlane = true;
+      // mesh.edgesColor = new BABYLON.Color4(0, 1, 1, 1);
     });
   }
 
   public clearAll(): void {
+    if (this.highlightLayer) {
+      this.highlightLayer.removeAllMeshes();
+      this.highlightLayer.dispose();
+      this.highlightLayer = null;
+    }
     if (this.highlightAnimation) {
       this.highlightAnimation.stop();
       this.highlightAnimation = null;
@@ -89,7 +114,10 @@ export class EffectManager {
         mesh.material = mesh.metadata.originalMaterial;
         mesh.isVisible = mesh.metadata.originalVisibility !== false;
         mesh.renderingGroupId = 0;
-        mesh.disableEdgesRendering();
+        // mesh.disableEdgesRendering();
+        // mesh.renderOutline = false;
+        // mesh.outlineWidth = 0;
+        // mesh.outlineColor = new BABYLON.Color4(0, 0, 0, 0);
 
         delete mesh.metadata.originalMaterial;
         delete mesh.metadata.originalVisibility;
