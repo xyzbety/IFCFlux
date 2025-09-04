@@ -1,11 +1,10 @@
-import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import * as BABYLON from '@babylonjs/core';
 import { useModelStore, useSceneStore } from '../store';
 import { useSettingsStore } from '../store/settings';
-import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
 import { getBoundingBoxForMeshes, updateTempLineLabel } from '../utils/index';
@@ -64,7 +63,7 @@ export function useAppCore() {
     const ifcPropertyUtils = IfcPropertyUtils.getInstance();
     const modelManager = ModelManager.getInstance();
     const {
-        layoutState, switchToMode, isMode, toggleStructureTree, togglePropertyTable, canToggleComponents,
+        layoutState, switchToMode, toggleStructureTree, togglePropertyTable, canToggleComponents,
         setStructureTreeWidth, setPropertyTableWidth, setInspectResultWidth, LayoutMode: LM,
     } = useLayoutManager();
 
@@ -90,7 +89,7 @@ export function useAppCore() {
 
     const hexToRgba = (hex: string, alpha: number) => {
         const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+        hex = hex.replace(shorthandRegex, ( r, g, b) => r + r + g + g + b + b);
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         if (!result) return hex;
         const r = parseInt(result[1], 16);
@@ -187,7 +186,7 @@ export function useAppCore() {
     const handlePropertiesTable = () => togglePropertyTable();
     const toggleStructureTreeDialog = () => { if (canToggleComponents.value) toggleStructureTree(); };
     const togglePropertyTableDialog = () => { if (canToggleComponents.value) togglePropertyTable(); };
-    const handleExplosion = (type: any) => sceneManager.handleExplosion(type);
+    // const handleExplosion = (type: any) => sceneManager.handleExplosion(type);
     const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
     const handleLightSettingsReset = () => { isHightlight = true; sceneManager.resetLightSettings(); };
     const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
@@ -264,7 +263,6 @@ export function useAppCore() {
 
     const handleInspectClick = async (event: number) => {
         if (!sceneManager.scene) return;
-        const scene = sceneManager.scene;
         const map = { 1: "基础数据", 2: "规划报建", 3: "施工图审查", 4: "智慧工地监管", 5: "竣工验收" } as const;
         inspectType.value = map[event as keyof typeof map];
         switchToMode(LM.INSPECT);

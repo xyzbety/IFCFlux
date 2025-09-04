@@ -111,7 +111,7 @@ export class IfcPropertyUtils {
         allIds.push(String(node.expressId));
       }
       if (node.children && node.children.length > 0) {
-        node.children.forEach(child => collectAllChildren(child));
+        node.children.forEach((child: any) => collectAllChildren(child));
       }
     };
 
@@ -179,7 +179,7 @@ export class IfcPropertyUtils {
     console.log('当前隐藏的节点集合:', Array.from(this.hiddenNodeIds));
 
     // 更新场景中所有 mesh 的可见性
-    scene.meshes.forEach(mesh => {
+    scene.meshes.forEach((mesh: { name: string; metadata: { globalId: any; }; isVisible: boolean; }) => {
       // 跳过特殊 mesh
       if (this.isSpecialMesh(mesh.name)) {
         return;
@@ -213,7 +213,7 @@ export class IfcPropertyUtils {
   ): Promise<any[]> {
     const showPropertyKey = ['GlobalId', 'Name', 'LongName', 'ObjectType', 'Tag', 'Phase', 'type'];
     const property = [];
-    const pset = propertyAll[expressID];
+    const pset = propertyAll[Number(expressID)];
     let spec: any[] = [];
     const expressIdsArray = Object.values(ifcExpressIds);
 
@@ -287,7 +287,7 @@ export class IfcPropertyUtils {
               return {
                 id,
                 name: value.Name.value,
-                value: typeof (value.NominalValue) === ('string' || 'number') ? value.NominalValue : String(value.NominalValue?.value)
+                value: typeof (value.NominalValue) === 'string' || typeof (value.NominalValue) === 'number' ? value.NominalValue : String(value.NominalValue?.value)
               };
             }),
           });
@@ -298,14 +298,14 @@ export class IfcPropertyUtils {
     return property;
   }
 
-  public async flattenTreeToGroupedItems(treeData): Promise<any[]> {
-    const result = [];
+  public async flattenTreeToGroupedItems(treeData: any[]): Promise<any[]> {
+    const result: any[] | PromiseLike<any[]> = [];
 
-    treeData.forEach(parentNode => {
+    treeData.forEach((parentNode: { children: any[]; name: any; }) => {
       // 检查是否有子节点
       if (parentNode.children && Array.isArray(parentNode.children)) {
         // 遍历子节点，添加 group 字段
-        parentNode.children.forEach(child => {
+        parentNode.children.forEach((child: { id: any; name: any; value: any; }) => {
           result.push({
             id: child.id,
             name: child.name,
@@ -422,8 +422,9 @@ export class IfcPropertyUtils {
       if (isFocus) {
         try {
           const bbox = getBoundingBoxForMeshes(exactMatches);
-          scene.activeCamera!.setTarget(bbox.center);
-          scene.activeCamera!.radius = bbox.maximum.subtract(bbox.minimum).length() * 1.8;
+          const arcRotateCamera = scene.activeCamera as BABYLON.ArcRotateCamera;
+          arcRotateCamera.setTarget(bbox.center);
+          arcRotateCamera.radius = bbox.maximum.subtract(bbox.minimum).length() * 1.8;
         } catch (e) {
           console.error("Focus error:", e);
         }
@@ -475,10 +476,10 @@ export class IfcPropertyUtils {
     });
   }
 
-  public getChildrenExpressIds(node): any[] {
+  public getChildrenExpressIds(node: { children: any; }): any[] {
     let expressIds: any[] = [];
 
-    const traverse = (children) => {
+    const traverse = (children: any[]) => {
       if (children && Array.isArray(children)) {
         children.forEach(child => {
           if (child.expressId) {

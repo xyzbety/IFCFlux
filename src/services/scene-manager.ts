@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils';
 import { CameraHistoryManager } from './history-manager';
 import { Measure } from '../utils/analysis/measure';
-import { CubeView } from '../utils/plugin/viewer/cubeView.js';
+import { CubeView } from '../utils/plugin/viewer/cubeView';
 import * as GUI from '@babylonjs/gui';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
@@ -98,7 +98,9 @@ export class SceneManager {
         if (pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh) {
           let parent = pointerInfo.pickInfo.pickedMesh.parent;
           while (parent) {
-            parent.isVisible = true;
+            if (parent instanceof BABYLON.AbstractMesh) {
+              parent.isVisible = true;
+            }
             parent = parent.parent;
           }
           window.dispatchEvent(new CustomEvent('mesh-clicked', {
@@ -527,7 +529,7 @@ export class SceneManager {
     type: 'distance' | 'area' | 'angle' | 'coordinate' | 'clear',
     measure: Measure | null,
     CoordinateTemp: { point: { x: number, y: number, z: number } | null },
-    updateTempLineLabel: (tempLine: BABYLON.Mesh, anchor: BABYLON.Mesh) => void
+    updateTempLineLabel: (tempLine: BABYLON.AbstractMesh, anchor: BABYLON.Mesh) => void
   ): Measure | null {
     if (!this.scene || !this.camera) return measure;
 

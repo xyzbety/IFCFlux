@@ -1,10 +1,9 @@
 import { ref, Ref } from 'vue';
 import * as BABYLON from '@babylonjs/core/index.js';
-import { IfcLoader } from '../utils/loader/IfcLoader.js';
+import { IfcLoader } from '../utils/loader/IfcLoader';
 import { addFileHistory } from '../utils/indexedDB.ts';
 import { useModelStore } from '../store/index.ts';
 import { useLayoutManager } from '../composables/useLayoutManager.ts';
-import { SceneManager } from './scene-manager.ts';
 import { IfcInspect } from '../utils/ifc/IfcInspect.js';
 
 const { switchToMode, LayoutMode: LM } = useLayoutManager();
@@ -74,6 +73,7 @@ export class ModelManager {
         };
 
         await ifcLoader.load(onProgressCallback);
+        console.log("IFC模型加载完成,模型数据为", ifcLoader);
 
         this.modelStore.setModel(file, {
             tree: ifcLoader.ifcTree,
@@ -120,8 +120,6 @@ export class ModelManager {
 
   private clearExistingScene(): void {
     if (this.scene) {
-      const sceneManager = SceneManager.getInstance();
-      // Dispose only meshes that are not the camera or lights managed by SceneManager
       this.scene.meshes.slice().forEach(mesh => {
           if (mesh.name !== 'camera' && !mesh.name.toLowerCase().includes('light')) {
               mesh.dispose();
