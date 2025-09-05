@@ -122,12 +122,11 @@ const handleGlobalClick = (event: Event) => {
 };
 const handleRowClick = async (event: any) => {
     console.log('表格行点击', event)
-    const mesh = sceneManager.scene?.meshes.find(m => m.id === event.row.guid);
-    if (mesh && mesh.name && sceneManager.scene) {
-        console.log('对应的mesh', mesh);
-        console.log(sceneManager.scene)
-        const expressID = mesh.name
-        const modelData = modelStore.modelData
+    const modelData = modelStore.modelData
+    console.log("modelData", modelData);
+    let expressID = ifcPropertyUtils.findExpressIdByGuid(modelData.tree, event.row.guid);
+    console.log("对应的expressID", expressID);
+    if (expressID && sceneManager.scene) {
 
         let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
         const meshConfig = {
@@ -477,7 +476,7 @@ onMounted(() => {
 
 // 组件卸载时移除监听器
 onUnmounted(() => {
-    eventManager.remove('click', handleGlobalClick);
+    eventManager.remove('click');
 });
 
 
