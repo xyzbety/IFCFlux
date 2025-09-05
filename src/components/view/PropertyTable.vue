@@ -11,13 +11,40 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     propertyData: () => []
 })
-
+let treeData = ref<any[]>([])
+let treeInstance: VTable.ListTable | null = null;
+let MouseId = 0
+const handleMouse = () => {
+    if (!treeInstance) return;
+    MouseId = treeInstance.on('mouseenter_cell', args => {
+        const { col, row } = args;
+        console.log('mouseenter_cell', col, row);
+        if (treeInstance) {
+            const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
+            if (treeInstance.getCellValue(col, row) && row !== 0) {
+                treeInstance.showTooltip(col, row, {
+                    content: treeInstance.getCellValue(col, row),
+                    referencePosition: { rect, placement: VTable.TYPES.Placement.top },
+                    className: 'defineTooltip',
+                    disappearDelay: 100,
+                    style: {
+                        bgColor: 'black',
+                        color: 'white',
+                        arrowMark: true
+                    }
+                });
+            }
+        }
+    });
+}
 onMounted(() => {
-    let treeData = ref<any[]>([])
-    let treeInstance: VTable.ListTable | null = null;
+
     watch(() => props.propertyData, (newValue) => {
         treeData.value = newValue
         if (treeInstance) {
+            treeInstance.off(MouseId);
+            treeInstance = new VTable.ListTable(document.getElementById('PropertyTable') as HTMLElement, options)
+            handleMouse()
             treeInstance.setRecords(treeData.value)
         }
     }, { deep: true, immediate: true });
@@ -42,14 +69,14 @@ onMounted(() => {
         defaultRowHeight: 30,
         theme: VTable.themes.DEFAULT.extends({
             bodyStyle: {
-                bgColor:"#fdfdfd",
-                borderLineWidth:0.5,
+                bgColor: "#fdfdfd",
+                borderLineWidth: 0.5,
                 fontSize: 11.5,
                 padding: 10
             },
             headerStyle: {
                 fontSize: 12,
-                borderLineWidth:0.5,
+                borderLineWidth: 0.5,
                 fontWeight: 300,
                 padding: 10
             },
@@ -75,26 +102,7 @@ onMounted(() => {
         }
     })
     treeInstance = new VTable.ListTable(document.getElementById('PropertyTable') as HTMLElement, options)
-    treeInstance.on('mouseenter_cell', args => {
-        const { col, row } = args;
-        console.log('mouseenter_cell', col, row);
-        if (treeInstance) {
-            const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
-            if (treeInstance.getCellValue(col, row) && row !== 0) {
-                treeInstance.showTooltip(col, row, {
-                    content: treeInstance.getCellValue(col, row),
-                    referencePosition: { rect, placement: VTable.TYPES.Placement.top },
-                    className: 'defineTooltip',
-                    disappearDelay: 100,
-                    style: {
-                        bgColor: 'black',
-                        color: 'white',
-                        arrowMark: true
-                    }
-                });
-            }
-        }
-    });
+    handleMouse()
 })
 
 </script>

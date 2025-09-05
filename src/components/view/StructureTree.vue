@@ -56,15 +56,14 @@ let options = reactive({
                 checkedFill: themeColor.value,
                 checkedStroke: themeColor.value,
                 defaultFill: 'transparent',
-                defaultStroke: '#d0d0d0'
+                defaultStroke: '#d0d0d0',
             } as any
         },
         {
             field: 'typeShow',
             title: '类型',
             width: '50%' as const,
-            tree: true,
-
+            tree: true
         },
         { field: 'name', title: '名称', width: '39%' as const },
     ],
@@ -92,6 +91,52 @@ let options = reactive({
         displayMode: 'basedOnContainer' as const
     }
 })
+
+const { CLICK_CELL } = VTable.ListTable.EVENT_TYPE;
+let ClickId = 0
+let MouseId = 0
+
+const handleClick = () => {
+    if (!treeInstance) return;
+    ClickId = treeInstance.on(CLICK_CELL, (...args) => {
+        if (treeInstance) {
+            if (args[0].cellType === 'checkbox' && args[0].cellLocation === 'columnHeader') {
+                let headerSelectState = treeInstance.getCheckboxState('check')[0];
+                emit('table-checkbox-click', { args, selectState: headerSelectState })
+                return;
+            } else if (args[0].cellType === 'checkbox' && args[0].cellLocation === 'body') {
+                const selectState = treeInstance.getCellCheckboxState(args[0].col, args[0].row);
+                emit('table-checkbox-click', { args, selectState })
+                return;
+            }
+        }
+        emit('table-cell-click', args)
+    });
+}
+
+const handleMouse = () => {
+    if (!treeInstance) return;
+    MouseId = treeInstance.on('mouseenter_cell', args => {
+        console.log('mouseenter_cell', args);
+        const { col, row } = args;
+        if (treeInstance) {
+            const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
+            if (treeInstance.getCellValue(col, row) && row !== 0) {
+                treeInstance.showTooltip(col, row, {
+                    content: treeInstance.getCellValue(col, row),
+                    referencePosition: { rect, placement: VTable.TYPES.Placement.top },
+                    className: 'defineTooltip',
+                    disappearDelay: 100,
+                    style: {
+                        bgColor: 'black',
+                        color: 'white',
+                        arrowMark: true
+                    }
+                });
+            }
+        }
+    });
+}
 
 onMounted(() => {
     watch(
@@ -130,6 +175,13 @@ onMounted(() => {
     );
 
     watch(() => treeData.value, (newValue) => {
+        if (treeInstance) {
+            treeInstance.off(ClickId)
+            treeInstance.off(MouseId)
+            treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
+            handleClick();
+            handleMouse();
+        }
         if (newValue.length > 0 && treeInstance) {
             treeInstance.setRecords(treeData.value)
             treeInstance.setCellCheckboxState(0, 0, true);
@@ -152,44 +204,9 @@ onMounted(() => {
         if (!newValue) return;
         treeData.value = newValue.tree
     }, { deep: true, immediate: true });
-
-
-    const { CLICK_CELL } = VTable.ListTable.EVENT_TYPE;
     treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
-    treeInstance.on(CLICK_CELL, (...args) => {
-        if (treeInstance) {
-            if (args[0].cellType === 'checkbox' && args[0].cellLocation === 'columnHeader') {
-                let headerSelectState = treeInstance.getCheckboxState('check')[0];
-                emit('table-checkbox-click', { args, selectState: headerSelectState })
-                return;
-            } else if (args[0].cellType === 'checkbox' && args[0].cellLocation === 'body') {
-                const selectState = treeInstance.getCellCheckboxState(args[0].col, args[0].row);
-                emit('table-checkbox-click', { args, selectState })
-                return;
-            }
-        }
-        emit('table-cell-click', args)
-    });
-    treeInstance.on('mouseenter_cell', args => {
-        console.log('mouseenter_cell', args);
-        const { col, row } = args;
-        if (treeInstance) {
-            const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
-            if (treeInstance.getCellValue(col, row) && row !== 0) {
-                treeInstance.showTooltip(col, row, {
-                    content: treeInstance.getCellValue(col, row),
-                    referencePosition: { rect, placement: VTable.TYPES.Placement.top },
-                    className: 'defineTooltip',
-                    disappearDelay: 100,
-                    style: {
-                        bgColor: 'black',
-                        color: 'white',
-                        arrowMark: true
-                    }
-                });
-            }
-        }
-    });
+    handleClick();
+    handleMouse();
 })
 
 const scrollToRow = (node: any) => {

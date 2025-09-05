@@ -14,7 +14,7 @@
       margin: layoutState.structureTreeWidth === 0 ? '0' : '15px'
     }">
       <Dialog :title="'构件树'" :visible="layoutState.showStructureTree" @close="toggleStructureTreeDialog">
-        <StructureTree ref="structureTreeRef" :tree-data="pageState.treeData" :visible="layoutState.showStructureTree"
+        <StructureTree ref="structureTreeRef" :tree-data="pageState.treeData"
           @table-cell-click="tableRowClick" @table-checkbox-click="onTableSelectChange" :style="themeStyle" />
       </Dialog>
     </div>
@@ -68,7 +68,7 @@
     }">
       <Dialog :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
         @tab-change="handleTabChange" :activeTab="activeTab">
-        <PropertyTable :property-data="pageState.property" :visible="layoutState.showPropertyTable">
+        <PropertyTable :property-data="pageState.property" >
         </PropertyTable>
       </Dialog>
     </div>
@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
 import Sidebar from './components/menu/Sidebar.vue';
 import TitleBar from './components/menu/TitleBar.vue';
 import DragBar from './components/DragBar.vue';

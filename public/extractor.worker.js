@@ -297,7 +297,7 @@ async function ifcsgExtractor(file, mapping) {
             if (psetItem) {
                 for (const [k, v] of Object.entries(value)) {
                     const p_item = psetItem[k]
-                    if (p_item) {
+                    if (p_item || p_item == 0) {
                         if (checkIfcType(p_item, v)) {
                             value[k] = [0, p_item, v]
                         } else {
