@@ -1,4 +1,4 @@
-import { getIfcChineseName } from '../utils/ifc/ifcMap';
+import { getIfcChineseName, getIfcChineseNumberName } from '../utils/ifc/ifcMap';
 import * as BABYLON from '@babylonjs/core';
 import { getBoundingBoxForMeshes } from '../utils';
 import { EffectManager } from './effect-manager';
@@ -18,7 +18,7 @@ export interface MeshHighlightConfig {
 
 export class IfcPropertyUtils {
   private static instance: IfcPropertyUtils | null = null;
-  
+
   public static rootExpressId = '0';
   private hiddenNodeIds = new Set<string>();
   private effectManager: EffectManager | null = null;
@@ -213,12 +213,17 @@ export class IfcPropertyUtils {
   ): Promise<any[]> {
     const showPropertyKey = ['GlobalId', 'Name', 'LongName', 'ObjectType', 'Tag', 'Phase', 'type'];
     const property = [];
-    const pset = propertyAll[Number(expressID)];
+    const extractNumbers = (str: string): string => {
+      const match = str.match(/\d+/);
+      return match ? match[0] : str;
+    };
+    const processedExpressID = extractNumbers(expressID);
+    const pset = propertyAll[Number(processedExpressID)];
     let spec: any[] = [];
     const expressIdsArray = Object.values(ifcExpressIds);
 
     // 找到当前expressID的索引
-    const currentIndex = expressIdsArray.findIndex(id => id === expressID);
+    const currentIndex = expressIdsArray.findIndex(id => id === processedExpressID);
 
     if (currentIndex !== -1) {
       const currentElement = expressIdsArray[currentIndex];
@@ -233,7 +238,7 @@ export class IfcPropertyUtils {
         }
       }
     } else {
-      console.log(`未找到expressID: ${expressID}`);
+      console.log(`未找到expressID: ${processedExpressID}`);
     }
 
     if (pset === undefined) {
@@ -245,12 +250,12 @@ export class IfcPropertyUtils {
       Object.keys(pset).map((key: string) => {
         if (showPropertyKey.indexOf(key) > -1) {
           const v = pset[key]?.value !== undefined ? pset[key]?.value : pset[key];
-          if (v !== null) {
+          if (v !== null && v !== '') {
             if (key === 'type') {
               value.push({
                 id,
                 name: 'IfcEntity',
-                value: getIfcChineseName(v)
+                value: typeof v === 'string' ? getIfcChineseName(v) : getIfcChineseNumberName(v)
               });
             } else {
               value.push({
@@ -494,5 +499,29 @@ export class IfcPropertyUtils {
 
     traverse(node.children);
     return expressIds;
+  }
+
+  /**
+ * 在嵌套结构中根据 guid 查找对应的 expressId
+ * @param {Array<Object>} data 嵌套结构的根节点数组
+ * @param {string} targetGuid 目标 guid
+ * @returns {string | null} 匹配的 expressId，未找到则返回 null
+ */
+  public findExpressIdByGuid(data: any[], targetGuid: string): string | null {
+    for (const node of data) {
+      // 检查当前节点的 guid 是否匹配
+      if (node.guid === targetGuid) {
+        return node.expressId;
+      }
+
+      // 递归检查子节点
+      if (node.children && node.children.length > 0) {
+        const result = this.findExpressIdByGuid(node.children, targetGuid);
+        if (result) {
+          return result;
+        }
+      }
+    }
+    return null;
   }
 }

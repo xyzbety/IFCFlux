@@ -2,7 +2,7 @@
  * IFC实体类型映射表
  * 包含原始名称、标准驼峰命名格式和中文名称
  */
-
+import { IfcCategoryMap as IfcCategoryNumberMap } from './ifc-category-map'
 export interface IfcTypeInfo {
   /** 原始名称（全大写） */
   original: string;
@@ -514,7 +514,7 @@ export function formatIfcType(originalType: string): string {
 
   const upperType = originalType.toUpperCase();
   const typeInfo = IFC_TYPE_MAP[upperType];
-  
+
   if (typeInfo) {
     return typeInfo.standard;
   }
@@ -541,13 +541,22 @@ export function getIfcChineseName(originalType: string): string {
 
   const upperType = originalType.toUpperCase();
   const typeInfo = IFC_TYPE_MAP[upperType];
-  
+
   if (typeInfo) {
     return typeInfo.chinese;
   }
 
   // 如果没有中文名称，返回格式化后的标准名称
   return formatIfcType(originalType);
+}
+
+
+export function getIfcChineseNumberName(originalType: number): string | number {
+  if (!originalType || typeof originalType !== 'number') {
+    return originalType
+  }
+  const typeInfo = IfcCategoryNumberMap[originalType];
+  return typeInfo;
 }
 
 /**
