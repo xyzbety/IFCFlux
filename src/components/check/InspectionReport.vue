@@ -403,7 +403,7 @@ function convertToTreeData(obj: any) {
                 key: `child-${idCounter}`,
                 name: subKey,
                 state: Array.isArray(subVal) ? subVal[0] : subVal,
-                value: Array.isArray(subVal) ? subVal[1] : subVal,
+                value: Array.isArray(subVal) ? (typeof subVal[1] === 'boolean' ? (subVal[1] ? '是' : '否') : subVal[1]) : subVal,
                 _parentName: key
             }));
             result.push({

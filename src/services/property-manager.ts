@@ -288,11 +288,22 @@ export class IfcPropertyUtils {
             value: '',
             children: p.HasProperties.map((v: any) => {
               const value = propertyAll[v?.value];
+              let nominalValue = value.NominalValue;
+              if (typeof nominalValue === 'boolean') {
+                nominalValue = nominalValue ? '是' : '否';
+              }
+              else if (typeof nominalValue === 'object' && nominalValue !== null && 'value' in nominalValue) {
+                if (typeof nominalValue.value === 'boolean') {
+                  nominalValue = nominalValue.value ? '是' : '否';
+                } else {
+                  nominalValue = nominalValue.value;
+                }
+              }
               id++;
               return {
                 id,
                 name: value.Name.value,
-                value: typeof (value.NominalValue) === 'string' || typeof (value.NominalValue) === 'number' ? value.NominalValue : String(value.NominalValue?.value)
+                value: nominalValue
               };
             }),
           });
