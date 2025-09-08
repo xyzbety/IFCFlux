@@ -331,7 +331,22 @@ export class IfcPropertyUtils {
         });
       }
     });
+    // 按照 group 进行排序
+    result.sort((a, b) => {
+      const groupA = a.group;
+      const groupB = b.group;
 
+      // Element Specific 永远排在第一位
+      if (groupA === 'Element Specific' && groupB !== 'Element Specific') {
+        return -1;
+      }
+      if (groupB === 'Element Specific' && groupA !== 'Element Specific') {
+        return 1;
+      }
+
+      // 如果都是 Element Specific 或都不是，按首字母排序
+      return groupA.localeCompare(groupB);
+    });
     return result;
   }
 
