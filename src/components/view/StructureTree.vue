@@ -7,6 +7,8 @@ import { watch, ref, reactive, computed } from 'vue'
 import { useModelStore } from '../../store';
 import { onMounted } from 'vue';
 import { SearchComponent } from '@visactor/vtable-search';
+import { MessagePlugin } from 'tdesign-vue-next';
+import { debounce } from '../../utils/index';
 const emit = defineEmits(['table-cell-click', 'table-checkbox-click']);
 const rootStyles = getComputedStyle(document.documentElement);
 const themeColor = ref(rootStyles.getPropertyValue('--theme-color'));
@@ -20,23 +22,29 @@ const theme = computed(() => {
             bgColor: "#fdfdfd",
             borderLineWidth: 0.5,
             fontSize: 11.5,
-            padding: 10
+            padding: 10,
+            hover: {
+                cellBgColor: '#ecf1f5',
+                inlineRowBgColor: '#ecf1f5',
+            },
+            cursor: 'pointer'
         },
         headerStyle: {
             fontSize: 12,
             borderLineWidth: 0.5,
             fontWeight: 300,
-            padding: 10
+            padding: 10,
+            bgColor: "#ecf1f5",
         },
         selectionStyle: {
-            cellBorderLineWidth: 0
+            cellBorderLineWidth: 0,
         },
         checkboxStyle: {
             checkedFill: themeColor.value,
             checkedStroke: themeColor.value,
         },
         scrollStyle: {
-            visible: 'always',
+            visible: 'always'
         }
     });
 });
@@ -63,9 +71,11 @@ let options = reactive({
             field: 'typeShow',
             title: '类型',
             width: '50%' as const,
-            tree: true
+            tree: true,
+            icon: 'order'
+
         },
-        { field: 'name', title: '名称', width: '39%' as const },
+        { field: 'name', title: '名称', width: '39%' as const, icon: 'order' },
     ],
     widthMode: 'adaptive' as const,
     autoFillWidth: true,
@@ -75,6 +85,9 @@ let options = reactive({
     defaultRowHeight: 30,
     select: {
         highlightMode: 'row' as const,
+    },
+    hover: {
+        highlightMode: 'row'
     },
     theme: theme.value,
     emptyTip: {
@@ -91,7 +104,32 @@ let options = reactive({
         displayMode: 'basedOnContainer' as const
     }
 })
-
+VTable.register.icon('order', {
+    type: 'svg',
+    svg: '<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M624.5 786.3c92.9 0 168.2-75.3 168.2-168.2V309c0-92.4-75.3-168.2-168.2-168.2H303.6c-92.4 0-168.2 75.3-168.2 168.2v309.1c0 92.4 75.3 168.2 168.2 168.2h320.9zM178.2 618.1V309c0-69.4 56.1-125.5 125.5-125.5h320.9c69.4 0 125.5 56.1 125.5 125.5v309.1c0 69.4-56.1 125.5-125.5 125.5h-321c-69.4 0-125.4-56.1-125.4-125.5z" p-id="5167" fill="#2c2c2c"></path><path d="M849.8 295.1v361.5c0 102.7-83.6 186.3-186.3 186.3H279.1v42.7h384.4c126.3 0 229.1-102.8 229.1-229.1V295.1h-42.8zM307.9 361.8h312.3c11.8 0 21.4-9.6 21.4-21.4 0-11.8-9.6-21.4-21.4-21.4H307.9c-11.8 0-21.4 9.6-21.4 21.4 0 11.9 9.6 21.4 21.4 21.4zM307.9 484.6h312.3c11.8 0 21.4-9.6 21.4-21.4 0-11.8-9.6-21.4-21.4-21.4H307.9c-11.8 0-21.4 9.6-21.4 21.4 0 11.9 9.6 21.4 21.4 21.4z" p-id="5168" fill="#2c2c2c"></path><path d="M620.2 607.4c11.8 0 21.4-9.6 21.4-21.4 0-11.8-9.6-21.4-21.4-21.4H307.9c-11.8 0-21.4 9.6-21.4 21.4 0 11.8 9.6 21.4 21.4 21.4h312.3z" p-id="5169" fill="#2c2c2c"></path></svg>',
+    width: 20,
+    height: 20,
+    name: 'order',
+    positionType: VTable.TYPES.IconPosition.absoluteRight,
+    marginLeft: 0,
+    hover: {
+        width: 20,
+        height: 20,
+        bgColor: 'rgba(101, 117, 168, 0.0)'
+    },
+    cursor: 'pointer',
+    visibleTime: 'click_cell'
+});
+const copyToClipboard = async (text: string) => {
+    try {
+        await navigator.clipboard.writeText(text);
+        MessagePlugin.success({ content: '复制成功', duration: 500 });
+    } catch (error) {
+        console.error('复制到剪贴板失败:', error);
+        MessagePlugin.error({ content: '复制失败', duration: 500 });
+    }
+}
+const debouncedCopyToClipboard = debounce(copyToClipboard, 500);
 const { CLICK_CELL } = VTable.ListTable.EVENT_TYPE;
 let ClickId = 0
 let MouseId = 0
@@ -100,6 +138,13 @@ const handleClick = () => {
     if (!treeInstance) return;
     ClickId = treeInstance.on(CLICK_CELL, (...args) => {
         if (treeInstance) {
+            const cellValue = treeInstance.getCellValue(args[0].col, args[0].row);
+            console.log('click_cell', args, cellValue);
+            const targetIcon = args[0].targetIcon;
+            if (targetIcon?.name === 'order') {
+                debouncedCopyToClipboard(cellValue);
+                return;
+            }
             if (args[0].cellType === 'checkbox' && args[0].cellLocation === 'columnHeader') {
                 let headerSelectState = treeInstance.getCheckboxState('check')[0];
                 emit('table-checkbox-click', { args, selectState: headerSelectState })
@@ -109,6 +154,7 @@ const handleClick = () => {
                 emit('table-checkbox-click', { args, selectState })
                 return;
             }
+
         }
         emit('table-cell-click', args)
     });
@@ -116,22 +162,38 @@ const handleClick = () => {
 
 const handleMouse = () => {
     if (!treeInstance) return;
-    MouseId = treeInstance.on('mouseenter_cell', args => {
-        console.log('mouseenter_cell', args);
-        const { col, row } = args;
+    MouseId = treeInstance.on('mousemove_cell', args => {
+        console.log('mousemove_cell', args);
+        const { col, row, targetIcon } = args;
         if (treeInstance) {
             const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
             if (treeInstance.getCellValue(col, row) && row !== 0) {
-                treeInstance.showTooltip(col, row, {
-                    content: treeInstance.getCellValue(col, row),
-                    referencePosition: { rect, placement: VTable.TYPES.Placement.top },
-                    className: 'defineTooltip',
-                    disappearDelay: 100,
-                    style: {
+                let content = '';
+                let referencePosition: any = {};
+                let style = {}
+                if (targetIcon?.name === 'order') {
+                    content = '点击复制';
+                    referencePosition = { rect, placement: VTable.TYPES.Placement.right };
+                    style = {
+                        bgColor: 'black',
+                        color: 'white',
+                        arrowMark: false
+                    }
+                } else {
+                    content = treeInstance.getCellValue(col, row);
+                    referencePosition = { rect, placement: VTable.TYPES.Placement.top };
+                    style = {
                         bgColor: 'black',
                         color: 'white',
                         arrowMark: true
                     }
+                }
+                treeInstance.showTooltip(col, row, {
+                    content,
+                    referencePosition,
+                    className: 'defineTooltip',
+                    disappearDelay: 100,
+                    style
                 });
             }
         }
@@ -216,9 +278,8 @@ const scrollToRow = (node: any) => {
         let result = search.search(node.expressId).results;
         treeInstance.updateTheme(theme.value);
         let row = result[0].range.start.row;
-        let col = 0;
-        treeInstance.scrollToCell({ row, col });
-        treeInstance.selectCell(col, row);
+        treeInstance.scrollToRow(row)
+        treeInstance.selectCells([{ start: { col: 0, row }, end: { col: 2, row } }]);
         return;
     } else if (typeof node === 'number') {
         treeInstance.scrollToCell({ row: node, col: 1 });

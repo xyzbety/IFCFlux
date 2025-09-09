@@ -233,3 +233,30 @@ export function updateTempLineLabel(tempLine: BABYLON.AbstractMesh, anchor: BABY
     const mid = BABYLON.Vector3.Center(start, end);
     anchor.position.copyFrom(mid);
 }
+
+export function debounce(func: Function, wait: number) {
+    let timeout: number | null = null;
+    return function executedFunction(...args: any[]) {
+        const later = () => {
+            timeout = null;
+            func(...args);
+        };
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(later, wait);
+    };
+};
+
+
+export function throttle(func: Function, limit: number) {
+    let inThrottle: boolean = false;
+    return function (this: any, ...args: any[]) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
