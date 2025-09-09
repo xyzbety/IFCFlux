@@ -1,0 +1,18 @@
+export const IfcTypes: { [key: string]: string} = {
+    IFCIDENTIFIER: "string",
+    IFCTEXT: "string",
+    IFCLABEL: "array",
+    IFCBOOLEAN: "boolean",
+    IFCINTEGER: "int",
+    IFCVOLUMEMEASURE: "float",
+    IFCREAL: "float",
+    IFCTHERMALTRANSMITTANCEMEASURE: "float",
+    IFCLENGTHMEASURE: "float",
+    IFCCOUNTMEASURE: "float",
+    IFCPOSITIVELENGTHMEASURE: "float",
+    IFCPLANEANGLEMEASURE: "float",
+    IFCNUMERICMEASURE: "float",
+    IFCAREAMEASURE: "float",
+    IFCQUANTITYLENGTH: "float",
+    IFCMASSMEASURE: "float",
+}
