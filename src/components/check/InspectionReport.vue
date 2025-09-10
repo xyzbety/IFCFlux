@@ -47,13 +47,11 @@
         </div>
         <!-- 弹框 -->
         <t-dialog v-model:visible="dialogVisible" header="属性赋值详情" width="400px" :footer="null" ref="dialogRef">
-            <div style="max-height:45vh; overflow: auto;">
-                <div style="max-height: 45vh; overflow: auto;">
-                    <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
-                        size="small" :tree="{ childrenKey: 'children', indent: 0 }"
-                        :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false"
-                        :expandedTreeNodes="expandedKeys" @expanded-tree-nodes-change="onExpandedTreeNodesChange" />
-                </div>
+            <div class="dialog-content">
+                <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
+                    size="small" :tree="{ childrenKey: 'children', indent: 0 }"
+                    :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false"
+                    :expandedTreeNodes="expandedKeys" @expanded-tree-nodes-change="onExpandedTreeNodesChange" />
             </div>
         </t-dialog>
     </div>
@@ -67,6 +65,14 @@ import { Tooltip as TTooltip } from 'tdesign-vue-next';
 import { SceneManager } from '../../services/scene-manager';
 import { IfcPropertyUtils } from '../../services/property-manager';
 import { eventManager } from '../../services/event-manager';
+const iconPathMap = {
+    'array': '/icons/枚举.svg',
+    'boolean': '/icons/布尔.svg',
+    'float': '/icons/浮点数.svg',
+    'int': '/icons/整数.svg',
+    'string': '/icons/字符串.svg',
+};
+
 const props = defineProps<{ visible: boolean; inspectType: string }>();
 
 const emit = defineEmits(['update:visible']);
@@ -195,23 +201,54 @@ const dialogTableColumns = [
         ellipsis: true,
         cell: (h: any, params: any) => {
             const children = [];
+            // 判断是否有图标
+            const hasIcon = params.row._parentName && params.row._parentName !== 'Element Specific';
+
+            if (hasIcon) {
+                const iconPath = iconPathMap[params.row.dataType as keyof typeof iconPathMap] || '/icons/字符串.svg';
+
+                children.push(
+                    h('span', {
+                        style: `
+                            display: inline-flex;
+                            align-items: center;
+                            margin-right: 8px;
+                            flex-shrink: 0;
+                        `
+                    }, [
+                        h('img', {
+                            src: iconPath,
+                            alt: params.row.dataType,
+                            style: {
+                                width: '16px',
+                                height: '16px'
+                            }
+                        })
+                    ])
+                );
+            }
+
+            // 根据是否有图标设置不同的最大宽度
+            const maxWidth = hasIcon ? '110px' : '135px';
+
             // 用 TDesign 的 Tooltip 包裹文字
             children.push(
                 h(TTooltip, { content: params.row.name, placement: 'top', overlayClassName: 'ellipsis-tooltip' }, {
                     default: () => h('span', {
                         style: `
-                            display: inline-block;
-                            max-width: 140px;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            white-space: nowrap;
-                            vertical-align: middle;
-                            flex: 1;`
+                        display: inline-block;
+                        max-width: ${maxWidth};
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        vertical-align: middle;
+                        flex: 1;`
                     }, params.row.name)
                 })
             );
+
             // 状态方框（属性集子项才有）
-            if (params.row._parentName && params.row._parentName !== 'Element Specific') {
+            if (hasIcon) {
                 const colorMap = {
                     0: '#52c41a',    // 绿色
                     1: '#d9001b',    // 深红色
@@ -222,17 +259,34 @@ const dialogTableColumns = [
                 const color = colorMap[params.row.state as keyof typeof colorMap] || '#d9d9d9';
                 children.push(
                     h('span', {
-                        style: `display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};position:absolute;right:10px;`
+                        style: `
+                        display: inline-block;
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 3px;
+                        background: ${color};
+                        position: absolute;
+                        right: 10px;
+                        flex-shrink: 0;
+                    `
                     })
                 );
             }
             // 展开/折叠图标（树节点才有）
             if (params.treeNodeCol && params.treeNodeRender) {
                 children.push(
-                    h('span', { style: 'margin-left:8px;' }, [params.treeNodeRender()])
+                    h('span', { style: 'margin-left: 8px; flex-shrink: 0;' }, [params.treeNodeRender()])
                 );
             }
-            return h('div', { style: 'display: flex; align-items: center;' }, children);
+
+            return h('div', {
+                style: `
+                display: flex; 
+                align-items: center; 
+                position: relative;
+                width: 100%;
+            `
+            }, children);
         }
     },
     {
@@ -404,6 +458,7 @@ function convertToTreeData(obj: any) {
                 name: subKey,
                 state: Array.isArray(subVal) ? subVal[0] : subVal,
                 value: Array.isArray(subVal) ? (typeof subVal[1] === 'boolean' ? (subVal[1] ? '是' : '否') : subVal[1]) : subVal,
+                dataType: Array.isArray(subVal) ? subVal[2] : subVal,
                 _parentName: key
             }));
             result.push({
@@ -698,5 +753,17 @@ onUnmounted(() => {
 .t-table th,
 .t-table td {
     font-size: 12px;
+}
+
+.dialog-content {
+    max-height: 55vh;
+    overflow: auto;
+}
+
+@media (min-height: 900px) {
+    .dialog-content {
+        max-height: 68vh;
+        overflow: auto;
+    }
 }
 </style>
