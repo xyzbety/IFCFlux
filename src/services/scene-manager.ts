@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils';
 import { CameraHistoryManager } from './history-manager';
 import { Measure } from '../utils/analysis/measure';
-import { CubeView } from '../utils/plugin/viewer/cubeView';
+import { CubeView } from '../services/cube-manager'
 import * as GUI from '@babylonjs/gui';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
@@ -77,7 +77,7 @@ export class SceneManager {
     const mainlight = new BABYLON.DirectionalLight("mainLight", new BABYLON.Vector3(-1, -1, -1), this.scene);
     mainlight.intensity = 0.5;
     mainlight.shadowEnabled = true;
-    
+
 
     const fillLight = new BABYLON.DirectionalLight('fillLight', new BABYLON.Vector3(1, -0.5, 0.5), this.scene);
     fillLight.intensity = 0.75;
@@ -217,7 +217,7 @@ export class SceneManager {
       this.scene!.getEngine().setDepthWrite(true);
       this.scene!.getEngine().setDepthFunction(BABYLON.Engine.LEQUAL);
     });
-    new CubeView(this.scene);
+    CubeView.getInstance(this.scene);
   }
 
   /**
@@ -304,31 +304,31 @@ export class SceneManager {
     }
 
     switch (action) {
-        case 'pan':
-            this.camera._panningMouseButton = 0; // 左键平移
-            break;
-        case 'rotate':
-            this.camera._panningMouseButton = 2; // 右键平移
-            break;
-        case 'zoomIn':
-            this.camera.radius *= 0.9; // 缩小半径以放大
-            break;
-        case 'zoomOut':
-            this.camera.radius *= 1.1; // 增大半径以缩小
-            break;
-        case 'rotateLeft':
-            this.camera.alpha -= 0.1;
-            break;
-        case 'rotateRight':
-            this.camera.alpha += 0.1;
-            break;
+      case 'pan':
+        this.camera._panningMouseButton = 0; // 左键平移
+        break;
+      case 'rotate':
+        this.camera._panningMouseButton = 2; // 右键平移
+        break;
+      case 'zoomIn':
+        this.camera.radius *= 0.9; // 缩小半径以放大
+        break;
+      case 'zoomOut':
+        this.camera.radius *= 1.1; // 增大半径以缩小
+        break;
+      case 'rotateLeft':
+        this.camera.alpha -= 0.1;
+        break;
+      case 'rotateRight':
+        this.camera.alpha += 0.1;
+        break;
     }
 
     this.sceneStore.setCameraState({ position: this.camera.position, target: this.camera.target });
 
     // 记录当前状态
     this.cameraHistoryManager.recordCurrentState(this.camera);
-}
+  }
 
   /**
    * 处理视图切换
@@ -674,7 +674,7 @@ export class SceneManager {
     }
 
     if (type === 'axis') {
-      this.ifcExplosion.bom(new BABYLON.Vector3(0, 0.5,0));
+      this.ifcExplosion.bom(new BABYLON.Vector3(0, 0.5, 0));
     }
   }
 

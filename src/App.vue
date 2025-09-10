@@ -14,8 +14,8 @@
       margin: layoutState.structureTreeWidth === 0 ? '0' : '15px'
     }">
       <Dialog :title="'构件树'" :visible="layoutState.showStructureTree" @close="toggleStructureTreeDialog">
-        <StructureTree ref="structureTreeRef" :tree-data="pageState.treeData"
-          @table-cell-click="tableRowClick" @table-checkbox-click="onTableSelectChange" :style="themeStyle" />
+        <StructureTree ref="structureTreeRef" :tree-data="pageState.treeData" @table-cell-click="tableRowClick"
+          @table-checkbox-click="onTableSelectChange" :style="themeStyle" />
       </Dialog>
     </div>
 
@@ -51,6 +51,7 @@
       <div id="rightArea" :style="{ flex: layoutState.showAnimationPanel ? '2 1 0' : '1 1 0' }">
         <div id="viewer" style="position: relative; width: 100%; height: 100%;">
           <BabylonViewer></BabylonViewer>
+          <cubeView v-show="pageState.treeData.length > 0"></cubeView>
           <ProgressBar :loading="modelStore.loading || false"
             :progress="modelStore.progress || { percent: 0, current: 0, total: 100, text: '' }" />
         </div>
@@ -68,7 +69,7 @@
     }">
       <Dialog :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
         @tab-change="handleTabChange" :activeTab="activeTab">
-        <PropertyTable :property-data="pageState.property" >
+        <PropertyTable :property-data="pageState.property">
         </PropertyTable>
       </Dialog>
     </div>
@@ -88,6 +89,7 @@ import StructureTree from './components/view/StructureTree.vue';
 import PropertyTable from './components/view/PropertyTable.vue';
 import ProgressBar from './components/ProgressBar.vue';
 import BabylonViewer from './components/BabylonViewer.vue';
+import cubeView from './components/view/cubeView.vue'
 import { useAppCore } from './composables/useAppCore';
 import { useModelStore } from './store';
 import { eventManager } from './services/event-manager';
