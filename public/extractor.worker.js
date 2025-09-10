@@ -1,7 +1,7 @@
 self.onmessage = async (e) => {
     const name = e.data.name
     if (name == 'start') {
-        const result = await ifcsgExtractor(e.data.file, e.data.mapping)
+        const result = await ifcsgExtractor(e.data.file, e.data.mapping, e.data.ifcTypes)
         self.postMessage({
             complete: true,
             result: result
@@ -9,7 +9,7 @@ self.onmessage = async (e) => {
     }
 }
 
-async function ifcsgExtractor(file, mapping) {
+async function ifcsgExtractor(file, mapping, ifcTypes) {
     const t0 = performance.now()
     console.log('Starting worker');
     const entities = []
@@ -23,7 +23,7 @@ async function ifcsgExtractor(file, mapping) {
     let valueCount = 0
 
     const numberDataTypes = ['IFCVOLUMEMEASURE', 'IFCREAL', 'IFCTHERMALTRANSMITTANCEMEASURE', 'IFCINTEGER', 'IFCLENGTHMEASURE', 'IFCCOUNTMEASURE', 'IFCPOSITIVELENGTHMEASURE', 'IFCPLANEANGLEMEASURE', 'IFCNUMERICMEASURE', 'IFCAREAMEASURE', 'IFCQUANTITYLENGTH', 'IFCMASSMEASURE']
-    const stringDataTypes = ['IFCIDENTIFIER', 'IFCLABEL', 'IFCTEXT']
+    const stringDataTypes = ['IFCIDENTIFIER', 'IFCLABEL', 'IFCTEXT', 'IFCDURATION']
 
     const entitiesRegex = entities.toString().toUpperCase().replace(/,/g, '|')
 
@@ -157,8 +157,6 @@ async function ifcsgExtractor(file, mapping) {
                             dataType = propertyFromEnum[1]
                             rawValue = propertyFromEnum[2]
                         }
-
-
 
                         if (dataType == 'IFCBOOLEAN') {
                             if (rawValue == '.T.') {
@@ -296,29 +294,24 @@ async function ifcsgExtractor(file, mapping) {
             const psetItem = item[pset]
             if (psetItem) {
                 for (const [k, v] of Object.entries(value)) {
+                    const v_type = ifcTypes[v.toUpperCase()] || v
                     const p_item = psetItem[k]
                     if (p_item || p_item == 0) {
-                        if (checkIfcType(p_item, v)) {
-                            value[k] = [0, p_item, v]
-                        } else {
-                            value[k] = [3, p_item, v]
-                        }
+                        const checkResult = checkIfcType(p_item, v, v_type)
+                        value[k] = [checkResult, p_item, v_type]
                         // 解码
                         if (typeof p_item == 'string') {
                             value[k][1] = ifcToText(p_item)
                         }
                     } else {
-                        if (p_item === null) {
-                            value[k] = [2, p_item, v]
-                        } else {
-                            value[k] = [1, p_item, v]
-                        }
+                        value[k] = [2, p_item, v_type]
                     }
                 }
                 
             } else {
                 for (const [k, v] of Object.entries(value)) {
-                    value[k] = [1, null, v]
+                    const v_type = ifcTypes[v.toUpperCase()] || v
+                    value[k] = [1, null, v_type]
                 }
             }
             
@@ -582,66 +575,54 @@ function ifcToText(encoded) {
  * @param {string} ifcType - IFC 类型标识符
  * @returns {boolean} 如果值符合指定的 IFC 类型则返回 true，否则返回 false
  */
-function checkIfcType(value, ifcType) {
-  // 定义 IFC 数据类型分类
-  const numberDataTypes = [
-    'IFCVOLUMEMEASURE', 'IFCREAL', 'IFCTHERMALTRANSMITTANCEMEASURE', 
-    'IFCINTEGER', 'IFCLENGTHMEASURE', 'IFCCOUNTMEASURE', 
-    'IFCPOSITIVELENGTHMEASURE', 'IFCPLANEANGLEMEASURE', 'IFCNUMERICMEASURE', 
-    'IFCAREAMEASURE', 'IFCQUANTITYLENGTH', 'IFCMASSMEASURE'
-  ];
-  
-  const stringDataTypes = ['IFCIDENTIFIER', 'IFCLABEL', 'IFCTEXT'];
+function checkIfcType(value, ifcType, ifcTypes) {
 
-  const booleanDataTypes = ['IFCBOOLEAN'];
-  
-  // 标准化 ifcType 为大写形式进行比较
-  const normalizedType = ifcType.toString().toUpperCase();
-  
-  // 检查数字类型
-  if (numberDataTypes.includes(normalizedType)) {
-    // 检查是否为数字
-    if (typeof value !== 'number' || isNaN(value)) {
-      return false;
-    }
-    
-    // 特殊检查 IFCINTEGER
-    if (normalizedType === 'IFCINTEGER' && !Number.isInteger(value)) {
-      return false;
-    }
-    
-    // 特殊检查 IFCPOSITIVELENGTHMEASURE
-    if (normalizedType === 'IFCPOSITIVELENGTHMEASURE' && value <= 0) {
-      return false;
-    }
-    
-    // 其他数字类型通用检查已通过
-    return true;
-  }
-  
-  // 检查字符串类型
-  if (stringDataTypes.includes(normalizedType)) {
-    // 检查是否为字符串
+  if (ifcTypes === 'string') {
     if (typeof value !== 'string') {
-      return false;
-    } 
-    // 所有字符串类型通用检查已通过
-    return true;
+        return 3;
+    }
+    return 0
   }
 
-  // 检查布尔类型
-  if (booleanDataTypes.includes(normalizedType)) {
-    // 检查是否为布尔值
-    if (typeof value !== 'boolean') {
-      return false;
+  if (ifcTypes === 'array') {
+    if (typeof value !== 'string') {
+        return 3;
     }
+    // 值域检查
+    // const rawValue = ifcToText(value)
+    // console.log('rawValue.slice(1,-1)', rawValue.slice(1,-1))
+    // if (!Array.isArray(rawValue.slice(1,-1))) {
+    //     return 4;
+    // }
+    return 0
+  }
 
-    // 所有布尔类型通用检查已通过
-    return true;
+  if (ifcTypes === 'boolean') {
+    if (typeof value !== 'boolean') {
+        return 3
+    }
+    return 0
+  }
+
+  if (ifcTypes === 'int') {
+    if (!Number.isInteger(value)) {
+        return 3
+    }
+    return 0
+  }
+
+  if (ifcTypes === 'float') {
+    if (typeof value !== 'number' || isNaN(value)) {
+        return 3
+    }
+    if (ifcType === 'IFCPOSITIVELENGTHMEASURE' && value <= 0) {
+        return 3
+    }
+    return 0
   }
   
   // 如果传入未定义的 IFC 类型，返回 false
-  return false;
+  return 3;
 }
 
 
