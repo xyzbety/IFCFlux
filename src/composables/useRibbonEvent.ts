@@ -125,6 +125,7 @@ export class RibbonEventManager {
         this.singleEvents.set("构件树", () => this.options!.emit("build-tree"));
         this.singleEvents.set("属性表", () => this.options!.emit("properties-table"));
         this.singleEvents.set("重置光照", () => this.options!.emit("light-settings-reset"));
+        this.singleEvents.set("点击聚焦", () => this.options!.emit("focus-on-click"));
     }
 
     /**

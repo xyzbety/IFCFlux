@@ -277,34 +277,34 @@ export default {
         allowedSizes: ['normal']
       }]
     },
-    // {
-    //   label: '楼层爆炸',
-    //   icon: 'floor_explosion material-icons',
-    //   ribbonItems: [{
-    //     label: '楼层抽屉',
-    //     icon: 'floor_drawer material-icons',
-    //     type: 'button',
-    //     cssClass: 'flat',
-    //     size: 'normal',
-    //     allowedSizes: ['normal']
-    //   },
-    //   {
-    //     label: '轴向爆炸',
-    //     icon: 'axis_explosion material-icons',
-    //     type: 'button',
-    //     cssClass: 'flat',
-    //     size: 'normal',
-    //     allowedSizes: ['normal']
-    //   },
-    //   {
-    //     label: '清除效果',
-    //     icon: 'measure_clear material-icons',
-    //     type: 'button',
-    //     cssClass: 'flat',
-    //     size: 'normal',
-    //     allowedSizes: ['normal']
-    //   },]
-    // },
+      // {
+      //   label: '楼层爆炸',
+      //   icon: 'floor_explosion material-icons',
+      //   ribbonItems: [{
+      //     label: '楼层抽屉',
+      //     icon: 'floor_drawer material-icons',
+      //     type: 'button',
+      //     cssClass: 'flat',
+      //     size: 'normal',
+      //     allowedSizes: ['normal']
+      //   },
+      //   {
+      //     label: '轴向爆炸',
+      //     icon: 'axis_explosion material-icons',
+      //     type: 'button',
+      //     cssClass: 'flat',
+      //     size: 'normal',
+      //     allowedSizes: ['normal']
+      //   },
+      //   {
+      //     label: '清除效果',
+      //     icon: 'measure_clear material-icons',
+      //     type: 'button',
+      //     cssClass: 'flat',
+      //     size: 'normal',
+      //     allowedSizes: ['normal']
+      //   },]
+      // },
     ]
   },
   {
@@ -526,7 +526,20 @@ export default {
           }
           ]
         }]
-    }
+    },
+    {
+      label: '场景设置',
+      icon: 'format_bold material-icons',
+      ribbonItems: [
+        {
+          label: '点击聚焦',
+          icon: 'pan_tool material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        }]
+    },
     ]
   }],
   fileMenu: {

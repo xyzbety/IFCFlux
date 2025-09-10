@@ -220,6 +220,7 @@ export function useAppCore() {
         if (!file || !sceneManager.scene) return;
         const scene = sceneManager.scene;
         clear();
+        pageState.treeData = [];
         resetGlobalVariables();
 
         try {
@@ -362,6 +363,9 @@ export function useAppCore() {
         ifcPropertyColumn.value = markRaw(newValue);
     };
 
+    const handleFocusOnClick = (enabled: boolean) => {
+        isFocus = !isFocus
+    }
     const handleHisBefore = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
     const handleHisAfter = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
     const handleOpenFile = () => document.getElementById('fileInput')?.click();
@@ -387,7 +391,7 @@ export function useAppCore() {
                     'inspect-click': handleInspectClick, 'light-settings-reset': handleLightSettingsReset,
                     'scene-settings': handleChangeScene, 'animation-event': handleAnimationEvent,
                     'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
-                    'toggle-file-menu': toggleFileMenu,
+                    'toggle-file-menu': toggleFileMenu,'focus-on-click': handleFocusOnClick,
                 };
                 eventMap[eventName]?.(...args);
             }

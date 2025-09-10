@@ -217,7 +217,7 @@ export class SceneManager {
       this.scene!.getEngine().setDepthWrite(true);
       this.scene!.getEngine().setDepthFunction(BABYLON.Engine.LEQUAL);
     });
-    CubeView.getInstance(this.scene);
+    new CubeView(this.scene);
   }
 
   /**
