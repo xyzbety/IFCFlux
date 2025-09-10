@@ -3,6 +3,7 @@ import hifc2 from './rules/HIFC规划报建.json';
 import hifc3 from './rules/HIFC施工图审查.json';
 import hifc4 from './rules/HIFC智慧工地监管.json';
 import hifc5 from './rules/HIFC竣工验收.json';
+import { IfcTypes } from './ifc-types-map'
 
 /**
  * IFC 规则映射类型定义
@@ -119,6 +120,7 @@ export class IfcInspect {
         name: 'start',
         file: this.file as File,
         mapping: this.ifcPset as IfcMapping,
+        ifcTypes: IfcTypes,
       });
 
       worker.onmessage = (e: MessageEvent<any>) => {

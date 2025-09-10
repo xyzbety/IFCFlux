@@ -1,6 +1,7 @@
 export const IfcTypes: { [key: string]: string} = {
     IFCIDENTIFIER: "string",
     IFCTEXT: "string",
+    IFCDURATION: "string",
     IFCLABEL: "array",
     IFCBOOLEAN: "boolean",
     IFCINTEGER: "int",
