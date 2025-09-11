@@ -65,6 +65,8 @@ import { Tooltip as TTooltip } from 'tdesign-vue-next';
 import { SceneManager } from '../../services/scene-manager';
 import { IfcPropertyUtils } from '../../services/property-manager';
 import { eventManager } from '../../services/event-manager';
+import { examineResultConfig } from '../../utils/config';
+
 const iconPathMap = {
     'array': '/icons/枚举.svg',
     'boolean': '/icons/布尔.svg',
@@ -233,7 +235,7 @@ const dialogTableColumns = [
 
             // 用 TDesign 的 Tooltip 包裹文字
             children.push(
-                h(TTooltip, { content: params.row.name, placement: 'top', overlayClassName: 'ellipsis-tooltip' }, {
+                h(TTooltip, { content: params.row.name, placement: 'top', overlayClassName: 'ellipsis-tooltip',showArrow:false }, {
                     default: () => h('span', {
                         style: `
                         display: inline-block;
@@ -257,18 +259,27 @@ const dialogTableColumns = [
                     4: '#ffe58f'     // 浅黄色
                 };
                 const color = colorMap[params.row.state as keyof typeof colorMap] || '#d9d9d9';
+                const configItem = examineResultConfig[params.row.state as keyof typeof colorMap];
+
                 children.push(
-                    h('span', {
-                        style: `
-                        display: inline-block;
-                        width: 10px;
-                        height: 10px;
-                        border-radius: 3px;
-                        background: ${color};
-                        position: absolute;
-                        right: 10px;
-                        flex-shrink: 0;
-                    `
+                    h(TTooltip, {
+                        content: configItem ? configItem : '未知状态',
+                        placement: 'top',
+                        overlayClassName: 'state-tooltip',
+                        showArrow:false
+                    }, {
+                        default: () => h('span', {
+                            style: `
+                                display: inline-block;
+                                width: 10px;
+                                height: 10px;
+                                border-radius: 3px;
+                                background: ${color};
+                                position: absolute;
+                                right: 10px;
+                                flex-shrink: 0;
+                                cursor: pointer;`
+                        })
                     })
                 );
             }
