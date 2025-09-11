@@ -80,6 +80,7 @@ export function useAppCore() {
         ifcExpressIds: [] as any[],
         propertyAll: [] as any[],
         property: [] as any[],
+        groupMap: {} as Record<number, any>
     });
 
     const themeStyle = computed(() => ({
@@ -244,6 +245,7 @@ export function useAppCore() {
                     initResult = ifcPropertyUtils.initializeModelData(modelData);
                     pageState.treeData = initResult.treeData;
                     pageState.property = [];
+                    pageState.groupMap = {};
                     pageState.ifcExpressIds = initResult.ifcExpressIds;
                     pageState.propertyAll = initResult.propertyAll;
                     eventManager.emit('file-loaded');
@@ -346,13 +348,16 @@ export function useAppCore() {
             lastClickedMeshId = null;
             selectedMeshIds.clear();
             pageState.property = [];
+            pageState.groupMap = {};
             ifcPropertyUtils.clearAllHighlights(scene);
             return;
         }
 
         selectedMeshId = expressID;
         let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds);
-        pageState.property = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
+        const { items, groupRowMap } = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
+        pageState.property = items;
+        pageState.groupMap = groupRowMap;
         const meshConfig = { scene, selectedMeshId, globalId: globalId || expressID, isHighlight: isHightlight, isFocus };
         await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, pageState.treeData);
     };

@@ -69,7 +69,7 @@
     }">
       <Dialog :title="'属性表'" :visible="layoutState.showPropertyTable" @close="togglePropertyTableDialog"
         @tab-change="handleTabChange" :activeTab="activeTab">
-        <PropertyTable :property-data="pageState.property">
+        <PropertyTable :property-data="pageState.property" :group-map="pageState.groupMap">
         </PropertyTable>
       </Dialog>
     </div>

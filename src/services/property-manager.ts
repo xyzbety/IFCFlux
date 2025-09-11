@@ -314,41 +314,64 @@ export class IfcPropertyUtils {
     return property;
   }
 
-  public async flattenTreeToGroupedItems(treeData: any[]): Promise<any[]> {
-    const result: any[] | PromiseLike<any[]> = [];
+public async flattenTreeToGroupedItems(treeData: any[]): Promise<{
+  items: any[];
+  groupRowMap: Map<number, string>;
+}> {
+  const result: any[] = [];
+  const groupRowMap = new Map<number, string>();
 
-    treeData.forEach((parentNode: { children: any[]; name: any; }) => {
-      // 检查是否有子节点
-      if (parentNode.children && Array.isArray(parentNode.children)) {
-        // 遍历子节点，添加 group 字段
-        parentNode.children.forEach((child: { id: any; name: any; value: any; }) => {
-          result.push({
-            id: child.id,
-            name: child.name,
-            value: child.value,
-            group: parentNode.name
-          });
-        });
-      }
+  // 首先收集所有分组数据
+  const groupedData: { [key: string]: any[] } = {};
+  
+  treeData.forEach((parentNode: { children: any[]; name: any; }) => {
+    // 检查是否有子节点
+    if (parentNode.children && Array.isArray(parentNode.children)) {
+      groupedData[parentNode.name] = parentNode.children.map((child: { id: any; name: any; value: any; }) => ({
+        id: child.id,
+        name: child.name,
+        value: child.value,
+        group: parentNode.name
+      }));
+    }
+  });
+
+  // 确保 Element Specific 排在第一位
+  const sortedGroupNames = Object.keys(groupedData).sort((a, b) => {
+    // Element Specific 永远排在第一位
+    if (a === 'Element Specific' && b !== 'Element Specific') {
+      return -1;
+    }
+    if (b === 'Element Specific' && a !== 'Element Specific') {
+      return 1;
+    }
+    // 如果都是 Element Specific 或都不是，按首字母排序
+    return a.localeCompare(b);
+  });
+
+  let currentRow = 1; // 从第1行开始
+
+  // 按排序后的分组名处理数据
+  sortedGroupNames.forEach(groupName => {
+    // 记录行数对应的分组名
+    groupRowMap.set(currentRow, groupName);
+    
+    // 分组名占一行
+    currentRow++;
+    
+    // 添加该分组的所有子项
+    const groupItems = groupedData[groupName];
+    groupItems.forEach(item => {
+      result.push(item);
+      currentRow++;
     });
-    // 按照 group 进行排序
-    result.sort((a, b) => {
-      const groupA = a.group;
-      const groupB = b.group;
+  });
 
-      // Element Specific 永远排在第一位
-      if (groupA === 'Element Specific' && groupB !== 'Element Specific') {
-        return -1;
-      }
-      if (groupB === 'Element Specific' && groupA !== 'Element Specific') {
-        return 1;
-      }
-
-      // 如果都是 Element Specific 或都不是，按首字母排序
-      return groupA.localeCompare(groupB);
-    });
-    return result;
-  }
+  return {
+    items: result,
+    groupRowMap
+  };
+}
 
   /**
    * 初始化模型数据的通用处理
