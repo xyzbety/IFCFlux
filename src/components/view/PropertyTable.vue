@@ -120,14 +120,13 @@ const handleMouse = () => {
         const { col, row } = args;
         console.log('鼠标进入事件', args);
         if (row === 0) return;
-        const cellPosition = {
-            col: col,
-            row: row,
-        }
-        treeInstance?.arrangeCustomCellStyle(cellPosition, 'text_style')
         if (treeInstance) {
             const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
             const group = groupMapData.value.get(row);
+            const cellPositionSingle = { col, row }
+            const cellPositionRange = { range: { start: { row, col: 0 }, end: { row, col: 1 } } }
+            const cellPosition = group ? cellPositionRange : cellPositionSingle;
+            treeInstance?.arrangeCustomCellStyle(cellPosition, 'text_style')
             const cellValue = treeInstance.getCellValue(col, row);
             const copyValue = cellValue ? cellValue : group;
             if (copyValue) {
@@ -150,10 +149,10 @@ const handleMouse = () => {
     eventIds.mouseLeave = treeInstance.on('mouseleave_cell', args => {
         const { col, row } = args;
         console.log('mouseleave_cell', args);
-        const cellPosition = {
-            col: col,
-            row: row,
-        }
+        const group = groupMapData.value.get(row);
+        const cellPositionSingle = { col, row }
+        const cellPositionRange = { range: { start: { row, col: 0 }, end: { row, col: 1 } } }
+        const cellPosition = group ? cellPositionRange : cellPositionSingle;
         treeInstance?.arrangeCustomCellStyle(cellPosition, '')
     });
 }

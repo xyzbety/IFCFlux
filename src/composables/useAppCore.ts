@@ -80,7 +80,7 @@ export function useAppCore() {
         ifcExpressIds: [] as any[],
         propertyAll: [] as any[],
         property: [] as any[],
-        groupMap: {} as Record<number, any>
+        groupMap: {} as Map<number, any>
     });
 
     const themeStyle = computed(() => ({
@@ -90,7 +90,7 @@ export function useAppCore() {
 
     const hexToRgba = (hex: string, alpha: number) => {
         const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthandRegex, ( r, g, b) => r + r + g + g + b + b);
+        hex = hex.replace(shorthandRegex, (r, g, b) => r + r + g + g + b + b);
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         if (!result) return hex;
         const r = parseInt(result[1], 16);
@@ -171,7 +171,7 @@ export function useAppCore() {
     const handleView = (view: any) => sceneManager.handleView(view);
     const handleSlice = (action: any) => {
         isHightlight = action === 'reset';
-        console.log('handleSlice', action,isHightlight);
+        console.log('handleSlice', action, isHightlight);
         sceneManager.handleSlice(action);
     };
     const handleVisibility = (mode: any) => {
@@ -244,7 +244,7 @@ export function useAppCore() {
                     initResult = ifcPropertyUtils.initializeModelData(modelData);
                     pageState.treeData = initResult.treeData;
                     pageState.property = [];
-                    pageState.groupMap = {};
+                    pageState.groupMap = new Map<number, any>();
                     pageState.ifcExpressIds = initResult.ifcExpressIds;
                     pageState.propertyAll = initResult.propertyAll;
                     eventManager.emit('file-loaded');
@@ -314,6 +314,8 @@ export function useAppCore() {
 
     const tableRowClick = async (event: any) => {
         console.log("tableRowClick:", event);
+        const handleColorPicker = document.getElementById("colorPicker") as any;
+        handleColorPicker.opened = false;
         if (!sceneManager.scene || !modelStore.modelData) return;
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
@@ -347,7 +349,7 @@ export function useAppCore() {
             lastClickedMeshId = null;
             selectedMeshIds.clear();
             pageState.property = [];
-            pageState.groupMap = {};
+            pageState.groupMap = new Map<number, any>();;
             ifcPropertyUtils.clearAllHighlights(scene);
             return;
         }
@@ -367,7 +369,7 @@ export function useAppCore() {
         ifcPropertyColumn.value = markRaw(newValue);
     };
 
-    const handleFocusOnClick = (data:any) => {
+    const handleFocusOnClick = (data: any) => {
         isFocus = data.focusMode
     }
     const handleHisBefore = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
@@ -395,7 +397,7 @@ export function useAppCore() {
                     'inspect-click': handleInspectClick, 'light-settings-reset': handleLightSettingsReset,
                     'scene-settings': handleChangeScene, 'animation-event': handleAnimationEvent,
                     'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
-                    'toggle-file-menu': toggleFileMenu,'interaction-settings': handleFocusOnClick,
+                    'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
                 };
                 eventMap[eventName]?.(...args);
             }

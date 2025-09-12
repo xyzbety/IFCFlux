@@ -12,10 +12,8 @@ import "smart-webcomponents/source/styles/smart.default.css";
 import "smart-webcomponents/source/modules/smart.ribbon.js";
 import "smart-webcomponents/source/modules/smart.slider.js"
 import "smart-webcomponents/source/modules/smart.numberinput.js"
-import "smart-webcomponents/source/modules/smart.switchbutton.js"
 import "smart-webcomponents/source/modules/smart.checkbox.js"
 import "smart-webcomponents/source/modules/smart.colorpicker.js"
-import "smart-webcomponents/source/modules/smart.progressbar.js"
 import config from '../../utils/default.config.ts';
 import { RibbonEventManager } from "../../composables/useRibbonEvent.ts";
 import { ModelManager } from "../../services/model-manager.ts";

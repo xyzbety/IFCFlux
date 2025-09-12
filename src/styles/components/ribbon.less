@@ -86,7 +86,7 @@ smart-slider {
   height: 22px;
   margin-right: 10px;
   position: relative;
-  margin-left: 60px;
+  margin-left: 55px;
   margin-top: 5px;
 }
 
@@ -107,7 +107,7 @@ smart-slider {
 }
 
 #checkboxShadow {
-  margin-left: 0px;
+  margin-left: -5px;
   margin-top: -5px;
 }
 
@@ -135,7 +135,7 @@ smart-slider {
 }
 
 #focusCheckbox {
-  margin-top: 15px;
+  margin-top: 13px;
 }
 
 #focusCheckbox .smart-label {
@@ -145,7 +145,7 @@ smart-slider {
 }
 
 #gridCheckbox {
-  margin-top: 5px;
+  margin-top: 8px;
 }
 
 #gridCheckbox .smart-label {
@@ -175,7 +175,10 @@ smart-slider {
   --smart-ui-state-color-hover: var(--smart-primary);
   --smart-border-width: 0px;
 }
-
+// 移除ribbon底部分类文字（如导航控制）旁的按钮
+ .smart-ribbon-group-dialog-launcher button {
+  display: none;
+ }
 /* header,文件下拉框样式 */
 .smart-ribbon .smart-ribbon-header,
 .smart-ribbon-file-container .smart-drop-down-button {
