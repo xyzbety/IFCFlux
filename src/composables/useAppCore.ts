@@ -207,7 +207,6 @@ export function useAppCore() {
         lastClickedMeshId = null;
         selectedMeshId = null;
         isHightlight = true;
-        isFocus = false;
         isGrid = false;
         measure = null;
         CoordinateTemp.point = null;
@@ -235,8 +234,8 @@ export function useAppCore() {
                     sceneManager.setupSceneAfterModelLoad();
                     sceneManager.setupCameraAndLight();
                     const bbox = getBoundingBoxForMeshes(sceneManager.scene!.meshes);
-                    const handleInspectboxFocus = document.getElementById("checkboxFocus") as HTMLInputElement;
-                    if (handleInspectboxFocus.checked) {
+                    const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
+                    if (handleGridCheckbox.checked) {
                         isGrid = true;
                         sceneManager.setupGround(bbox, isGrid);
                     }
@@ -368,8 +367,8 @@ export function useAppCore() {
         ifcPropertyColumn.value = markRaw(newValue);
     };
 
-    const handleFocusOnClick = (enabled: boolean) => {
-        isFocus = !isFocus
+    const handleFocusOnClick = (data:any) => {
+        isFocus = data.focusMode
     }
     const handleHisBefore = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
     const handleHisAfter = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
@@ -396,7 +395,7 @@ export function useAppCore() {
                     'inspect-click': handleInspectClick, 'light-settings-reset': handleLightSettingsReset,
                     'scene-settings': handleChangeScene, 'animation-event': handleAnimationEvent,
                     'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
-                    'toggle-file-menu': toggleFileMenu,'focus-on-click': handleFocusOnClick,
+                    'toggle-file-menu': toggleFileMenu,'interaction-settings': handleFocusOnClick,
                 };
                 eventMap[eventName]?.(...args);
             }

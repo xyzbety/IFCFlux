@@ -733,14 +733,14 @@ export class SceneManager {
       viewer.style.backgroundColor = data.backgroundColor;
     }
 
-    if (data.focusMode !== undefined) {
+    if (data.gridMode !== undefined) {
       let ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       if (!ground) {
         const bbox = getBoundingBoxForMeshes(this.scene.meshes);
         this.setupGround(bbox, true);
         ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       } else {
-        ground.setEnabled(data.focusMode);
+        ground.setEnabled(data.gridMode);
       }
     }
 

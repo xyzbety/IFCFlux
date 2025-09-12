@@ -12,6 +12,7 @@ export class RibbonEventManager {
     private options: RibbonEventsOptions | null = null;
     private eventMap: Map<string, { type: string; param: string | number }> = new Map();
     private singleEvents: Map<string, () => void> = new Map();
+    private settingsEventHandlers = new Map<string, (event: any) => void>();
 
     // 在内部初始化爆炸参数
     public explosionX = ref(0);
@@ -33,6 +34,9 @@ export class RibbonEventManager {
 
     // 重置单例（如果需要）
     public static resetInstance(): void {
+        if (RibbonEventManager.instance) {
+            RibbonEventManager.instance.cleanupSettingsEvents();
+        }
         RibbonEventManager.instance = null;
     }
 
@@ -95,9 +99,9 @@ export class RibbonEventManager {
 
             // 爆炸图事件
             {
-                labels: ["楼层抽屉","轴向爆炸","清除效果"],
+                labels: ["楼层抽屉", "轴向爆炸", "清除效果"],
                 type: "explosion-event",
-                params: ["drawer","axis","clear"]
+                params: ["drawer", "axis", "clear"]
             },
 
             // 检查事件
@@ -125,7 +129,6 @@ export class RibbonEventManager {
         this.singleEvents.set("构件树", () => this.options!.emit("build-tree"));
         this.singleEvents.set("属性表", () => this.options!.emit("properties-table"));
         this.singleEvents.set("重置光照", () => this.options!.emit("light-settings-reset"));
-        this.singleEvents.set("点击聚焦", () => this.options!.emit("focus-on-click"));
     }
 
     /**
@@ -194,7 +197,6 @@ export class RibbonEventManager {
 
             // 添加新的监听器
             ribbon.addEventListener('click', this.handleRibbonClick);
-
             ribbon.addEventListener('select', this.handleRibbonSelect);
         }
 
@@ -203,7 +205,6 @@ export class RibbonEventManager {
 
     private handleRibbonClick = (event: Event) => {
         const fileButtonContainer = (event.target as Element).closest('.smart-ribbon-file-container');
-
         const fileMenuDropdown = document.querySelector('.smart-drop-down') as HTMLElement | null;
 
         if (fileButtonContainer && fileMenuDropdown) {
@@ -213,7 +214,6 @@ export class RibbonEventManager {
             fileMenuDropdown.style.display = 'none'
             return;
         }
-
 
         const button = event.target && (event.target as Element).closest ?
             (event.target as Element).closest('smart-button') : null;
@@ -237,83 +237,103 @@ export class RibbonEventManager {
         }
     }
 
+    private cleanupSettingsEvents() {
+        this.settingsEventHandlers.forEach((handler, elementId) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.removeEventListener('change', handler);
+            }
+        });
+        this.settingsEventHandlers.clear();
+    }
+
+    private createEventHandler(elementId: string, callback: (event: any) => void) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            // 移除之前的监听器（如果存在）
+            const existingHandler = this.settingsEventHandlers.get(elementId);
+            if (existingHandler) {
+                element.removeEventListener('change', existingHandler);
+            }
+            
+            // 添加新的监听器
+            element.addEventListener('change', callback);
+            this.settingsEventHandlers.set(elementId, callback);
+        }
+    }
+
     private handleSettingsTabSelect() {
         try {
             if (!this.options) return;
 
-            const handleSliderX = document.getElementById("horizontalSliderX") as HTMLInputElement;
-            const handleSliderY = document.getElementById("horizontalSliderY");
-            const handleSliderZ = document.getElementById("horizontalSliderZ");
-            const inputIndensity = document.getElementById("inputIndensity");
-            const checkboxShadow = document.getElementById("checkboxShadow");
-            const handleSliderSpeed = document.getElementById("horizontalSliderSpeed") as HTMLInputElement;
-            const handleCheckboxFocus = document.getElementById("checkboxFocus") as HTMLInputElement;
-            
+            // 清理之前的事件监听器
+            this.cleanupSettingsEvents();
+
             // TODO: When the settings tab is opened, the initial value of the control should be set from the scene.
             // This logic should be handled by the parent component (e.g., App.vue) listening for the 'ribbon-tab-change' event.
 
-            if (handleSliderX) {
-                handleSliderX.addEventListener('change', (event: any) => {
-                    this.options?.emit('light-settings', { lightX: event.detail.value })
-                })
-            }
+            // 绑定光照设置 X 轴滑块
+            this.createEventHandler("horizontalSliderX", (event: any) => {
+                this.options?.emit('light-settings', { lightX: event.detail.value });
+            });
 
-            if (handleSliderY) {
-                handleSliderY.addEventListener('change', (event: any) => {
-                    this.options?.emit('light-settings', { lightY: event.detail.value })
-                })
-            }
+            // 绑定光照设置 Y 轴滑块
+            this.createEventHandler("horizontalSliderY", (event: any) => {
+                this.options?.emit('light-settings', { lightY: event.detail.value });
+            });
 
-            if (handleSliderZ) {
-                handleSliderZ.addEventListener('change', (event: any) => {
-                    this.options?.emit('light-settings', { lightZ: event.detail.value })
-                })
-            }
+            // 绑定光照设置 Z 轴滑块
+            this.createEventHandler("horizontalSliderZ", (event: any) => {
+                this.options?.emit('light-settings', { lightZ: event.detail.value });
+            });
 
-            if (inputIndensity) {
-                inputIndensity.addEventListener('change', (event: any) => {
-                    this.options?.emit('light-settings', { lightIndensity: event.detail.value })
-                })
-            }
+            // 绑定光照强度输入框
+            this.createEventHandler("inputIndensity", (event: any) => {
+                this.options?.emit('light-settings', { lightIndensity: event.detail.value });
+            });
 
-            if (checkboxShadow) {
-                checkboxShadow.addEventListener('change', (event: any) => {
-                    this.options?.emit('light-settings', { lightShadowEnabled: event.detail.value })
-                })
-            }
+            // 绑定阴影复选框
+            this.createEventHandler("checkboxShadow", (event: any) => {
+                this.options?.emit('light-settings', { lightShadowEnabled: event.detail.value });
+            });
 
-            if (handleSliderSpeed) {
-                handleSliderSpeed.addEventListener('change', (event: any) => {
-                    const speed = event.detail.value;
-                    console.log("拖动速度:", speed);
-                    this.options?.emit('scene-settings', { dragSpeed: speed });
-                });
-            }
+            // 绑定拖动速度滑块
+            this.createEventHandler("horizontalSliderSpeed", (event: any) => {
+                const speed = event.detail.value;
+                console.log("拖动速度:", speed);
+                this.options?.emit('scene-settings', { dragSpeed: speed });
+            });
 
-            if (handleCheckboxFocus) {
-                handleCheckboxFocus.addEventListener('change', (event: any) => {
-                    const isChecked = event.detail.value;
-                    console.log("Focus mode:", isChecked);
-                    this.options?.emit('scene-settings', { focusMode: isChecked });
-                });
-            }
+            // 绑定焦点模式复选框
+            this.createEventHandler("focusCheckbox", (event: any) => {
+                const isChecked = event.detail.value;
+                console.log("Focus mode:", isChecked);
+                this.options?.emit('interaction-settings', { focusMode: isChecked });
+            });
 
+            // 绑定网格模式复选框
+            this.createEventHandler("gridCheckbox", (event: any) => {
+                const isChecked = event.detail.value;
+                console.log("Grid mode:", isChecked);
+                this.options?.emit('scene-settings', { gridMode: isChecked }); // 修正了这里的参数名
+            });
+
+            // 绑定颜色选择器
             const handleColorPicker = document.getElementById("colorPicker") as HTMLInputElement;
             const viewerCanvas = document.getElementById("viewer-canvas") as HTMLCanvasElement;
             if (handleColorPicker && viewerCanvas) {
                 const bgColor = window.getComputedStyle(viewerCanvas).backgroundColor;
                 handleColorPicker.value = bgColor;
-                handleColorPicker.addEventListener('change', (event: any) => {
+                
+                this.createEventHandler("colorPicker", (event: any) => {
                     const color = event.detail.value;
                     console.log("背景颜色改变:", color);
                     this.options?.emit('scene-settings', { backgroundColor: color });
-                })
+                });
             }
         }
         catch (error) {
             console.log("error", error)
         }
     }
-
-
 }

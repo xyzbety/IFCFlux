@@ -485,8 +485,8 @@ export default {
           direction: 'horizontal',
           ribbonItems: [
             {
-              label: '阴影开关',
-              itemTemplate: '<smart-check-box id="checkboxShadow" checked></smart-check-box>',
+              label: '',
+              itemTemplate: '<smart-check-box id="checkboxShadow" checked right-to-left>阴影开关</smart-check-box>',
               cssClass: 'verySmall'
             }
           ]
@@ -495,51 +495,50 @@ export default {
       }]
     },
     {
-      label: '场景设置',
+      label: '交互设置',
       icon: 'format_bold material-icons',
+      type: 'group',
+      direction: 'vertical',
       ribbonItems: [
         {
-          type: 'group',
-          direction: 'vertical',
-          ribbonItems: [{
-            label: '拖动速度',
-            itemTemplate: '<smart-slider id="horizontalSliderSpeed" show-tooltip tooltip-position="far" orientation="horizontal" min="1" max="10" scale-position="none"></smart-slider>',
-          },
-          {
-            type: 'group',
-            direction: 'horizontal',
-            ribbonItems: [
-              {
-                label: '',
-                tooltip: '背景颜色',
-                itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="colorPicker"></smart-color-picker>',
-                settings: {
-                  valueDisplayMode: 'colorBox',
-                  dropDownAppendTo: 'body',
-                },
-              },
-              {
-                label: '地面网格',
-                itemTemplate: '<smart-check-box id="checkboxFocus"></smart-check-box>'
-              },
-            ]
-          }
-          ]
+          label: '拖动速度',
+          itemTemplate: '<smart-slider id="horizontalSliderSpeed" show-tooltip tooltip-position="far" orientation="horizontal" min="1" max="10" scale-position="none"></smart-slider>',
+        },
+        {
+          label: '',
+          itemTemplate: '<smart-check-box id="focusCheckbox" right-to-left>点击聚焦</smart-check-box>'
+
         }]
     },
     {
       label: '场景设置',
       icon: 'format_bold material-icons',
+      type: 'group',
+      direction: 'vertical',
+      cssClass: 'sceneSetting',
       ribbonItems: [
         {
-          label: '点击聚焦',
-          icon: 'pan_tool material-icons',
-          type: 'button',
-          cssClass: 'flat',
-          size: 'normal',
-          allowedSizes: ['normal']
-        }]
+          type: 'group',
+          direction: 'vertical',
+          ribbonItems: [
+            {
+              label: '',
+              itemTemplate: '<smart-check-box id="gridCheckbox" right-to-left>地面网格</smart-check-box>'
+            },
+            {
+              label: '',
+              itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="colorPicker" ></smart-color-picker>',
+              settings: {
+                valueDisplayMode: 'colorBox',
+                dropDownAppendTo: 'body',
+              },
+            },
+
+          ]
+        }
+      ]
     },
+
     ]
   }],
   fileMenu: {
