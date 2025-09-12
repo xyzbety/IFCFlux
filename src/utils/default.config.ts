@@ -527,6 +527,7 @@ export default {
             },
             {
               label: '',
+              tooltip:'背景颜色',
               itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="colorPicker" ></smart-color-picker>',
               settings: {
                 valueDisplayMode: 'colorBox',
