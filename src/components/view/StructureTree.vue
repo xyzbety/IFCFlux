@@ -79,7 +79,7 @@ let options = reactive({
     ],
     widthMode: 'adaptive' as const,
     autoFillWidth: true,
-    hierarchyExpandLevel: 6,
+    hierarchyExpandLevel: 5,
     hierarchyIndent: 2,
     hierarchyTextStartAlignment: true,
     defaultRowHeight: 30,
@@ -102,7 +102,12 @@ let options = reactive({
             image: ''
         },
         displayMode: 'basedOnContainer' as const
-    }
+    },
+    virtualization: {
+    vertical: true, // 启用垂直虚拟滚动
+    horizontal: false, // 根据需要决定是否启用水平虚拟滚动
+    overscroll: true, // 允许超滚动
+  },
 })
 VTable.register.icon('order', {
     type: 'svg',
@@ -202,38 +207,32 @@ const handleMouse = () => {
 
 onMounted(() => {
     watch(
-        () => props.style,
-        (newStyle) => {
-            if (newStyle && newStyle['--theme-color']) {
-                themeColor.value = newStyle['--theme-color'];
-
-                if (treeInstance) {
-                    // 更新整个配置对象
-                    const newOptions = {
-                        ...options,
-                        theme: theme.value,
-                        columns: [
-                            {
-                                headerType: 'checkbox' as const,
-                                cellType: 'checkbox' as const,
-                                field: 'check',
-                                width: "11%" as const,
-                                style: {
-                                    checkedFill: themeColor.value,
-                                    checkedStroke: themeColor.value,
-                                    defaultFill: 'transparent',
-                                    defaultStroke: '#d0d0d0'
-                                } as any
-                            },
-                            ...options.columns.slice(1) // 保持其他列
-                        ]
-                    };
-                    treeInstance.updateOption(newOptions);
-                    treeInstance.setCellCheckboxState(0, 0, true);
-                }
-            }
-        },
-        { deep: true }
+    () => props.style,
+    (newStyle) => {
+        if (newStyle && newStyle['--theme-color']) {
+        themeColor.value = newStyle['--theme-color'];
+        if (treeInstance) {
+            treeInstance.updateTheme(theme.value);
+            treeInstance.updateColumns([
+            {
+                headerType: 'checkbox',
+                cellType: 'checkbox',
+                field: 'check',
+                width: '11%',
+                style: {
+                checkedFill: themeColor.value,
+                checkedStroke: themeColor.value,
+                defaultFill: 'transparent',
+                defaultStroke: '#d0d0d0',
+                },
+            },
+            ...options.columns.slice(1),
+            ]);
+            treeInstance.setCellCheckboxState(0, 0, true);
+        }
+        }
+    },
+    { deep: true }
     );
 
     watch(() => treeData.value, (newValue) => {
@@ -259,17 +258,20 @@ onMounted(() => {
             });
             search.clear()
         }
-    }, { deep: true, immediate: true });
+    }, { immediate: true });
 
     const modelStore = useModelStore()
     watch(() => modelStore.modelData, (newValue) => {
         if (!newValue) return;
         treeData.value = newValue.tree
-    }, { deep: true, immediate: true });
+    }, { immediate: true });
     treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
     handleClick();
     handleMouse();
 })
+
+
+
 
 const scrollToRow = (node: any) => {
     if (!treeInstance) return;
