@@ -151,7 +151,9 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
       expandedIds.push(id)
     }
   })
+  const treeLength = tempTreeData.length;
   const tree = XeUtils.toArrayTree(tempTreeData, { key: 'expressId' })
+  tree[0]['treeLength'] = treeLength;
   // 处理 ifcproject 下的ifc site
   if (tree[0].type === 'IFCPROJECT') {
     tree[0].children = tree[0].children?.map((item) => {

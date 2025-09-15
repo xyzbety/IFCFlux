@@ -79,7 +79,7 @@ let options = reactive({
     ],
     widthMode: 'adaptive' as const,
     autoFillWidth: true,
-    hierarchyExpandLevel: 5,
+    hierarchyExpandLevel: 6,
     hierarchyIndent: 2,
     hierarchyTextStartAlignment: true,
     defaultRowHeight: 30,
@@ -239,6 +239,18 @@ onMounted(() => {
         if (treeInstance) {
             treeInstance.off(ClickId)
             treeInstance.off(MouseId)
+            if (newValue.length > 0) {
+                const treeLength = newValue[0].treeLength
+                if ( treeLength > 5000) {
+                    options.hierarchyExpandLevel = 5
+                }
+                if (treeLength > 20000) {
+                    options.hierarchyExpandLevel = 4
+                }
+                if (treeLength > 80000) {
+                    options.hierarchyExpandLevel = 3
+                }
+            }
             treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
             handleClick();
             handleMouse();
