@@ -240,6 +240,7 @@ onMounted(() => {
             treeInstance.off(ClickId)
             treeInstance.off(MouseId)
             if (newValue.length > 0) {
+                options.hierarchyExpandLevel = 6
                 const treeLength = newValue[0].treeLength
                 if ( treeLength > 5000) {
                     options.hierarchyExpandLevel = 5
