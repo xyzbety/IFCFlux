@@ -117,7 +117,12 @@ const options = reactive({
 
             }
         }
-    ]
+    ],
+    virtualization: {
+    vertical: true, // 启用垂直虚拟滚动
+    horizontal: false, // 根据需要决定是否启用水平虚拟滚动
+    overscroll: true, // 允许超滚动
+  },
 })
 const copyToClipboard = async (text: string) => {
     try {
@@ -233,43 +238,50 @@ const clearSelected = () => {
 }
 onMounted(() => {
     watch(
-        () => props.style,
-        (newStyle) => {
-            if (newStyle && newStyle['--theme-color']) {
-                themeColor.value = newStyle['--theme-color'];
-
-                if (treeInstance) {
-                    // 更新整个配置对象
-                    const newOptions = {
-                        ...options,
-                        theme: theme.value,
-                        columns: [
-                            {
-                                headerType: 'checkbox' as const,
-                                cellType: 'checkbox' as const,
-                                field: 'check',
-                                width: "11%" as const,
-                                style: {
-                                    checkedFill: themeColor.value,
-                                    checkedStroke: themeColor.value,
-                                    defaultFill: 'transparent',
-                                    defaultStroke: '#d0d0d0'
-                                } as any
-                            },
-                            ...options.columns.slice(1) // 保持其他列
-                        ]
-                    };
-                    treeInstance.updateOption(newOptions);
-                    treeInstance.setCellCheckboxState(0, 0, true);
-                }
-            }
-        },
-        { deep: true }
+    () => props.style,
+    (newStyle) => {
+        if (newStyle && newStyle['--theme-color']) {
+        themeColor.value = newStyle['--theme-color'];
+        if (treeInstance) {
+            treeInstance.updateTheme(theme.value);
+            treeInstance.updateColumns([
+            {
+                headerType: 'checkbox',
+                cellType: 'checkbox',
+                field: 'check',
+                width: '11%',
+                style: {
+                checkedFill: themeColor.value,
+                checkedStroke: themeColor.value,
+                defaultFill: 'transparent',
+                defaultStroke: '#d0d0d0',
+                },
+            },
+            ...options.columns.slice(1),
+            ]);
+            treeInstance.setCellCheckboxState(0, 0, true);
+        }
+        }
+    },
+    { deep: true }
     );
 
     watch(() => treeData.value, (newValue) => {
         if (treeInstance) {
             clearAllEvents();
+            if (newValue.length > 0) {
+                options.hierarchyExpandLevel = 6
+                const treeLength = newValue[0].treeLength
+                if ( treeLength > 5000) {
+                    options.hierarchyExpandLevel = 5
+                }
+                if (treeLength > 20000) {
+                    options.hierarchyExpandLevel = 4
+                }
+                if (treeLength > 80000) {
+                    options.hierarchyExpandLevel = 3
+                }
+            }
             treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
             handleClick();
             handleMouse();
@@ -289,17 +301,18 @@ onMounted(() => {
             });
             search.clear()
         }
-    }, { deep: true, immediate: true });
+    }, { immediate: true });
 
     const modelStore = useModelStore()
     watch(() => modelStore.modelData, (newValue) => {
         if (!newValue) return;
         treeData.value = newValue.tree
-    }, { deep: true, immediate: true });
+    }, { immediate: true });
     treeInstance = new VTable.ListTable(document.getElementById('structureTree') as HTMLElement, options)
     handleClick();
     handleMouse();
 })
+
 // 使用 defineExpose 暴露方法给父组件
 defineExpose({
     scrollToRow,
