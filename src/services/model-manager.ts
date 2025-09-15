@@ -61,28 +61,28 @@ export class ModelManager {
       await this.addToFileHistory(file);
 
       this.clearExistingScene();
-      
+
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
       if (fileExtension === 'ifc') {
         this.updateProgress(0, "打开文件");
         const ifcLoader = new IfcLoader(file, this.scene);
-        
+
         const onProgressCallback = (progress: number, text: string, current?: number, total?: number) => {
-            this.updateProgress(progress, text, current, total);
+          this.updateProgress(progress, text, current, total);
         };
 
         await ifcLoader.load(onProgressCallback);
         console.log("IFC模型加载完成,模型数据为", ifcLoader);
 
         this.modelStore.setModel(file, {
-            tree: ifcLoader.ifcTree,
-            properties: ifcLoader.properties,
-            ifcExpressIds: ifcLoader.ifcExpressIds,
-            ifcManager: ifcLoader.ifcApi,
-            modelID: ifcLoader.modelID
+          tree: ifcLoader.ifcTree,
+          properties: ifcLoader.properties,
+          ifcExpressIds: ifcLoader.ifcExpressIds,
+          ifcManager: ifcLoader.ifcApi,
+          modelID: ifcLoader.modelID
         });
-        
+
         this.updateProgress(100, "完成");
 
       } else {
@@ -98,10 +98,10 @@ export class ModelManager {
       this.updateProgress(100, "加载失败");
       throw error;
     } finally {
-      // Give the UI a moment to show the 100% "完成" status before hiding the progress bar.
-      setTimeout(() => {
+      this.scene.onAfterRenderObservable.addOnce(() => {
+        console.log("模型加载完成，隐藏进度条");
         this.loading.value = false;
-      }, 500);
+      })
     }
   }
 
@@ -121,9 +121,9 @@ export class ModelManager {
   private clearExistingScene(): void {
     if (this.scene) {
       this.scene.meshes.slice().forEach(mesh => {
-          if (mesh.name !== 'camera' && !mesh.name.toLowerCase().includes('light')) {
-              mesh.dispose();
-          }
+        if (mesh.name !== 'camera' && !mesh.name.toLowerCase().includes('light')) {
+          mesh.dispose();
+        }
       });
       this.scene.materials.slice().forEach(mat => mat.dispose());
       this.scene.textures.slice().forEach(tex => tex.dispose());

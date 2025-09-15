@@ -7,7 +7,7 @@ import { useModelStore, useSceneStore } from '../store';
 import { useSettingsStore } from '../store/settings';
 import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
-import { getBoundingBoxForMeshes, updateTempLineLabel } from '../utils/index';
+import { updateTempLineLabel } from '../utils/index';
 import { IfcSpaceGen } from "../utils/ifc/ifcspacegen";
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
 import * as animationFns from '../utils/blockly/animation';
@@ -18,7 +18,6 @@ import { IfcPropertyUtils } from '../services/property-manager';
 import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
-
 // Global declarations
 declare global {
     interface Window {
@@ -27,7 +26,10 @@ declare global {
     }
 }
 
-export function useAppCore() {
+// 单例实例存储
+let appCoreInstance: ReturnType<typeof createAppCore> | null = null;
+
+function createAppCore() {
     let initResult: any = null; // 用于存储初始化结果
     // 批量挂载所有导出函数到 window
     Object.keys(animationFns).forEach((key: any) => {
@@ -116,7 +118,7 @@ export function useAppCore() {
     }, { deep: true, immediate: true });
 
     const handleRibbonTabChange = (tabIndex: number) => {
-        if (!sceneManager.scene) {
+        if (!modelStore.modelData) {
             switchToMode(LM.CANVAS_ONLY);
             return;
         }
@@ -224,23 +226,10 @@ export function useAppCore() {
         resetGlobalVariables();
 
         try {
-            await modelManager.loadModel(file, () => {
+            await modelManager.loadModel(file, async () => {
                 const modelData = modelStore.modelData;
                 if (modelData) {
-                    sceneManager.setIfcExplosion(new IfcExplosion(scene));
-                    switchToMode(LM.VIEW);
                     inspectType.value = "";
-                    if (animationControllerRef.value) animationControllerRef.value.initializeBlockly();
-                    sceneManager.setupSceneAfterModelLoad();
-                    sceneManager.setupCameraAndLight();
-                    const bbox = getBoundingBoxForMeshes(sceneManager.scene!.meshes);
-                    const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
-                    if (handleGridCheckbox.checked) {
-                        isGrid = true;
-                        sceneManager.setupGround(bbox, isGrid);
-                    }
-                    sceneManager.setupShadows();
-                    sceneManager.saveOriginalMaterialProperties(originalMaterialProperties);
                     initResult = ifcPropertyUtils.initializeModelData(modelData);
                     pageState.treeData = initResult.treeData;
                     pageState.property = [];
@@ -248,6 +237,20 @@ export function useAppCore() {
                     pageState.ifcExpressIds = initResult.ifcExpressIds;
                     pageState.propertyAll = initResult.propertyAll;
                     eventManager.emit('file-loaded');
+                    
+                    sceneManager.setIfcExplosion(new IfcExplosion(scene));
+                    switchToMode(LM.VIEW);
+                    if (animationControllerRef.value) animationControllerRef.value.initializeBlockly();
+                    sceneManager.setupCameraAndLight();
+                    const box = sceneManager.scene!.meshes[0].getHierarchyBoundingVectors();
+                    const bbox = new BABYLON.BoundingBox(box.min, box.max)
+                    const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
+                    if (handleGridCheckbox.checked) {
+                        isGrid = true;
+                        sceneManager.setupGround(bbox, isGrid);
+                    }
+                    await sceneManager.setupShadows();
+                    await sceneManager.saveOriginalMaterialProperties(originalMaterialProperties);
                 }
             });
         } catch (error) {
@@ -402,7 +405,6 @@ export function useAppCore() {
                 eventMap[eventName]?.(...args);
             }
         });
-        ribbonManager.bindRibbonEvents();
 
         switchToMode(LM.CANVAS_ONLY);
         // This logic is now handled by the watcher and CSS variables.
@@ -441,4 +443,13 @@ export function useAppCore() {
         originalMaterialProperties,
         handleAnimationEvent
     };
+}
+
+export function useAppCore() {
+  if (!appCoreInstance) {
+    appCoreInstance = createAppCore();
+    console.log('创建新的app管理器单例实例');
+  }
+  
+  return appCoreInstance;
 }

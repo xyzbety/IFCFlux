@@ -51,7 +51,7 @@
       <div id="rightArea" :style="{ flex: layoutState.showAnimationPanel ? '2 1 0' : '1 1 0' }">
         <div id="viewer" style="position: relative; width: 100%; height: 100%;">
           <BabylonViewer></BabylonViewer>
-          <cubeView v-show="pageState.treeData.length > 0"></cubeView>
+          <cubeView v-show="modelStore.modelData"></cubeView>
           <ProgressBar :loading="modelStore.loading || false"
             :progress="modelStore.progress || { percent: 0, current: 0, total: 100, text: '' }" />
         </div>
@@ -96,7 +96,7 @@ import { eventManager } from './services/event-manager';
 
 const {
   isMaximized, isSidebarVisible, layoutState, structureTreeRef, animationControllerRef,
-  leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
+  leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab,
   themeStyle, inspectType,
   handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
   toggleStructureTreeDialog, togglePropertyTableDialog, tableRowClick, onTableSelectChange,

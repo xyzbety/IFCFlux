@@ -1,5 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
-import { setupCameraByBoundingBox, createGround, getBoundingBoxForMeshes } from '../utils';
+import { setupCameraByBoundingBox, createGround } from '../utils';
 import { CameraHistoryManager } from './history-manager';
 import { Measure } from '../utils/analysis/measure';
 import { CubeView } from '../services/cube-manager'
@@ -60,7 +60,7 @@ export class SceneManager {
 
     // --- Camera Creation ---
     const canvas = scene.getEngine().getRenderingCanvas();
-    this.camera = new BABYLON.ArcRotateCamera('camera', 2 * Math.PI / 3, Math.PI / 3, 150, BABYLON.Vector3.Zero(), scene);
+    this.camera = new BABYLON.ArcRotateCamera('camera', 2 * Math.PI / 3, Math.PI / 3, 150, BABYLON.Vector3.Zero(), this.scene);
     if (canvas) {
       this.camera.attachControl(canvas, true);
     }
@@ -160,11 +160,12 @@ export class SceneManager {
     // --- Final Setup ---
     this.cameraHistoryManager.setCamera(this.camera);
 
-    scene.onBeforeRenderObservable.add(() => {
-      scene.getEngine().resize();
-      scene.getEngine().setDepthBuffer(true);
-      scene.getEngine().setDepthWrite(true);
-      scene.getEngine().setDepthFunction(BABYLON.Engine.LEQUAL);
+    this.scene.onBeforeRenderObservable.add(() => {
+      if (!this.scene) return;
+      this.scene.getEngine().resize();
+      this.scene.getEngine().setDepthBuffer(true);
+      this.scene.getEngine().setDepthWrite(true);
+      this.scene.getEngine().setDepthFunction(BABYLON.Engine.LEQUAL);
     });
   }
 
@@ -172,52 +173,23 @@ export class SceneManager {
    * 保存场景中所有网格的原始材质属性
    * @param originalMaterialProperties 存储原始材质属性的Map
    */
-  public saveOriginalMaterialProperties(originalMaterialProperties: Map<string, { alpha: number }>) {
+  public async saveOriginalMaterialProperties(originalMaterialProperties: Map<string, { alpha: number }>) {
     if (!this.scene) return;
 
-    this.scene.meshes.forEach((mesh) => {
+    for (const mesh of this.scene.meshes) {
       // 保存原始材质属性
       if (mesh.material && !originalMaterialProperties.has(mesh.name)) {
         originalMaterialProperties.set(mesh.name, {
           alpha: mesh.material.alpha
         });
       }
-    });
-  }
 
-  /**
-   * 在模型加载后设置场景
-   */
-  public setupSceneAfterModelLoad() {
-    if (!this.scene || !this.camera) return;
-
-    // 计算模型包围盒
-    const bbox = getBoundingBoxForMeshes(this.scene.meshes);
-
-    setupCameraByBoundingBox(this.camera, bbox);
-    this.initialCameraState = {
-      alpha: this.camera.alpha,
-      beta: this.camera.beta,
-      radius: this.camera.radius,
-      target: this.camera.target.clone ?
-        this.camera.target.clone() :
-        new BABYLON.Vector3(this.camera.target.x, this.camera.target.y, this.camera.target.z)
-    };
-
-    // 设置初始相机状态到历史管理器
-    this.cameraHistoryManager.setInitialState(this.initialCameraState);
-
-    const linkMesh = BABYLON.MeshBuilder.CreateBox("linkMesh", { size: 0.1 }, this.scene);
-    linkMesh.position = this.initialCameraState.target;
-    linkMesh.setEnabled(false); // 不显示链接点
-
-    this.scene.onBeforeRenderObservable.add(() => {
-      this.scene!.getEngine().resize();
-      this.scene!.getEngine().setDepthBuffer(true);
-      this.scene!.getEngine().setDepthWrite(true);
-      this.scene!.getEngine().setDepthFunction(BABYLON.Engine.LEQUAL);
-    });
-    new CubeView(this.scene);
+      // 每处理100个网格，让出控制权给浏览器，防止阻塞UI
+      if (this.scene.meshes.indexOf(mesh) % 100 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+    console.log('原始材质属性保存完毕');
   }
 
   /**
@@ -233,23 +205,29 @@ export class SceneManager {
   /**
    * 设置阴影生成器
    */
-  public setupShadows() {
+  public async setupShadows() {
     if (!this.scene || !this.light) return;
 
     const shadowGenerator = new BABYLON.ShadowGenerator(2048, this.light);
     shadowGenerator.usePoissonSampling = true;
 
     if (shadowGenerator) {
-      this.scene.meshes.forEach((mesh) => {
-        const grid = this.scene!.meshes.find(m => m.name === 'infiniteGrid');
+      const grid = this.scene.meshes.find(m => m.name === 'infiniteGrid');
+
+      for (let i = 0; i < this.scene.meshes.length; i++) {
+        const mesh = this.scene.meshes[i];
         if (mesh !== grid) {
           shadowGenerator.addShadowCaster(mesh); // 仅模型投射阴影
           mesh.receiveShadows = true;
         }
-      });
-    }
-  }
 
+        if (i % 2000 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+    }
+    console.log("阴影生成器设置完成");
+  }
   /**
    * 设置场景相机和光照
    */
@@ -257,7 +235,8 @@ export class SceneManager {
     if (!this.scene) return;
 
     // 计算模型包围盒
-    const bbox = getBoundingBoxForMeshes(this.scene.meshes);
+    const box = this.scene.meshes[0].getHierarchyBoundingVectors();
+    const bbox = new BABYLON.BoundingBox(box.min, box.max)
 
     if (this.camera) {
       setupCameraByBoundingBox(this.camera, bbox);
@@ -272,24 +251,10 @@ export class SceneManager {
 
       // 设置初始相机状态到历史管理器
       this.cameraHistoryManager.setInitialState(this.initialCameraState);
-
-      // 设置光照
-      // The light is now created in initializeScene and stored in this.light
-      console.log('场景灯光设置', this.light);
-      if (this.light) {
-        const shadowGenerator = new BABYLON.ShadowGenerator(2048, this.light);
-        shadowGenerator.usePoissonSampling = true;
-
-        if (shadowGenerator) {
-          this.scene.meshes.forEach((mesh) => {
-            const grid = this.scene!.meshes.find(m => m.name === 'infiniteGrid');
-            if (mesh !== grid) {
-              shadowGenerator.addShadowCaster(mesh); // 仅模型投射阴影
-              mesh.receiveShadows = true;
-            }
-          });
-        }
-      }
+      const linkMesh = BABYLON.MeshBuilder.CreateBox("linkMesh", { size: 0.1 }, this.scene);
+      linkMesh.position = this.initialCameraState.target;
+      linkMesh.setEnabled(false); // 不显示链接点
+      new CubeView(this.scene);
     }
   }
 
@@ -736,7 +701,8 @@ export class SceneManager {
     if (data.gridMode !== undefined) {
       let ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       if (!ground) {
-        const bbox = getBoundingBoxForMeshes(this.scene.meshes);
+        const box = this.scene.meshes[0].getHierarchyBoundingVectors();
+        const bbox = new BABYLON.BoundingBox(box.min, box.max)
         this.setupGround(bbox, true);
         ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       } else {
