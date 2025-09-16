@@ -110,7 +110,7 @@ const options = reactive({
         {
             id: 'text_style',
             style: {
-                color:"#185abd",
+                color: "#185abd",
                 underline: true,
                 underlineDash: [2],
                 underlineOffset: 2,
@@ -119,10 +119,10 @@ const options = reactive({
         }
     ],
     virtualization: {
-    vertical: true, // 启用垂直虚拟滚动
-    horizontal: false, // 根据需要决定是否启用水平虚拟滚动
-    overscroll: true, // 允许超滚动
-  },
+        vertical: true, // 启用垂直虚拟滚动
+        horizontal: false, // 根据需要决定是否启用水平虚拟滚动
+        overscroll: true, // 允许超滚动
+    },
 })
 const copyToClipboard = async (text: string) => {
     try {
@@ -141,7 +141,9 @@ const handleClick = () => {
         if (treeInstance) {
             const cellValue = treeInstance.getCellValue(args[0].col, args[0].row);
             console.log('click_cell', args, cellValue);
-            debouncedCopyToClipboard(cellValue);
+            if (args[0].col !== 0) {
+                debouncedCopyToClipboard(cellValue);
+            }
             if (args[0].cellType === 'checkbox' && args[0].cellLocation === 'columnHeader') {
                 let headerSelectState = treeInstance.getCheckboxState('check')[0];
                 emit('table-checkbox-click', { args, selectState: headerSelectState })
@@ -238,32 +240,32 @@ const clearSelected = () => {
 }
 onMounted(() => {
     watch(
-    () => props.style,
-    (newStyle) => {
-        if (newStyle && newStyle['--theme-color']) {
-        themeColor.value = newStyle['--theme-color'];
-        if (treeInstance) {
-            treeInstance.updateTheme(theme.value);
-            treeInstance.updateColumns([
-            {
-                headerType: 'checkbox',
-                cellType: 'checkbox',
-                field: 'check',
-                width: '11%',
-                style: {
-                checkedFill: themeColor.value,
-                checkedStroke: themeColor.value,
-                defaultFill: 'transparent',
-                defaultStroke: '#d0d0d0',
-                },
-            },
-            ...options.columns.slice(1),
-            ]);
-            treeInstance.setCellCheckboxState(0, 0, true);
-        }
-        }
-    },
-    { deep: true }
+        () => props.style,
+        (newStyle) => {
+            if (newStyle && newStyle['--theme-color']) {
+                themeColor.value = newStyle['--theme-color'];
+                if (treeInstance) {
+                    treeInstance.updateTheme(theme.value);
+                    treeInstance.updateColumns([
+                        {
+                            headerType: 'checkbox',
+                            cellType: 'checkbox',
+                            field: 'check',
+                            width: '11%',
+                            style: {
+                                checkedFill: themeColor.value,
+                                checkedStroke: themeColor.value,
+                                defaultFill: 'transparent',
+                                defaultStroke: '#d0d0d0',
+                            },
+                        },
+                        ...options.columns.slice(1),
+                    ]);
+                    treeInstance.setCellCheckboxState(0, 0, true);
+                }
+            }
+        },
+        { deep: true }
     );
 
     watch(() => treeData.value, (newValue) => {
@@ -272,7 +274,7 @@ onMounted(() => {
             if (newValue.length > 0) {
                 options.hierarchyExpandLevel = 6
                 const treeLength = newValue[0].treeLength
-                if ( treeLength > 5000) {
+                if (treeLength > 5000) {
                     options.hierarchyExpandLevel = 5
                 }
                 if (treeLength > 20000) {
