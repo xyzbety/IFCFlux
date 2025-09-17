@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import * as BABYLON from '@babylonjs/core';
-import { useModelStore, useSceneStore } from '../store';
+import { useModelStore, useSceneStore,useSelectedStore } from '../store';
 import { useSettingsStore } from '../store/settings';
 import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
@@ -61,6 +61,7 @@ function createAppCore() {
     const sceneStore = useSceneStore();
     const modelStore = useModelStore();
     const settingsStore = useSettingsStore();
+    const selectedStore = useSelectedStore();
     const sceneManager = SceneManager.getInstance();
     const ifcPropertyUtils = IfcPropertyUtils.getInstance();
     const modelManager = ModelManager.getInstance();
@@ -237,7 +238,7 @@ function createAppCore() {
                     pageState.ifcExpressIds = initResult.ifcExpressIds;
                     pageState.propertyAll = initResult.propertyAll;
                     eventManager.emit('file-loaded');
-                    
+
                     sceneManager.setIfcExplosion(new IfcExplosion(scene));
                     switchToMode(LM.VIEW);
                     if (animationControllerRef.value) animationControllerRef.value.initializeBlockly();
@@ -315,6 +316,7 @@ function createAppCore() {
 
     const tableRowClick = async (event: any) => {
         console.log("tableRowClick:", event);
+        selectedStore.updateSelectedRowKey(null);
         const handleColorPicker = document.getElementById("colorPicker") as any;
         handleColorPicker.opened = false;
         if (!sceneManager.scene || !modelStore.modelData) return;
@@ -444,10 +446,10 @@ function createAppCore() {
 }
 
 export function useAppCore() {
-  if (!appCoreInstance) {
-    appCoreInstance = createAppCore();
-    console.log('创建新的app管理器单例实例');
-  }
-  
-  return appCoreInstance;
+    if (!appCoreInstance) {
+        appCoreInstance = createAppCore();
+        console.log('创建新的app管理器单例实例');
+    }
+
+    return appCoreInstance;
 }

@@ -40,9 +40,8 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
-                    @row-click="handleRowClick" v-model:activeRowKeys="activeRowKeys" :active-row-type="'single'"
-                    actived :max-height="'100%'" :table-layout="'auto'" :row-class-name="getRowClassName"
-                    rowKey="guid" />
+                    @row-click="handleRowClick" :max-height="'100%'" :table-layout="'auto'"
+                    :row-class-name="getRowClassName" rowKey="guid" />
             </div>
         </div>
         <!-- 弹框 -->
@@ -66,6 +65,7 @@ import { SceneManager } from '../../services/scene-manager';
 import { IfcPropertyUtils } from '../../services/property-manager';
 import { eventManager } from '../../services/event-manager';
 import { examineResultConfig } from '../../utils/config';
+import { useSelectedStore } from '../../store';
 
 const iconPathMap = {
     'array': '/icons/枚举.svg',
@@ -84,10 +84,10 @@ const treeExpandAndFoldIcon = (h: any, { type }: { type: string }) => {
         : h(ChevronDownIcon);
 };
 let loading = ref(false);
-let activeRowKeys = ref<Array<string>>([]);
 const loadingText = computed(() => `正在进行${props.inspectType}检查，请稍候...`);
 const searchText = ref('');
 const modelStore = useModelStore();
+const selectedStore = useSelectedStore();
 const sceneManager = SceneManager.getInstance();
 const ifcPropertyUtils = IfcPropertyUtils.getInstance();
 
@@ -100,57 +100,43 @@ const expandedKeys = ref<string[]>([]);
 const dialogVisible = ref(false);
 const dialogTableData = ref<any[]>([]);
 const dialogRef = ref<any>(null);
-// 点击外部关闭弹框的处理函数
-
-const handleGlobalClick = (event: Event) => {
+const handleGlobalClick = (event: any) => {
+    console.log("全局点击", event, props.visible, event.srcElement.tagName);
     if (!event.target) return;
-    const target = event.target as HTMLElement;
-    // console.log('全局点击', target, target.tagName);
-    // if(sceneManager.scene && event.target.tagName === 'DIV'){
-    //     ifcPropertyUtils.clearAllHighlights(sceneManager.scene)
-    // }
-    const clickedRow = target.closest('tbody tr');
-
-    const dialogElement = document.querySelector('.t-dialog__ctx') as HTMLElement;
-
-    if (window.getComputedStyle(dialogElement).display === 'block') {
-        dialogVisible.value = false;
-        console.log('点击弹框外区域，关闭弹框');
-        return;
-    } else {
-        // 弹框未打开时，正常处理表格行高亮逻辑
-        if (!clickedRow && activeRowKeys.value.length > 0) {
-            activeRowKeys.value = [];
-            if (sceneManager.scene) {
-                ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
-            }
-            console.log('点击非表格行区域，清除高亮');
+    if (!event._vts && event.srcElement.tagName !== 'CANVAS' && props.visible) {
+        selectedStore.updateSelectedRowKey(null);
+        if (sceneManager.scene) {
+            ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
         }
     }
+    dialogVisible.value = false;
 };
 const handleRowClick = async (event: any) => {
-    console.log('表格行点击', event)
+    console.log('表格行点击', event, event.e.target)
+    selectedStore.updateSelectedRowKey(event.row.guid);
     const modelData = modelStore.modelData
     console.log("modelData", modelData);
     let expressID = ifcPropertyUtils.findExpressIdByGuid(modelData.tree, event.row.guid);
     console.log("对应的expressID", expressID);
-    if (expressID && sceneManager.scene) {
-
-        let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
-        const meshConfig = {
-            scene: sceneManager.scene,
-            selectedMeshId: expressID,
-            globalId: expressID,
-            isHighlight: true,
-            isFocus: false
-        };
-        // 调用统一的处理方法
-        await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
-    } else {
-        console.log("未找到对应构件");
-        return;
+    if (sceneManager.scene) {
+        ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
+        if (expressID) {
+            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
+            const meshConfig = {
+                scene: sceneManager.scene,
+                selectedMeshId: expressID,
+                globalId: expressID,
+                isHighlight: true,
+                isFocus: false
+            };
+            // 调用统一的处理方法
+            await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
+            console.log("点击高亮了构件", event.row.guid);
+        } else {
+            console.log("未找到对应构件");
+            return;
+        }
     }
-
 }
 const tableColumns = [
     { colKey: 'guid', title: 'GUID', ellipsis: true },
@@ -235,7 +221,7 @@ const dialogTableColumns = [
 
             // 用 TDesign 的 Tooltip 包裹文字
             children.push(
-                h(TTooltip, { content: params.row.name, placement: 'top', overlayClassName: 'ellipsis-tooltip',showArrow:false }, {
+                h(TTooltip, { content: params.row.name, placement: 'top', overlayClassName: 'ellipsis-tooltip', showArrow: false }, {
                     default: () => h('span', {
                         style: `
                         display: inline-block;
@@ -266,7 +252,7 @@ const dialogTableColumns = [
                         content: configItem ? configItem : '未知状态',
                         placement: 'top',
                         overlayClassName: 'state-tooltip',
-                        showArrow:false
+                        showArrow: false
                     }, {
                         default: () => h('span', {
                             style: `
@@ -530,14 +516,22 @@ function handleClose() {
 function onExpandedTreeNodesChange(keys: string[]) {
     expandedKeys.value = keys;
 }
-function getRowClassName({ row }: { row: { allGreen: boolean } }) {
+function getRowClassName({ row }: { row: { allGreen: boolean, guid: string } }) {
     if (!row) return '';
     if (!tableData.value || tableData.value.length === 0) return '';
-    return row.allGreen === true ? 'green-border' : 'red-border';
+    let baseClass = '';
+    if (row && tableData.value && tableData.value.length > 0) {
+        baseClass = row.allGreen === true ? 'green-border' : 'red-border';
+    }
+    if (selectedStore.selectedRowKey && row && row.guid === selectedStore.selectedRowKey) {
+        baseClass = baseClass + ' selected-item';
+    }
+    return baseClass;
 }
 // 组件挂载时添加全局点击监听
 onMounted(() => {
     eventManager.add('click', handleGlobalClick);
+
 });
 
 // 组件卸载时移除监听器
@@ -650,7 +644,7 @@ onUnmounted(() => {
 }
 
 .selected-item {
-    background: #e6f7ff;
+    background-color: #e6f7ff !important;
 }
 
 .t-list {

@@ -64,3 +64,14 @@ export const useSceneStore = defineStore('scene', () => {
 
   return { sceneSettings, setSceneSettings, cameraState, setCameraState }
 })
+
+// store.ts
+export const useSelectedStore = defineStore('inspectTable', () => {
+  const selectedRowKey = ref<string | null>(null);
+  
+  const updateSelectedRowKey = (newValue: string | null) => {
+    selectedRowKey.value = newValue;
+  };
+  
+  return { selectedRowKey, updateSelectedRowKey };
+});

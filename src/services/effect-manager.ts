@@ -72,7 +72,13 @@ export class EffectManager {
 
     meshes.forEach(mesh => {
       if (!mesh.metadata) mesh.metadata = {};
-      if (mesh.name === 'slicePlane') return;
+      if (mesh.name === 'slicePlane' ||
+        mesh.name === "measureLine" ||
+        mesh.name === "tempLine" ||
+        mesh.name === "measureRectangle" ||
+        mesh.name === "tempRectangle" ||
+        mesh.name === "rectangleMesh" ||
+        mesh.name === "pointMarker") return;
 
       // 保存原始状态
       mesh.metadata.originalMaterial = mesh.material;

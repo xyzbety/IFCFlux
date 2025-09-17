@@ -1,1 +1,1 @@
-export { useModelStore, useSceneStore } from './scene-store';
+export { useModelStore, useSceneStore,useSelectedStore} from './scene-store';
