@@ -242,12 +242,10 @@ function createAppCore() {
                     switchToMode(LM.VIEW);
                     if (animationControllerRef.value) animationControllerRef.value.initializeBlockly();
                     sceneManager.setupCameraAndLight();
-                    const box = sceneManager.scene!.meshes[0].getHierarchyBoundingVectors();
-                    const bbox = new BABYLON.BoundingBox(box.min, box.max)
                     const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
                     if (handleGridCheckbox.checked) {
                         isGrid = true;
-                        sceneManager.setupGround(bbox, isGrid);
+                        sceneManager.setupGround(isGrid);
                     }
                     await sceneManager.setupShadows();
                     await sceneManager.saveOriginalMaterialProperties(originalMaterialProperties);

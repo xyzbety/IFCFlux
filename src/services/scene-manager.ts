@@ -20,6 +20,7 @@ export class SceneManager {
     radius: number;
     target: BABYLON.Vector3;
   } | null = null;
+  public bbox: BABYLON.BoundingBox | null = null;
 
   private cameraHistoryManager: CameraHistoryManager;
   private slicePlane: SlicePlane | null = null;
@@ -197,9 +198,9 @@ export class SceneManager {
    * @param bbox 包围盒
    * @param isGrid 是否显示网格
    */
-  public setupGround(bbox: BABYLON.BoundingBox, isGrid: boolean) {
+  public setupGround(isGrid: boolean) {
     if (!this.scene) return;
-    createGround(this.scene, bbox, isGrid);
+    createGround(this.scene, this.bbox, isGrid);
   }
 
   /**
@@ -235,11 +236,11 @@ export class SceneManager {
     if (!this.scene) return;
 
     // 计算模型包围盒
-    const box = this.scene.meshes[0].getHierarchyBoundingVectors();
-    const bbox = new BABYLON.BoundingBox(box.min, box.max)
+    const { min, max } = this.scene.meshes[0].getHierarchyBoundingVectors();
+    this.bbox = new BABYLON.BoundingBox(min, max)
 
     if (this.camera) {
-      setupCameraByBoundingBox(this.camera, bbox);
+      setupCameraByBoundingBox(this.camera, this.bbox);
       this.initialCameraState = {
         alpha: this.camera.alpha,
         beta: this.camera.beta,
@@ -620,8 +621,14 @@ export class SceneManager {
       this.slicePlane.destroy();
       this.slicePlane = null;
     }
-
-    this.slicePlane = new SlicePlane(this.scene, 80);
+    let slicePlaneSize = 80; // 默认大小
+    if (this.bbox) {
+      const boundingBoxSize = this.bbox.extendSize.scale(2);
+      slicePlaneSize = Math.max(boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z) * 1.5;
+    }
+    
+    this.slicePlane = new SlicePlane(this.scene, slicePlaneSize);
+    console.log("剖切面尺寸:", slicePlaneSize);
     this.slicePlane.start(action);
   }
 
@@ -701,9 +708,7 @@ export class SceneManager {
     if (data.gridMode !== undefined) {
       let ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       if (!ground) {
-        const box = this.scene.meshes[0].getHierarchyBoundingVectors();
-        const bbox = new BABYLON.BoundingBox(box.min, box.max)
-        this.setupGround(bbox, true);
+        this.setupGround(true);
         ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       } else {
         ground.setEnabled(data.gridMode);
