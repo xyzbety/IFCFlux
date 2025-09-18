@@ -358,10 +358,24 @@ export default {
     },
     ]
   },
-  // {
-  //   label: '转换',
-  //   ribbonGroups: []
-  // },
+  {
+    label: '转换',
+    ribbonGroups: [{
+      label: '模型导出',
+      icon: 'compliance_inspection material-icons',
+      ribbonItems: [
+        {
+          label: '导出GLB',
+          icon: 'export_glb material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        }
+      ]
+    },
+    ]
+  },
   // {
   //   label: '分析',
   //   ribbonGroups: [{

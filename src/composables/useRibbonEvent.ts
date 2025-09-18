@@ -1,6 +1,5 @@
 import { ref, Ref } from "vue";
-import * as BABYLON from '@babylonjs/core/index.js';
-
+import { debounce } from "../utils/index";
 export interface RibbonEventsOptions {
     modelStore: any;
     emit: any;
@@ -126,11 +125,11 @@ export class RibbonEventManager {
         }
 
         this.singleEvents.clear(); // 清空之前的事件
-        this.singleEvents.set("构件树", () => this.options!.emit("build-tree"));
-        this.singleEvents.set("属性表", () => this.options!.emit("properties-table"));
-        this.singleEvents.set("重置光照", () => this.options!.emit("light-settings-reset"));
+        this.singleEvents.set("构件树", debounce(() => this.options!.emit("build-tree")));
+        this.singleEvents.set("属性表", debounce(() => this.options!.emit("properties-table")));
+        this.singleEvents.set("重置光照", debounce(() => this.options!.emit("light-settings-reset")));
+        this.singleEvents.set("导出GLB", debounce(() => this.options!.emit("export-settings", "glb")));
     }
-
     /**
      * 处理按钮点击
      * @param label - 按钮标签
@@ -152,7 +151,7 @@ export class RibbonEventManager {
         // 检查映射事件
         const eventInfo = this.eventMap.get(label);
         if (eventInfo) {
-            this.options.emit(eventInfo.type, eventInfo.param);
+            debounce(() => this.options?.emit(eventInfo.type, eventInfo.param))();
             return true;
         }
 
@@ -231,7 +230,7 @@ export class RibbonEventManager {
         if (event.detail && this.options) {
             console.log("选中了:", event.detail.index);
             this.options.emit('ribbon-tab-change', event.detail.index);
-            if (event.detail.index === 2) {
+            if (event.detail.index === 3) {
                 this.handleSettingsTabSelect();
             }
         }

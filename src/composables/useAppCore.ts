@@ -1,9 +1,13 @@
 import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
+import { MessagePlugin } from 'tdesign-vue-next';
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile } from '@tauri-apps/plugin-fs';
 import * as BABYLON from '@babylonjs/core';
-import { useModelStore, useSceneStore,useSelectedStore } from '../store';
+import { GLTF2Export } from "@babylonjs/serializers";
+import { useModelStore, useSceneStore, useSelectedStore } from '../store';
 import { useSettingsStore } from '../store/settings';
 import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
@@ -126,7 +130,7 @@ function createAppCore() {
         switch (tabIndex) {
             case 0: case 2: switchToMode(LM.VIEW); break;
             case 1: switchToMode(LM.CANVAS_ONLY); break;
-            case 3: switchToMode(LM.MEASURE); break;
+            case 3: switchToMode(LM.VIEW); break;
             case 4:
                 switchToMode(LM.ANIMATION);
                 if (animationControllerRef.value) {
@@ -194,6 +198,49 @@ function createAppCore() {
     const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
     const handleLightSettingsReset = () => { isHightlight = true; sceneManager.resetLightSettings(); };
     const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
+    const handleExportSetting = async (type: string) => {
+        const fileName = modelStore.file?.name ?? "untitled";
+        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
+        const exportFileName = `${fileNameWithoutExtension}.glb`;
+        try {
+            const options = {
+                shouldExportNode: (node: any) => {
+                    if (node instanceof BABYLON.Mesh) {
+                        return node.isEnabled() && node.getTotalVertices() > 0;
+                    }
+                    return true;
+                }
+            };
+            const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, fileNameWithoutExtension, options);
+            const glbFile = exportResult.files[exportFileName];
+            if (!(glbFile instanceof Blob)) {
+                throw new Error("导出的文件格式无效");
+            }
+            if (!isTauriEnv) {
+                exportResult.downloadFiles();
+                MessagePlugin.success({ content: '导出成功！', duration: 1000 });
+                return;
+            }
+            const savePath = await save({
+                title: '请选择.glb文件导出路径',
+                defaultPath: exportFileName,
+                filters: [{ name: "", extensions: ['glb'] }]
+            });
+            if (!savePath) {
+                MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
+                return;
+            }
+            const arrayBuffer = await glbFile.arrayBuffer();
+            await writeFile(savePath, new Uint8Array(arrayBuffer));
+            MessagePlugin.success({ content: '导出成功！', duration: 1000 });
+        } catch (error) {
+            console.error("导出失败:", error);
+            MessagePlugin.error({
+                content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
+                duration: 2000
+            });
+        }
+    }
 
     function clear() {
         if (measure) {
@@ -401,6 +448,7 @@ function createAppCore() {
                     'scene-settings': handleChangeScene, 'animation-event': handleAnimationEvent,
                     'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
                     'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
+                    'export-settings': handleExportSetting
                 };
                 eventMap[eventName]?.(...args);
             }
@@ -418,7 +466,7 @@ function createAppCore() {
         eventManager.add('mouse-wheel', handleHisBefore);
         eventManager.add("resize", handleResize);
 
-        if (isTauriEnv) invoke('show_mainscreen').catch(console.error);
+        if (isTauriEnv) await invoke('show_mainscreen').catch(console.error);
 
         watch(() => sceneStore.sceneSettings, handleChangeScene, { deep: true });
     });

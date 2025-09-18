@@ -234,7 +234,7 @@ export function updateTempLineLabel(tempLine: BABYLON.AbstractMesh, anchor: BABY
     anchor.position.copyFrom(mid);
 }
 
-export function debounce(func: Function, wait: number) {
+export function debounce(func: Function, wait: number = 500) {
     let timeout: number | null = null;
     return function executedFunction(...args: any[]) {
         const later = () => {

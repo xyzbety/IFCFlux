@@ -13,6 +13,7 @@
     "@babylonjs/core": "^8.25.0",
     "@babylonjs/gui": "^8.25.0",
     "@babylonjs/materials": "^8.25.0",
+    "@babylonjs/serializers": "^8.25.0",
     "@blockly/field-colour": "^6.0.4",
     "@jscad/modeling": "^2.12.5",
     "@tauri-apps/api": "^2.8.0",
