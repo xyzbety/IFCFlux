@@ -40,8 +40,7 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
-                    @row-click="handleRowClick" :max-height="'100%'" :table-layout="'auto'"
-                    :row-class-name="getRowClassName" rowKey="guid" />
+                    @row-click="handleRowClick" :max-height="'100%'" :row-class-name="getRowClassName" rowKey="guid" />
             </div>
         </div>
         <!-- 弹框 -->
@@ -138,26 +137,52 @@ const handleRowClick = async (event: any) => {
         }
     }
 }
+const handleFocus = async (event: any) => {
+    console.log('焦点图标点击', event);
+    selectedStore.updateSelectedRowKey(event.guid);
+    const modelData = modelStore.modelData
+    let expressID = ifcPropertyUtils.findExpressIdByGuid(modelData.tree, event.guid);
+    if (sceneManager.scene) {
+        ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
+        if (expressID) {
+            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
+            const meshConfig = {
+                scene: sceneManager.scene,
+                selectedMeshId: expressID,
+                globalId: expressID,
+                isHighlight: true,
+                isFocus: true
+            };
+            // 调用统一的处理方法
+            await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
+        } else {
+            console.log("未找到对应构件");
+            return;
+        }
+    }
+
+}
 const tableColumns = [
-    { colKey: 'guid', title: 'GUID', ellipsis: true },
-    { colKey: 'name', title: 'Name', ellipsis: true },
-    { colKey: 'tag', title: 'Tag', ellipsis: true },
+    { colKey: 'guid', title: 'GUID', width: 200, ellipsis: true },
+    { colKey: 'name', title: 'Name', width: 100, ellipsis: true },
+    { colKey: 'tag', title: 'Tag', width: 150, ellipsis: true },
     {
         colKey: 'op',
         title: '',
+        width: 50,
         cell: (h: any, { row }: { row: any }) =>
-            h(
-                'a',
-                {
+            h('div', {
+                style: 'display: flex; align-items: center; justify-content: center; gap: 8px;'
+            }, [
+                // 第一个图标 - 查看
+                h('a', {
                     style: 'color: #0052d9; cursor: pointer; display: flex; align-items: center; justify-content: center;',
                     onClick: (event: Event) => {
-                        // 阻止事件冒泡，防止触发 handleGlobalClick
                         event.stopPropagation();
                         event.preventDefault();
                         handleView(row);
                     }
-                },
-                [
+                }, [
                     h('svg', {
                         width: '16',
                         height: '16',
@@ -177,8 +202,47 @@ const tableColumns = [
                             fill: '#8a8a8a'
                         })
                     ])
-                ]
-            )
+                ]),
+                // 第二个图标 - 焦点图标
+                h('a', {
+                    style: 'color: #52c41a; cursor: pointer; display: flex; align-items: center; justify-content: center;',
+                    onClick: (event: Event) => {
+                        event.stopPropagation();
+                        event.preventDefault();
+                        handleFocus(row);
+                    }
+                }, [
+                    h('svg', {
+                        width: '16',
+                        height: '16',
+                        viewBox: '0 0 24 24',
+                        fill: 'none',
+                        xmlns: 'http://www.w3.org/2000/svg'
+                    }, [
+                        h('g', { id: 'bgqfocus' }, [
+                            h('path', {
+                                id: 'fill1',
+                                d: 'M19 12C19 15.866 15.866 19 12 19C8.13401 19 5 15.866 5 12C5 8.13401 8.13401 5 12 5C15.866 5 19 8.13401 19 12Z',
+                                fill: 'transparent'
+                            }),
+                            h('path', {
+                                id: 'stroke1',
+                                d: 'M19 12C19 15.866 15.866 19 12 19M19 12C19 8.13401 15.866 5 12 5M19 12H22M12 19C8.13401 19 5 15.866 5 12M12 19V22M5 12C5 8.13401 8.13401 5 12 5M5 12H2M12 5V2',
+                                'stroke-linecap': 'square',
+                                'stroke-width': '2',
+                                stroke: '#8a8a8a'
+                            }),
+                            h('path', {
+                                id: 'stroke2',
+                                d: 'M13 12C13 12.5523 12.5523 13 12 13C11.4477 13 11 12.5523 11 12C11 11.4477 11.4477 11 12 11C12.5523 11 13 11.4477 13 12Z',
+                                'stroke-linecap': 'square',
+                                'stroke-width': '2',
+                                stroke: '#8a8a8a'
+                            })
+                        ])
+                    ])
+                ])
+            ])
     }
 ];
 
