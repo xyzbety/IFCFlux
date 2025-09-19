@@ -3,6 +3,9 @@ import * as BABYLON from "@babylonjs/core";
 import { cacheDB } from './CacheDB';
 import { IfcParser } from "./IfcParser";
 import { GeometryTypes } from "../ifc/ifc-geometry-types";
+import { fromIfcGuid } from '../ifc/ifc-guid'
+
+
 // 定义进度回调函数类型
 type ProgressCallback = (percent: number, message: string, loaded: number, total: number) => void;
 
@@ -298,6 +301,8 @@ export class IfcLoader {
         const size = placedGeometries.size();
         const expressID = flatMesh.expressID;
         const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, expressID);
+        const guid = fromIfcGuid(entity.GlobalId.value)
+
 
         if (size > 1) {
             const meshes: BABYLON.Mesh[] = [];
@@ -316,16 +321,16 @@ export class IfcLoader {
 
             const mergedMesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
             if (mergedMesh) {
-                mergedMesh.name = `${expressID}`;
-                mergedMesh.id = `${entity.GlobalId.value}`;
+                mergedMesh.id = `${expressID}`;
+                mergedMesh.name = guid;
                 mergedMesh.parent = this.model;
             }
         } else if (size === 1) {
             const placedGeometry = placedGeometries.get(0);
             const mesh = this.createGeometryMesh(placedGeometry, flatMesh.expressID);
             if (mesh) {
-                mesh.id = `${entity.GlobalId.value}`;
-                mesh.name = `${expressID}`;
+                mesh.id = `${expressID}`;
+                mesh.name = guid;
                 this.assignMeshMaterial(placedGeometry, mesh);
 
                 if (this.useInstancing) {

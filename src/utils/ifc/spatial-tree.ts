@@ -1,5 +1,7 @@
 import XeUtils from 'xe-utils'
 import { IfcCategoryMap } from './ifc-category-map'
+import { fromIfcGuid } from './ifc-guid'
+
 
 // const XeUtils = require('xe-utils')
 // const { IfcCategoryMap } = require('./ifc-category-map')
@@ -83,6 +85,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
 
   Object.keys(relations).forEach((id: string) => {
     const property = properties[id]
+    const guid = fromIfcGuid(property.GlobalId.value)
     //  ifc project  顶级节点
     if (property.type === 103090709) {
       console.log('property', property);
@@ -92,7 +95,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         description: property.Description !== null && property.Description !== undefined ? property.Description : '',
         parentId: null,
         expressId: id,
-        guid: property.GlobalId.value,
+        guid: guid,
         objectType: property.ObjectType,
         type: IfcCategoryMap[property.type],
         typeShow: IfcCategoryMap[property.type],
@@ -116,7 +119,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         description: property.Description !== null && property.Description !== undefined ? property.Description : '',
         parentId: id,
         expressId: expressId,
-        guid: property.GlobalId.value,
+        guid: guid,
         objectType: property.ObjectType,
         type: IfcCategoryMap[property.type],
         typeShow: IfcCategoryMap[property.type],
@@ -134,7 +137,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
             parentId: id,
             // TODO  这个层级是人为创建的,所以ExpressID是人为创建的
             expressId: categoryEid,
-            guid: property.GlobalId.value,
+            guid: guid,
             objectType: property.ObjectType,
             type: 'category',
             typeShow: IfcCategoryMap[property.type],
