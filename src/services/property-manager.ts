@@ -179,14 +179,14 @@ export class IfcPropertyUtils {
     console.log('当前隐藏的节点集合:', Array.from(this.hiddenNodeIds));
 
     // 更新场景中所有 mesh 的可见性
-    scene.meshes.forEach((mesh: { name: string; metadata: { globalId: any; }; isVisible: boolean; }) => {
+    scene.meshes.forEach((mesh: { id: string; metadata: { globalId: any; }; isVisible: boolean; }) => {
       // 跳过特殊 mesh
-      if (this.isSpecialMesh(mesh.name)) {
+      if (this.isSpecialMesh(mesh.id)) {
         return;
       }
 
       // 根据 expressId 或 globalId 判断是否应该可见
-      const meshExpressId = mesh.metadata?.globalId || mesh.name;
+      const meshExpressId = mesh.metadata?.globalId || mesh.id;
       const shouldBeHidden = this.hiddenNodeIds.has(String(meshExpressId));
 
       // 设置可见性：如果在隐藏集合中则隐藏，否则显示
@@ -449,7 +449,7 @@ public async flattenTreeToGroupedItems(treeData: any[]): Promise<{
     // 基于 GlobalId 查找对应的mesh进行联动
     const exactMatches = scene.meshes.filter(mesh => {
       // 优先使用 GlobalId 匹配，如果没有则使用 expressId
-      return expressIdSet.has(mesh.metadata?.globalId) || expressIdSet.has(mesh.name);
+      return expressIdSet.has(mesh.metadata?.globalId) || expressIdSet.has(mesh.id);
     });
 
     // 排除天空盒
@@ -460,7 +460,7 @@ public async flattenTreeToGroupedItems(treeData: any[]): Promise<{
     // 检查mesh可见性
     let isVisibleMeshHighlight = true;
     scene.meshes.forEach((mesh) => {
-      if (mesh.name === selectedMeshId || mesh.metadata?.globalId === globalId) {
+      if (mesh.id === selectedMeshId || mesh.metadata?.globalId === globalId) {
         isVisibleMeshHighlight = mesh.isVisible;
       }
     });

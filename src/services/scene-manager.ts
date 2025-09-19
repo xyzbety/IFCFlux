@@ -106,7 +106,7 @@ export class SceneManager {
           }
           window.dispatchEvent(new CustomEvent('mesh-clicked', {
             detail: {
-              expressID: pointerInfo.pickInfo.pickedMesh.name,
+              expressID: pointerInfo.pickInfo.pickedMesh.id,
               mesh: pointerInfo.pickInfo.pickedMesh,
               point: pointerInfo.pickInfo.pickedPoint
             }
@@ -179,8 +179,8 @@ export class SceneManager {
 
     for (const mesh of this.scene.meshes) {
       // 保存原始材质属性
-      if (mesh.material && !originalMaterialProperties.has(mesh.name)) {
-        originalMaterialProperties.set(mesh.name, {
+      if (mesh.material && !originalMaterialProperties.has(mesh.id)) {
+        originalMaterialProperties.set(mesh.id, {
           alpha: mesh.material.alpha
         });
       }
@@ -368,7 +368,7 @@ export class SceneManager {
         mesh.isVisible = true;
         // 还原透明度到原始值
         if (mesh.material) {
-          const originalProps = originalMaterialProperties.get(mesh.name);
+          const originalProps = originalMaterialProperties.get(mesh.id);
           if (originalProps) {
             mesh.material.alpha = originalProps.alpha;
           } else {
@@ -415,16 +415,16 @@ export class SceneManager {
       let meshTransparent = false;
 
       // 1. 检查是否被隐藏
-      if (this.hiddenMeshIds.has(mesh.name)) {
+      if (this.hiddenMeshIds.has(mesh.id)) {
         meshVisible = false;
       }
       // 2. 检查隔离模式（只有隔离的mesh才显示）
       if (this.isolatedMeshIds.size > 0) {
-        meshVisible = this.isolatedMeshIds.has(mesh.name);
+        meshVisible = this.isolatedMeshIds.has(mesh.id);
       }
 
       // 3. 检查透明状态（只在可见时生效）
-      if (meshVisible && this.transparentMeshIds.has(mesh.name)) {
+      if (meshVisible && this.transparentMeshIds.has(mesh.id)) {
         meshTransparent = true;
       }
 
@@ -456,7 +456,7 @@ export class SceneManager {
       } else {
         // 还原非半透明mesh的透明度到原始值
         if (mesh.material) {
-          const originalProps = originalMaterialProperties.get(mesh.name);
+          const originalProps = originalMaterialProperties.get(mesh.id);
           if (originalProps) {
             mesh.material.alpha = originalProps.alpha;
           } else {
