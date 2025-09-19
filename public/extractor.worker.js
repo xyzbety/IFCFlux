@@ -1,3 +1,5 @@
+importScripts('https://cdn.jsdelivr.net/npm/uuid/dist/umd/uuid.min.js');
+
 self.onmessage = async (e) => {
     const name = e.data.name
     if (name == 'start') {
@@ -283,7 +285,7 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
     for (const item of ifcResult) {
         const nweItem = {
             Entity: item.Entity,
-            Guid: item.Guid,
+            Guid: uuid.stringify(fromIfcGuidArray(item.Guid)),
             Name: typeof item.name == 'string' ? ifcToText(item.name) : item.name,
             PredefinedType: typeof item.PredefinedType == 'string' ? ifcToText(item.PredefinedType) : item.PredefinedType,
             ObjectType: typeof item.ObjectType == 'string' ? ifcToText(item.ObjectType) : item.ObjectType,
@@ -623,6 +625,36 @@ function checkIfcType(value, ifcType, ifcTypes) {
   
   // 如果传入未定义的 IFC 类型，返回 false
   return 3;
+}
+
+const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
+const reverse = Object.fromEntries(chars.split("").map((char, index) => [char, index]));
+const ifcGuidRegex = new RegExp(/^[0-3][\dA-Za-z_$]{21}$/);
+
+function fromIfcGuidArray(ifcGuid){
+    
+  if (typeof ifcGuid !== "string")
+    throw new TypeError("Invalid IFC-GUID type");
+  if (ifcGuid.length !== 22)
+    throw Error("Invalid IFC-GUID length");
+  if (!ifcGuidRegex.test(ifcGuid)) throw Error("Invalid character in IFC-GUID");
+
+  const result = new Uint8Array(16);
+  result[0] = (reverse[ifcGuid[0]] << 6) | reverse[ifcGuid[1]];
+
+  for (let i = 2, j = 1; j < 16; i = i + 4, j = j + 3) {
+    const u24 =
+      (reverse[ifcGuid[i]] << 18) |
+      (reverse[ifcGuid[i + 1]] << 12) |
+      (reverse[ifcGuid[i + 2]] << 6) |
+      reverse[ifcGuid[i + 3]];
+
+    result[j] = (u24 >> 16) & 255;
+    result[j + 1] = (u24 >> 8) & 255;
+    result[j + 2] = u24 & 255;
+  }
+
+  return result;
 }
 
 
