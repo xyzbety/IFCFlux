@@ -361,8 +361,8 @@ export default {
   {
     label: '转换',
     ribbonGroups: [{
-      label: '模型导出',
-      icon: 'compliance_inspection material-icons',
+      label: '数据导出',
+      icon: 'data_export material-icons',
       ribbonItems: [
         {
           label: '导出GLB',
