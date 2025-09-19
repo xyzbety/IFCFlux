@@ -17,6 +17,9 @@ importers:
       '@babylonjs/materials':
         specifier: ^8.25.0
         version: 8.27.0(@babylonjs/core@8.27.0)
+      '@babylonjs/serializers':
+        specifier: ^8.25.0
+        version: 8.28.1(@babylonjs/core@8.27.0)(babylonjs-gltf2interface@8.28.1)
       '@blockly/field-colour':
         specifier: ^6.0.4
         version: 6.0.4(blockly@12.3.0)
@@ -56,6 +59,9 @@ importers:
       tdesign-vue-next:
         specifier: ^1.16.0
         version: 1.16.1(vue@3.5.21(typescript@5.9.2))
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.0
       vue:
         specifier: ^3.5.18
         version: 3.5.21(typescript@5.9.2)
@@ -123,6 +129,12 @@ packages:
     resolution: {integrity: sha512-hRQTV6Nb9pcJaN4lY2oDSiJETG4kXIci/utT6oI1p3GFlaMI9PHHkDtm26hq2mk2SE9jEWNDgynWyg8kIU+8Ag==}
     peerDependencies:
       '@babylonjs/core': ^8.6.0
+
+  '@babylonjs/serializers@8.28.1':
+    resolution: {integrity: sha512-d2wzJUaKaPLdousdhFQJLHSs/pdF9OHRpFX4ONan10Hj5ousiqtBdSxeBL9ZSFSq4EOM/DEVaXwtW3l/qRhY6g==}
+    peerDependencies:
+      '@babylonjs/core': ^8.0.0
+      babylonjs-gltf2interface: ^8.0.0
 
   '@blockly/field-colour@6.0.4':
     resolution: {integrity: sha512-/sNTrP/wQHwpLN8sEbBDvRBFkY9+7U+WAfnA66wmgRJc4N02F41kX89C29CLUS4SUVkElUuh9spYH6Lj7G4KRQ==}
@@ -1126,6 +1138,9 @@ packages:
   array-source@0.0.4:
     resolution: {integrity: sha512-frNdc+zBn80vipY+GdcJkLEbMWj3xmzArYApmUGxoiV8uAu/ygcs9icPdsGdA26h0MkHUMW6EN2piIvVx+M5Mw==}
 
+  babylonjs-gltf2interface@8.28.1:
+    resolution: {integrity: sha512-fouhhlGnsgDrVyprooZ8KeBcThFYL+ecjb8gffJYGeIT8MXAfvQvz70zBxXIOT4OQfTaf5MpEqMzJ24C1Q0fjQ==}
+
   bignumber.js@9.3.1:
     resolution: {integrity: sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ==}
 
@@ -1693,6 +1708,10 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+    hasBin: true
+
   validator@13.15.15:
     resolution: {integrity: sha512-BgWVbCI72aIQy937xbawcs+hrVaN/CZ2UwutgaJ36hGqRrLNM+f5LUT/YPRbo8IV/ASeFzXszezV+y2+rq3l8A==}
     engines: {node: '>= 0.10'}
@@ -1833,6 +1852,11 @@ snapshots:
   '@babylonjs/materials@8.27.0(@babylonjs/core@8.27.0)':
     dependencies:
       '@babylonjs/core': 8.27.0
+
+  '@babylonjs/serializers@8.28.1(@babylonjs/core@8.27.0)(babylonjs-gltf2interface@8.28.1)':
+    dependencies:
+      '@babylonjs/core': 8.27.0
+      babylonjs-gltf2interface: 8.28.1
 
   '@blockly/field-colour@6.0.4(blockly@12.3.0)':
     dependencies:
@@ -3498,6 +3522,8 @@ snapshots:
 
   array-source@0.0.4: {}
 
+  babylonjs-gltf2interface@8.28.1: {}
+
   bignumber.js@9.3.1: {}
 
   birpc@2.5.0: {}
@@ -4104,6 +4130,8 @@ snapshots:
   typescript@5.9.2: {}
 
   util-deprecate@1.0.2: {}
+
+  uuid@13.0.0: {}
 
   validator@13.15.15: {}
 
