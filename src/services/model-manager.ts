@@ -1,4 +1,4 @@
-import { ref, Ref } from 'vue';
+import { ref, Ref, markRaw } from 'vue';
 import * as BABYLON from '@babylonjs/core/index.js';
 import { IfcLoader } from '../utils/loader/IfcLoader';
 import { addFileHistory } from '../utils/indexedDB.ts';
@@ -148,7 +148,7 @@ export class ModelManager {
       if (ifcInspect.ifcData) {
         clearInterval(checkInterval);
         this.modelStore.clearModelInspectData();
-        this.modelStore.setModelInspectData(ifcInspect.ifcData);
+        this.modelStore.setModelInspectData(markRaw(ifcInspect.ifcData));
         console.log("模型检查数据已更新", ifcInspect.ifcData, this.modelStore.modelInspectData);
       }
     }, 100);
