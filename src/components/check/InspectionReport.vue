@@ -40,6 +40,7 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
+                :scroll="{ type: 'virtual', rowHeight: 48, bufferSize: 10 }"
                     @row-click="handleRowClick" :max-height="'100%'" :row-class-name="getRowClassName" rowKey="guid" />
             </div>
         </div>
@@ -163,9 +164,9 @@ const handleFocus = async (event: any) => {
 
 }
 const tableColumns = [
-    { colKey: 'guid', title: 'GUID', width: 200, ellipsis: true },
-    { colKey: 'name', title: 'Name', width: 100, ellipsis: true },
-    { colKey: 'tag', title: 'Tag', width: 150, ellipsis: true },
+    { colKey: 'guid', title: 'GUID', width: 250, ellipsis: true },
+    { colKey: 'name', title: 'Name', width: 150, ellipsis: true },
+    { colKey: 'tag', title: 'Tag', width: 50, ellipsis: true },
     {
         colKey: 'op',
         title: '',
@@ -689,15 +690,23 @@ onUnmounted(() => {
 }
 
 .list-area {
-    width: 30%;
+    width: 20%;
     height: calc(100% - 15px);
-    overflow: auto;
+    overflow: hidden;
     border-right: 1px solid #eee;
     box-sizing: border-box;
+    text-overflow: ellipsis;
+}
+
+.list-area .t-list-item__meta-description {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
 }
 
 .table-area {
-    width: 70%;
+    width: 80%;
     height: calc(100% - 30px);
     overflow: auto;
     box-sizing: border-box;
@@ -712,7 +721,7 @@ onUnmounted(() => {
 }
 
 .t-list {
-    overflow: visible;
+    overflow: hidden;
 }
 
 .t-list.t-size-s .t-list-item {
@@ -731,8 +740,12 @@ onUnmounted(() => {
 
 .t-list-item__meta {
     min-height: 24px !important;
+    width: 100%;
 }
 
+.t-list-item__meta-content {
+    width: 100%;
+}
 
 .t-table__content {
     border: 1px solid #eee;
