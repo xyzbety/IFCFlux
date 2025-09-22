@@ -3,7 +3,7 @@ import * as BABYLON from "@babylonjs/core";
 import { cacheDB } from './CacheDB';
 import { IfcParser } from "./IfcParser";
 import { GeometryTypes } from "../ifc/ifc-geometry-types";
-import { fromIfcGuid } from '../ifc/ifc-guid'
+import { ifcGuidToUuid } from '../ifc/ifc-guid'
 
 
 // 定义进度回调函数类型
@@ -301,7 +301,7 @@ export class IfcLoader {
         const size = placedGeometries.size();
         const expressID = flatMesh.expressID;
         const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, expressID);
-        const guid = fromIfcGuid(entity.GlobalId.value)
+        const guid = ifcGuidToUuid(entity.GlobalId.value)
 
 
         if (size > 1) {
