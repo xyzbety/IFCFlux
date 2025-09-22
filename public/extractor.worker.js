@@ -1,4 +1,4 @@
-importScripts('https://cdn.jsdelivr.net/npm/uuid/dist/umd/uuid.min.js');
+// importScripts('https://cdn.jsdelivr.net/npm/uuid/dist/umd/uuid.min.js');
 
 self.onmessage = async (e) => {
     const name = e.data.name
@@ -285,7 +285,7 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
     for (const item of ifcResult) {
         const nweItem = {
             Entity: item.Entity,
-            Guid: uuid.stringify(fromIfcGuidArray(item.Guid)),
+            Guid: ifcGuidToUuid(item.Guid),
             Name: typeof item.name == 'string' ? ifcToText(item.name) : item.name,
             PredefinedType: typeof item.PredefinedType == 'string' ? ifcToText(item.PredefinedType) : item.PredefinedType,
             ObjectType: typeof item.ObjectType == 'string' ? ifcToText(item.ObjectType) : item.ObjectType,
@@ -628,33 +628,49 @@ function checkIfcType(value, ifcType, ifcTypes) {
 }
 
 const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
-const reverse = Object.fromEntries(chars.split("").map((char, index) => [char, index]));
-const ifcGuidRegex = new RegExp(/^[0-3][\dA-Za-z_$]{21}$/);
+// const reverse = Object.fromEntries(chars.split("").map((char, index) => [char, index]));
+// const ifcGuidRegex = new RegExp(/^[0-3][\dA-Za-z_$]{21}$/);
 
-function fromIfcGuidArray(ifcGuid){
+// function fromIfcGuidArray(ifcGuid){
     
-  if (typeof ifcGuid !== "string")
-    throw new TypeError("Invalid IFC-GUID type");
-  if (ifcGuid.length !== 22)
-    throw Error("Invalid IFC-GUID length");
-  if (!ifcGuidRegex.test(ifcGuid)) throw Error("Invalid character in IFC-GUID");
+//   if (typeof ifcGuid !== "string")
+//     throw new TypeError("Invalid IFC-GUID type");
+//   if (ifcGuid.length !== 22)
+//     throw Error("Invalid IFC-GUID length");
+//   if (!ifcGuidRegex.test(ifcGuid)) throw Error("Invalid character in IFC-GUID");
 
-  const result = new Uint8Array(16);
-  result[0] = (reverse[ifcGuid[0]] << 6) | reverse[ifcGuid[1]];
+//   const result = new Uint8Array(16);
+//   result[0] = (reverse[ifcGuid[0]] << 6) | reverse[ifcGuid[1]];
 
-  for (let i = 2, j = 1; j < 16; i = i + 4, j = j + 3) {
-    const u24 =
-      (reverse[ifcGuid[i]] << 18) |
-      (reverse[ifcGuid[i + 1]] << 12) |
-      (reverse[ifcGuid[i + 2]] << 6) |
-      reverse[ifcGuid[i + 3]];
+//   for (let i = 2, j = 1; j < 16; i = i + 4, j = j + 3) {
+//     const u24 =
+//       (reverse[ifcGuid[i]] << 18) |
+//       (reverse[ifcGuid[i + 1]] << 12) |
+//       (reverse[ifcGuid[i + 2]] << 6) |
+//       reverse[ifcGuid[i + 3]];
 
-    result[j] = (u24 >> 16) & 255;
-    result[j + 1] = (u24 >> 8) & 255;
-    result[j + 2] = u24 & 255;
+//     result[j] = (u24 >> 16) & 255;
+//     result[j + 1] = (u24 >> 8) & 255;
+//     result[j + 2] = u24 & 255;
+//   }
+
+//   return result;
+// }
+
+function u64(v){
+  return Array.from(v).reduce((a, b) => a * 64 + chars.indexOf(b), 0);
+}
+
+function ifcGuidToUuid(ifcGuid){
+  const bs = [u64(ifcGuid.substring(0, 2))];
+  for (let i = 0; i < 5; i++) {
+    const d = u64(ifcGuid.substring(2 + 4 * i, 6 + 4 * i));
+    for (let j = 0; j < 3; j++) {
+      bs.push((d >> (8 * (2 - j))) % 256);
+    }
   }
-
-  return result;
+  const bsf = bs.map(b => b.toString(16).padStart(2, '0')).join("");
+  return `${bsf.slice(0, 8)}-${bsf.slice(8, 12)}-${bsf.slice(12, 16)}-${bsf.slice(16, 20)}-${bsf.slice(20)}`
 }
 
 
