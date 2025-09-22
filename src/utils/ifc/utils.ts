@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import WebIFC from 'web-ifc'
+import * as WebIFC from 'web-ifc'
 
 const IfcElements: { [key: number]: string } = {
   103090709: 'IFCPROJECT',

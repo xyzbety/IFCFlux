@@ -2,7 +2,7 @@
 import { IfcAPI, Vector, Color, Properties } from 'web-ifc'
 import { IFCPROJECT, IFCRELDEFINESBYPROPERTIES, IFCSPACE, IFCRELASSOCIATESCLASSIFICATION } from 'web-ifc'
 import proj4 from 'proj4'
-const { webcrypto } = require('crypto');
+// const { webcrypto } = require('crypto');
 
 import {
   getHash,
@@ -971,16 +971,16 @@ export function formatGuid(guid: string): string {
 // console.log(formatGuid('f70dd363-bfe3-495d-84a0-2c02dcb7d4d2')); // 压缩为短格式
 
 // 生成physical/dummy表的id字段方法（要求为整数）
-function generateNanoId() {
-  const buffer = new Uint8Array(8); // 64位 = 8字节
-  webcrypto.getRandomValues(buffer);
+// function generateNanoId() {
+//   const buffer = new Uint8Array(8); // 64位 = 8字节
+//   webcrypto.getRandomValues(buffer);
 
-  let nanoId = 0n;
-  for (let i = 0; i < buffer.length; i++) {
-    nanoId = (nanoId << 8n) | BigInt(buffer[i]);
-  }
+//   let nanoId = 0n;
+//   for (let i = 0; i < buffer.length; i++) {
+//     nanoId = (nanoId << 8n) | BigInt(buffer[i]);
+//   }
 
-  return nanoId;
-}
+//   return nanoId;
+// }
 
 // console.log(`Generated NanoID: ${generateNanoId()}`);

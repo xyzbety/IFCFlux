@@ -371,6 +371,14 @@ export default {
           cssClass: 'flat',
           size: 'normal',
           allowedSizes: ['normal']
+        },
+        {
+          label: '导出DUCK',
+          icon: 'export_glb material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
         }
       ]
     },

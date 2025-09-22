@@ -22,6 +22,9 @@ import { IfcPropertyUtils } from '../services/property-manager';
 import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
+import { IFCParser2DB } from '../utils/ifc/ifcparse2db'
+
+
 // Global declarations
 declare global {
     interface Window {
@@ -242,6 +245,31 @@ function createAppCore() {
         }
     }
 
+    const handleExportDuck = async () => {
+        console.log('handleExportDuck');
+        const fileName = modelStore.file?.name ?? "untitled";
+        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
+        console.log('fileNameWithoutExtension', fileNameWithoutExtension);
+        const exportFileName = `${fileNameWithoutExtension}.bin`;
+        console.log('modelStore.file', modelStore.file)
+        try {
+            const envConfig = {
+                x: 0, // 经度
+                y: 0, // 纬度
+                z: 0,
+                a: 0,
+                detail_level: 12
+            };
+            const parser = new IFCParser2DB();
+        } catch (error) {
+            console.error("导出失败:", error);
+            MessagePlugin.error({
+                content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
+                duration: 2000
+            });
+        }
+    }
+
     function clear() {
         if (measure) {
             measure.destroy();
@@ -448,7 +476,8 @@ function createAppCore() {
                     'scene-settings': handleChangeScene, 'animation-event': handleAnimationEvent,
                     'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
                     'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
-                    'export-settings': handleExportSetting
+                    'export-settings': handleExportSetting,
+                    'export-duck': handleExportDuck
                 };
                 eventMap[eventName]?.(...args);
             }

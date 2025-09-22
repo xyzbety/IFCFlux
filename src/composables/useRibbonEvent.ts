@@ -129,6 +129,7 @@ export class RibbonEventManager {
         this.singleEvents.set("属性表", debounce(() => this.options!.emit("properties-table")));
         this.singleEvents.set("重置光照", debounce(() => this.options!.emit("light-settings-reset")));
         this.singleEvents.set("导出GLB", debounce(() => this.options!.emit("export-settings", "glb")));
+        this.singleEvents.set("导出DUCK", debounce(() => this.options!.emit("export-duck", "bin")));
     }
     /**
      * 处理按钮点击
