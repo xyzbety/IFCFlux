@@ -1,5 +1,8 @@
 {
   "name": "IFCFlux",
+  "description": "本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理IFC模型数据",
+  "keywords": ["IFC","BIM"],
+  "author": "",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -45,9 +48,6 @@
   "peerDependencies": {
     "@turf/turf": "^7.2.0"
   },
-  "description": "专为查看和分析IFC文件设计。本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理BIM模型数据",
   "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "license": "Apache-2.0"
 }
