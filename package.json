@@ -1,5 +1,8 @@
 {
   "name": "IFCFlux",
+  "description": "本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理IFC模型数据",
+  "keywords": ["IFC","BIM"],
+  "author": "",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -15,19 +18,24 @@
     "@babylonjs/materials": "^8.25.0",
     "@babylonjs/serializers": "^8.25.0",
     "@blockly/field-colour": "^6.0.4",
+    "@duckdb/duckdb-wasm": "^1.30.0",
     "@jscad/modeling": "^2.12.5",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-cli": "~2",
     "@tauri-apps/plugin-dialog": "^2.3.3",
     "@tauri-apps/plugin-fs": "^2.4.2",
+    "@types/node": "20.11.30",
     "@visactor/vtable": "^1.19.8",
     "@visactor/vtable-search": "^1.19.8",
     "blockly": "^12.2.0",
+    "magic-string": "0.30.10",
     "pinia": "^3.0.3",
+    "proj4": "^2.11.0",
+    "rollup-plugin-node-externals": "7.1.2",
     "smart-webcomponents": "~23.1.1",
     "tdesign-icons-vue-next": "^0.3.7",
     "tdesign-vue-next": "^1.16.0",
-    "uuid": "^13.0.0",
+    "ts-node": "10.9.2",
     "vue": "^3.5.18",
     "web-ifc": "~0.0.71",
     "xe-utils": "3.7.8"
@@ -43,9 +51,6 @@
   "peerDependencies": {
     "@turf/turf": "^7.2.0"
   },
-  "description": "专为查看和分析IFC文件设计。本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理BIM模型数据",
   "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "license": "Apache-2.0"
 }

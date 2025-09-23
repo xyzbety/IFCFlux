@@ -371,6 +371,22 @@ export default {
           cssClass: 'flat',
           size: 'normal',
           allowedSizes: ['normal']
+        },
+        {
+          label: '导出DB',
+          icon: 'export_db material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        },
+        {
+          label: '导出JSON',
+          icon: 'export_json material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
         }
       ]
     },
@@ -541,7 +557,7 @@ export default {
             },
             {
               label: '',
-              tooltip:'背景颜色',
+              tooltip: '背景颜色',
               itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="colorPicker" ></smart-color-picker>',
               settings: {
                 valueDisplayMode: 'colorBox',
