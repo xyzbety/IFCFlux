@@ -16,6 +16,7 @@
     "core:path:default",
     "fs:default",
     "fs:allow-write-file",
-    "dialog:default"
+    "dialog:default",
+    "cli:default"
   ]
 }

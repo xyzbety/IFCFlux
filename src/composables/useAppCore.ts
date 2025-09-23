@@ -2,6 +2,7 @@ import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmou
 import { MessagePlugin } from 'tdesign-vue-next';
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '@tauri-apps/api/core';
+import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
@@ -22,6 +23,7 @@ import { IfcPropertyUtils } from '../services/property-manager';
 import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
+import { IfcLoader } from '../utils/loader/IfcLoader';
 // Global declarations
 declare global {
     interface Window {
@@ -434,6 +436,36 @@ function createAppCore() {
         }
     };
 
+    const convertFileByCli = async () => {
+        const matches = await getMatches();
+        if (matches.subcommand?.name === 'convert') {
+            const input = matches.subcommand.matches.args.input.value as string;
+            const output = matches.subcommand.matches.args.output.value as string;
+            await invoke('print_to_terminal', { message: '正在读取文件...' })
+            const content = await invoke('read_file', { path: input });
+            const encoder = new TextEncoder();
+            const buffer = encoder.encode(content as string).buffer;
+            if (buffer) {
+                const file = new File([buffer], 'converted.ifc', { type: 'application/ifc' });
+                const ifcLoader = new IfcLoader(file, sceneManager.scene!);
+                await ifcLoader.load();
+            } else {
+                console.error("无法获取 IFC 文件数据");
+            }
+            await invoke('print_to_terminal', { message: '正在进行文件格式转换...' })
+            const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, 'temp');
+            const glbFile = exportResult.files['temp.glb'];
+            if (!(glbFile instanceof Blob)) {
+                throw new Error("导出的文件格式无效");
+            }
+            const arrayBuffer = await glbFile.arrayBuffer();
+            await invoke('print_to_terminal', { message: '正在进行文件写入...' })
+            await invoke('write_binary_file', {
+                path: output,
+                data: Array.from(new Uint8Array(arrayBuffer)) 
+            });
+        }
+    }
     onMounted(async () => {
         const ribbonManager = RibbonEventManager.getInstance();
         ribbonManager.initialize({
@@ -469,6 +501,7 @@ function createAppCore() {
         if (isTauriEnv) await invoke('show_mainscreen').catch(console.error);
 
         watch(() => sceneStore.sceneSettings, handleChangeScene, { deep: true });
+        await convertFileByCli();
     });
 
     onUnmounted(() => {

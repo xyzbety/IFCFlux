@@ -18,9 +18,8 @@
         "minWidth": 700,
         "decorations": false,
         "visible": false,
-        "maximized":true
+        "maximized": true
       }
-      
     ],
     "security": {
       "csp": null
@@ -36,5 +35,50 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "cli": {
+      "description": "My Tauri App",
+      "args": [
+        {
+          "name": "verbose",
+          "short": "v",
+          "description": "Enable verbose output",
+          "takesValue": false
+        }
+      ],
+      "subcommands": {
+        "greet": {
+          "description": "Greet someone",
+          "args": [
+            {
+              "name": "name",
+              "description": "Name to greet",
+              "takesValue": true,
+              "required": true
+            }
+          ]
+        },
+        "convert": {
+          "description": "Convert IFC file to GLB",
+          "args": [
+            {
+              "name": "input",
+              "description": "Input IFC file path",
+              "takesValue": true,
+              "required": true,
+              "index": 1
+            },
+            {
+              "name": "output",
+              "description": "Output GLB file path",
+              "takesValue": true,
+              "required": true,
+              "index": 2
+            }
+          ]
+        }
+      }
+    }
   }
 }

@@ -259,7 +259,6 @@ export class IfcLoader {
                 buffer = await this.loadBinary(this.url);
             }
         }
-
         if (buffer) {
             this.modelID = await this.ifcApi.OpenModel(new Uint8Array(buffer), {
                 COORDINATE_TO_ORIGIN: false
