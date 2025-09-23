@@ -247,26 +247,39 @@ function createAppCore() {
 
     const handleExportDuck = async () => {
         console.log('handleExportDuck');
-        const fileName = modelStore.file?.name ?? "untitled";
-        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-        console.log('fileNameWithoutExtension', fileNameWithoutExtension);
-        const exportFileName = `${fileNameWithoutExtension}.bin`;
-        console.log('modelStore.file', modelStore.file)
-        try {
-            const envConfig = {
-                x: 0, // 经度
-                y: 0, // 纬度
-                z: 0,
-                a: 0,
-                detail_level: 12
-            };
-            const parser = new IFCParser2DB();
-        } catch (error) {
-            console.error("导出失败:", error);
-            MessagePlugin.error({
-                content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
-                duration: 2000
-            });
+        if (modelStore.file) {
+            const fileName = modelStore.file?.name ?? "untitled";
+            const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
+            console.log('fileNameWithoutExtension', fileNameWithoutExtension);
+            const exportFileName = `${fileNameWithoutExtension}.db`;
+            console.log('modelStore.file', modelStore.file)
+            try {
+                const envConfig = {
+                    x: 0, // 经度
+                    y: 0, // 纬度
+                    z: 0,
+                    a: 0,
+                    detail_level: 12
+                };
+                const parser = new IFCParser2DB();
+                const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig); // uuid为bin文件的文件名
+                console.log('result', result);
+                const blob = new Blob([result], { type: 'application/vnd.duckdb.database' }); // 使用正确的MIME类型
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${fileNameWithoutExtension}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error("导出失败:", error);
+                MessagePlugin.error({
+                    content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
+                    duration: 2000
+                });
+            }
         }
     }
 
@@ -477,7 +490,7 @@ function createAppCore() {
                     'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
                     'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
                     'export-settings': handleExportSetting,
-                    'export-duck': handleExportDuck
+                    'export-db': handleExportDuck
                 };
                 eventMap[eventName]?.(...args);
             }

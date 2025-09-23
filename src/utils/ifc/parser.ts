@@ -60,15 +60,17 @@ export class IFCParser {
   constructor(props: IFCParserProps) {
     const { fileId } = props
     this.ifcapi = new IfcAPI()
-    this.ifcapi.SetWasmPath('./', false)
+    this.ifcapi.SetWasmPath('/web-ifc/', false)
     this.fileId = fileId
 
   }
 
-  async parse(data: Buffer, detail_level: number) {
+  async parse(data: File, detail_level: number) {
     await this.ifcapi.Init()
+    console.log('parse data', data);
     // @ts-ignore
-    this.modelId = this.ifcapi.OpenModel(new Uint8Array(data), {
+    const buffer = await data.arrayBuffer()
+    this.modelId = this.ifcapi.OpenModel(new Uint8Array(buffer), {
       COORDINATE_TO_ORIGIN: false,
       // OPTIMIZE_PROFILES: true,
       CIRCLE_SEGMENTS: detail_level, // 测试一下
