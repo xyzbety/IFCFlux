@@ -268,7 +268,7 @@ function createAppCore() {
                     const url = URL.createObjectURL(result);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `${fileNameWithoutExtension}.duckdb`;
+                    a.download = `${fileNameWithoutExtension}.db`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);

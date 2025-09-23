@@ -77,7 +77,7 @@ export class IFCParser2DB {
         this.db = new duckdb.AsyncDuckDB(logger, worker);
         await this.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
         await this.db.open({
-            path: `opfs://${dbNane}.duckdb`,
+            path: `opfs://${dbNane}.db`,
             accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
         });
         this.cnn = await this.db.connect();
@@ -360,11 +360,14 @@ export class IFCParser2DB {
             // this.cnn.send(`COPY (SELECT * FROM memory.scene_attribute) TO '${dbNane}.json' (FORMAT json);`);
             // const parquet_buffer = await this.db.copyFileToBuffer(`${dbNane}.json`);
             // return parquet_buffer
+            if (this.cnn) await this.cnn.close();
+            if (this.db) await this.db.terminate();
 
             const opfsRoot = await navigator.storage.getDirectory();
+            console.log('opfsRoot', opfsRoot);
 
-            // Get handle to the .duckdb file
-             const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.duckdb`);
+            // Get handle to the .db file
+             const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`);
              
              return await fileHandle.getFile();
         } catch (error) {
