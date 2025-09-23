@@ -264,15 +264,16 @@ function createAppCore() {
                 const parser = new IFCParser2DB();
                 const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig); // uuid为bin文件的文件名
                 console.log('result', result);
-                const blob = new Blob([result], { type: 'application/vnd.duckdb.database' }); // 使用正确的MIME类型
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${fileNameWithoutExtension}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                if (result) {
+                    const url = URL.createObjectURL(result);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${fileNameWithoutExtension}.duckdb`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
             } catch (error) {
                 console.error("导出失败:", error);
                 MessagePlugin.error({

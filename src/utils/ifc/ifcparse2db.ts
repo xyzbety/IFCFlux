@@ -57,7 +57,7 @@ export class IFCParser2DB {
     }
 
     // 创建或打开DuckDB数据库
-    private async initDb() {
+    private async initDb(dbNane:string) {
         const baseUrl = window.location.origin
         const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
         mvp: {
@@ -76,6 +76,10 @@ export class IFCParser2DB {
         const logger = new duckdb.ConsoleLogger();
         this.db = new duckdb.AsyncDuckDB(logger, worker);
         await this.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+        await this.db.open({
+            path: `opfs://${dbNane}.duckdb`,
+            accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
+        });
         this.cnn = await this.db.connect();
     }
     // 初始Result数据
@@ -115,7 +119,8 @@ export class IFCParser2DB {
     // 处理ifc文件数据并导出到duckdb数据库入口
     async start(data: File, dbNane: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }) {
         const tableChunks: { [key: string]: string[] } = {};
-        await this.initDb();
+        const memoryDbName = `${dbNane}_${(new Date).getTime()}`;
+        await this.initDb(memoryDbName);
         this.data = data;
 
         if (envConfig && 'detail_level' in envConfig) {
@@ -352,20 +357,23 @@ export class IFCParser2DB {
             // await this.cnn.query(`ATTACH ':memory:' as ${dbNane}`);
             // await this.cnn.query(`USE ${dbNane}`);
 
-            this.cnn.send(`COPY (SELECT * FROM memory.scene_attribute) TO '${dbNane}.json' (FORMAT json);`);
-            const parquet_buffer = await this.db.copyFileToBuffer(`${dbNane}.json`);
-            return parquet_buffer
+            // this.cnn.send(`COPY (SELECT * FROM memory.scene_attribute) TO '${dbNane}.json' (FORMAT json);`);
+            // const parquet_buffer = await this.db.copyFileToBuffer(`${dbNane}.json`);
+            // return parquet_buffer
 
+            const opfsRoot = await navigator.storage.getDirectory();
+
+            // Get handle to the .duckdb file
+             const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.duckdb`);
+             
+             return await fileHandle.getFile();
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
             if (this.cnn) await this.cnn.close();
             if (this.db) await this.db.terminate();
         }
-        return {
-            'id': 'OK',
-            'tCount': 200
-        };
+        return false
     }
 
 }
