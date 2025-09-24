@@ -253,12 +253,6 @@ function createAppCore() {
             const exportFileName = `${fileNameWithoutExtension}.db`;
             
             // 显示加载中状态
-            MessagePlugin.loading({
-                content: '正在导出数据库文件，请稍候...',
-                duration: 0, // 设置为0表示不自动关闭
-                closeBtn: true
-            });
-            
             try {
                 const envConfig = {
                     x: 0, // 经度
@@ -269,9 +263,13 @@ function createAppCore() {
                 };
 
                 const parser = new IFCParser2DB();
-
                 if (!isTauriEnv) {
-                    const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig); // uuid为bin文件的文件名
+                    MessagePlugin.loading({
+                        content: '正在导出数据库文件，请稍候...',
+                        duration: 0, // 设置为0表示不自动关闭
+                        closeBtn: true
+                    });
+                    const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig);
                     console.log('result', result);
                     MessagePlugin.closeAll();
                     if (result) {
@@ -305,17 +303,25 @@ function createAppCore() {
                     MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
                     return;
                 }
-                const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig, true);
+                MessagePlugin.loading({
+                    content: '正在导出数据库文件，请稍候...',
+                    duration: 0, // 设置为0表示不自动关闭
+                    closeBtn: true
+                });
+                const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig);
                 console.log('result tauri', result);
-                await writeFile(savePath, result);
                 MessagePlugin.closeAll();
                 if (result) {
+                    const arrayBuffer = await result.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    await writeFile(savePath, uint8Array);
+                  
                     MessagePlugin.success({
                         content: '导出成功！',
                         duration: 1000
                     });
                 } else {
-                    MessagePlugin.error({
+                     MessagePlugin.error({
                         content: '导出失败: 参数错误！',
                         duration: 1000
                     });
