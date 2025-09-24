@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile } from '@tauri-apps/plugin-fs';
+import { writeFile, exists, remove } from '@tauri-apps/plugin-fs';
 import * as BABYLON from '@babylonjs/core';
 import { GLTF2Export } from "@babylonjs/serializers";
 import { useModelStore, useSceneStore, useSelectedStore } from '../store';
@@ -251,6 +251,14 @@ function createAppCore() {
             const fileName = modelStore.file?.name ?? "untitled";
             const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
             const exportFileName = `${fileNameWithoutExtension}.db`;
+            
+            // 显示加载中状态
+            MessagePlugin.loading({
+                content: '正在导出数据库文件，请稍候...',
+                duration: 0, // 设置为0表示不自动关闭
+                closeBtn: true
+            });
+            
             try {
                 const envConfig = {
                     x: 0, // 经度
@@ -261,27 +269,70 @@ function createAppCore() {
                 };
 
                 const parser = new IFCParser2DB();
-                const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig); // uuid为bin文件的文件名
-                console.log('result', result);
-                if (result) {
-                    const url = URL.createObjectURL(result);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = exportFileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
+
+                if (!isTauriEnv) {
+                    const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig); // uuid为bin文件的文件名
+                    console.log('result', result);
+                    MessagePlugin.closeAll();
+                    if (result) {
+                        const url = URL.createObjectURL(result);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = exportFileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        // 显示成功消息
+                        MessagePlugin.success({
+                            content: '导出成功！',
+                            duration: 1000
+                        });
+                    } else {
+                        MessagePlugin.error({
+                            content: '导出失败: 参数错误！',
+                            duration: 1000
+                        });
+                    }
+                    return;
                 }
+                const savePath = await save({
+                title: '请选择.db文件导出路径',
+                defaultPath: exportFileName,
+                filters: [{ name: "", extensions: ['db'] }]
+                });
+                if (!savePath) {
+                    MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
+                    return;
+                }
+                const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig, true);
+                console.log('result tauri', result);
+                await writeFile(savePath, result);
+                MessagePlugin.closeAll();
+                if (result) {
+                    MessagePlugin.success({
+                        content: '导出成功！',
+                        duration: 1000
+                    });
+                } else {
+                    MessagePlugin.error({
+                        content: '导出失败: 参数错误！',
+                        duration: 1000
+                    });
+                }
+                return;
             } catch (error) {
+                MessagePlugin.closeAll();
                 console.error("导出失败:", error);
                 MessagePlugin.error({
                     content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
-                    duration: 2000
+                    duration: 1000
                 });
+          
             }
-        }
     }
+}
+
 
     function clear() {
         if (measure) {

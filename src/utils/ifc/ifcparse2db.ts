@@ -57,7 +57,7 @@ export class IFCParser2DB {
     }
 
     // 创建或打开DuckDB数据库
-    private async initDb(dbNane:string) {
+    private async initDb(dbNane:string, isTauriEnv:boolean) {
         const baseUrl = window.location.origin
         const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
         mvp: {
@@ -77,7 +77,7 @@ export class IFCParser2DB {
         this.db = new duckdb.AsyncDuckDB(logger, worker);
         await this.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
         await this.db.open({
-            path: `opfs://${dbNane}.db`,
+            path: isTauriEnv? `${dbNane}.db`: `opfs://${dbNane}.db`,
             accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
         });
         this.cnn = await this.db.connect();
@@ -117,10 +117,10 @@ export class IFCParser2DB {
     // }
 
     // 处理ifc文件数据并导出到duckdb数据库入口
-    async start(data: File, dbNane: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }) {
+    async start(data: File, dbNane: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }, isTauriEnv: boolean = false) {
         const tableChunks: { [key: string]: string[] } = {};
         const memoryDbName = `${dbNane}_${(new Date).getTime()}`;
-        await this.initDb(memoryDbName);
+        await this.initDb(memoryDbName, isTauriEnv);
         this.data = data;
 
         if (envConfig && 'detail_level' in envConfig) {
@@ -355,15 +355,23 @@ export class IFCParser2DB {
             await this.cnn.query(`CHECKPOINT "${memoryDbName}"`)
             // await this.cnn.query(`ATTACH ':memory:' as ${memoryDbName}`);
             // await this.cnn.query(`USE ${memoryDbName}`);
+            console.log('isTauriEnv', isTauriEnv);
+            if (isTauriEnv) {
+                 // Tauri 环境：导出为二进制数据
+                if (this.cnn) await this.cnn.close();
+                const binaryData = await this.db.copyFileToBuffer(`${memoryDbName}.db`);
+                console.log('binaryData', binaryData);
+                return binaryData;
+            }
             if (this.cnn) await this.cnn.close();
             const opfsRoot = await navigator.storage.getDirectory();
             // Get handle to the .db file
-             const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`, {create: false});
-             return await fileHandle.getFile();
+            const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`, {create: false});
+            return await fileHandle.getFile();
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
-            // if (this.cnn) await this.cnn.close();
+
             // if (this.db) await this.db.terminate();
             if (this.db) await this.db.terminate();
 
