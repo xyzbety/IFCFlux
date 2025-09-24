@@ -57,7 +57,7 @@ export class IFCParser2DB {
     }
 
     // 创建或打开DuckDB数据库
-    private async initDb(dbNane:string, isTauriEnv:boolean) {
+    private async initDb(dbName:string, isTauriEnv:boolean) {
         const baseUrl = window.location.origin
         const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
         mvp: {
@@ -77,7 +77,7 @@ export class IFCParser2DB {
         this.db = new duckdb.AsyncDuckDB(logger, worker);
         await this.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
         await this.db.open({
-            path: isTauriEnv? `${dbNane}.db`: `opfs://${dbNane}.db`,
+            path: isTauriEnv? `${dbName}.db`: `opfs://${dbName}.db`,
             accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
         });
         this.cnn = await this.db.connect();
@@ -117,9 +117,9 @@ export class IFCParser2DB {
     // }
 
     // 处理ifc文件数据并导出到duckdb数据库入口
-    async start(data: File, dbNane: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }, isTauriEnv: boolean = false) {
+    async start(data: File, dbName: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }, isTauriEnv: boolean = false) {
         const tableChunks: { [key: string]: string[] } = {};
-        const memoryDbName = `${dbNane}_${(new Date).getTime()}`;
+        const memoryDbName = `${dbName}_${(new Date).getTime()}`;
         await this.initDb(memoryDbName, isTauriEnv);
         this.data = data;
 
