@@ -1,11 +1,7 @@
 import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
-import { MessagePlugin } from 'tdesign-vue-next';
-import { invoke } from '@tauri-apps/api/core';
-import { isTauri } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile } from '@tauri-apps/plugin-fs';
 import * as BABYLON from '@babylonjs/core';
 import { GLTF2Export } from "@babylonjs/serializers";
 import { useModelStore, useSceneStore, useSelectedStore } from '../store';
@@ -203,48 +199,10 @@ function createAppCore() {
     const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
     const handleLightSettingsReset = () => { isHightlight = true; sceneManager.resetLightSettings(); };
     const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
-    const handleExportSetting = async (type: string) => {
-        const fileName = modelStore.file?.name ?? "untitled";
-        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-        const exportFileName = `${fileNameWithoutExtension}.glb`;
-        try {
-            const options = {
-                shouldExportNode: (node: any) => {
-                    if (node instanceof BABYLON.Mesh) {
-                        return node.isEnabled() && node.getTotalVertices() > 0;
-                    }
-                    return true;
-                }
-            };
-            const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, fileNameWithoutExtension, options);
-            const glbFile = exportResult.files[exportFileName];
-            if (!(glbFile instanceof Blob)) {
-                throw new Error("导出的文件格式无效");
-            }
-            if (!isTauriEnv) {
-                exportResult.downloadFiles();
-                MessagePlugin.success({ content: '导出成功！', duration: 1000 });
-                return;
-            }
-            const savePath = await save({
-                title: '请选择.glb文件导出路径',
-                defaultPath: exportFileName,
-                filters: [{ name: "", extensions: ['glb'] }]
-            });
-            if (!savePath) {
-                MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-                return;
-            }
-            const arrayBuffer = await glbFile.arrayBuffer();
-            await writeFile(savePath, new Uint8Array(arrayBuffer));
-            MessagePlugin.success({ content: '导出成功！', duration: 1000 });
-        } catch (error) {
-            console.error("导出失败:", error);
-            MessagePlugin.error({
-                content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
-                duration: 2000
-            });
-        }
+
+    const handleExportSetting = async (type: 'glb' | 'db' | 'json') => {
+        console.log('handleExportSetting', type);
+        await sceneManager.exportSceneData(type, isTauriEnv);
     }
 
     const handleExportDuck = async () => {
@@ -490,7 +448,7 @@ function createAppCore() {
             await invoke('print_to_terminal', { message: '正在进行文件写入...' })
             await invoke('write_binary_file', {
                 path: output,
-                data: Array.from(new Uint8Array(arrayBuffer)) 
+                data: Array.from(new Uint8Array(arrayBuffer))
             });
         }
     }

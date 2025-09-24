@@ -15,7 +15,7 @@
     "core:window:allow-start-dragging",
     "core:path:default",
     "fs:default",
-    "fs:allow-write-file",
+    "fs:write-files",
     "dialog:default",
     "cli:default"
   ]
