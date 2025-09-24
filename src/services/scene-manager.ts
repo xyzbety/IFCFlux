@@ -11,6 +11,7 @@ import { Measure } from '../utils/analysis/measure';
 import { CubeView } from '../services/cube-manager'
 import { CameraHistoryManager } from './history-manager';
 import { useModelStore, useSceneStore } from '../store';
+import { IFCParser2DB } from '../utils/ifc/ifcparse2db'
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -789,6 +790,81 @@ export class SceneManager {
             return;
           }
           await writeTextFile(savePath, exportFile);
+        }
+      }
+      else if (type === 'db') {
+        if (this.modelStore.file) {
+          const fileName = this.modelStore.file?.name ?? "untitled";
+          const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
+          const exportFileName = `${fileNameWithoutExtension}.db`;
+          const envConfig = {
+              x: 0, // 经度
+              y: 0, // 纬度
+              z: 0,
+              a: 0,
+              detail_level: 12
+          };
+          const parser = new IFCParser2DB();
+          if (!isTauriEnv) {
+            MessagePlugin.loading({
+                content: '正在导出数据库文件，请稍候...',
+                duration: 0, // 设置为0表示不自动关闭
+                closeBtn: true
+            });
+            const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
+            console.log('result', result);
+            MessagePlugin.closeAll();
+            if (result) {
+              const url = URL.createObjectURL(result);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = exportFileName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              // 显示成功消息
+              MessagePlugin.success({
+                  content: '导出成功！',
+                  duration: 1000
+              });
+            } else {
+                MessagePlugin.error({
+                    content: '导出失败: 参数错误！',
+                    duration: 1000
+                });
+            }
+            return;
+          }
+          const savePath = await save(saveDialogConfig);
+          if (!savePath) {
+              MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
+              return;
+          }
+          MessagePlugin.loading({
+              content: '正在导出数据库文件，请稍候...',
+              duration: 0, // 设置为0表示不自动关闭
+              closeBtn: true
+          });
+          const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
+          console.log('result tauri', result);
+          MessagePlugin.closeAll();
+          if (result) {
+              const arrayBuffer = await result.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+              await writeFile(savePath, uint8Array);
+            
+              MessagePlugin.success({
+                  content: '导出成功！',
+                  duration: 1000
+              });
+          } else {
+                MessagePlugin.error({
+                  content: '导出失败: 参数错误！',
+                  duration: 1000
+              });
+          }
+          return;
         }
       }
       MessagePlugin.success({ content: '导出成功！', duration: 1000 });
