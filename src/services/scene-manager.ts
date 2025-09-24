@@ -1,12 +1,16 @@
 import * as BABYLON from '@babylonjs/core';
+import * as GUI from '@babylonjs/gui';
+import { GLTF2Export } from "@babylonjs/serializers";
+import { MessagePlugin } from 'tdesign-vue-next';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { setupCameraByBoundingBox, createGround } from '../utils';
-import { CameraHistoryManager } from './history-manager';
+import { IfcExplosion } from '../utils/ifc/IfcExplosion';
+import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { Measure } from '../utils/analysis/measure';
 import { CubeView } from '../services/cube-manager'
-import * as GUI from '@babylonjs/gui';
-import { SlicePlane } from '../utils/analysis/slice/slicePlane';
-import { IfcExplosion } from '../utils/ifc/IfcExplosion';
-import { useSceneStore } from '../store/scene-store';
+import { CameraHistoryManager } from './history-manager';
+import { useModelStore, useSceneStore } from '../store';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -29,6 +33,7 @@ export class SceneManager {
   private isolatedMeshIds: Set<string> = new Set(); // 存储已隔离的mesh ID
   private transparentMeshIds: Set<string> = new Set(); // 存储已半透明的mesh ID
   private sceneStore = useSceneStore();
+  private modelStore = useModelStore();
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -626,7 +631,7 @@ export class SceneManager {
       const boundingBoxSize = this.bbox.extendSize.scale(2);
       slicePlaneSize = Math.max(boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z) * 1.5;
     }
-    
+
     this.slicePlane = new SlicePlane(this.scene, slicePlaneSize);
     console.log("剖切面尺寸:", slicePlaneSize);
     this.slicePlane.start(action);
@@ -717,6 +722,82 @@ export class SceneManager {
 
     if (data.dragSpeed !== undefined && this.camera) {
       this.camera.panningSensibility = 20 - data.dragSpeed;
+    }
+  }
+
+  public async exportSceneData(type: 'glb' | 'db' | 'json', isTauriEnv: boolean) {
+    if (!this.scene) return;
+
+    const fileName = this.modelStore.file?.name ?? "untitled";
+    const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
+    const exportFileName = `${fileNameWithoutExtension}.${type}`;
+
+    const saveDialogConfig = {
+      title: `请选择 ${type} 文件导出路径`,
+      defaultPath: exportFileName,
+      filters: [{ name: "", extensions: [type] }]
+    };
+
+    try {
+      if (type === 'glb') {
+        const options = {
+          shouldExportNode: (node: any) => {
+            if (node instanceof BABYLON.Mesh) {
+              return node.isEnabled() && node.getTotalVertices() > 0;
+            }
+            return true;
+          }
+        };
+        const exportResult = await GLTF2Export.GLBAsync(this.scene!, fileNameWithoutExtension, options);
+        const exportFile = exportResult.files[exportFileName];
+        if (!(exportFile instanceof Blob)) {
+          throw new Error("导出的 GLB 文件格式无效");
+        }
+
+        if (!isTauriEnv) {
+          exportResult.downloadFiles();
+        } else {
+          const savePath = await save(saveDialogConfig);
+          if (!savePath) {
+            MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
+            return;
+          }
+          const arrayBuffer = await exportFile.arrayBuffer();
+          await writeFile(savePath, new Uint8Array(arrayBuffer));
+        }
+      }
+      else if (type === 'json') {
+        const exportDataScene = BABYLON.SceneSerializer.Serialize(this.scene!);
+        const exportFile = JSON.stringify(exportDataScene, null, 2);
+
+        if (!isTauriEnv) {
+          const blob = new Blob([exportFile], { type: "application/json" });
+          const a = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          a.href = url;
+          a.download = exportFileName;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 0);
+        } else {
+          const savePath = await save(saveDialogConfig);
+          if (!savePath) {
+            MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
+            return;
+          }
+          await writeTextFile(savePath, exportFile);
+        }
+      }
+      MessagePlugin.success({ content: '导出成功！', duration: 1000 });
+    } catch (error) {
+      console.error("导出失败:", error);
+      MessagePlugin.error({
+        content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
+        duration: 2000
+      });
     }
   }
 

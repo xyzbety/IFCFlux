@@ -1,10 +1,7 @@
 import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
-import { MessagePlugin } from 'tdesign-vue-next';
-import { invoke } from '@tauri-apps/api/core';
-import { isTauri } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
+import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile, exists, remove } from '@tauri-apps/plugin-fs';
 import * as BABYLON from '@babylonjs/core';
 import { GLTF2Export } from "@babylonjs/serializers";
 import { useModelStore, useSceneStore, useSelectedStore } from '../store';
@@ -22,7 +19,7 @@ import { IfcPropertyUtils } from '../services/property-manager';
 import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
-import { IFCParser2DB } from '../utils/ifc/ifcparse2db'
+import { IfcLoader } from '../utils/loader/IfcLoader';
 
 
 // Global declarations
@@ -201,144 +198,11 @@ function createAppCore() {
     const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
     const handleLightSettingsReset = () => { isHightlight = true; sceneManager.resetLightSettings(); };
     const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
-    const handleExportSetting = async (type: string) => {
-        const fileName = modelStore.file?.name ?? "untitled";
-        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-        const exportFileName = `${fileNameWithoutExtension}.glb`;
-        try {
-            const options = {
-                shouldExportNode: (node: any) => {
-                    if (node instanceof BABYLON.Mesh) {
-                        return node.isEnabled() && node.getTotalVertices() > 0;
-                    }
-                    return true;
-                }
-            };
-            const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, fileNameWithoutExtension, options);
-            const glbFile = exportResult.files[exportFileName];
-            if (!(glbFile instanceof Blob)) {
-                throw new Error("导出的文件格式无效");
-            }
-            if (!isTauriEnv) {
-                exportResult.downloadFiles();
-                MessagePlugin.success({ content: '导出成功！', duration: 1000 });
-                return;
-            }
-            const savePath = await save({
-                title: '请选择.glb文件导出路径',
-                defaultPath: exportFileName,
-                filters: [{ name: "", extensions: ['glb'] }]
-            });
-            if (!savePath) {
-                MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-                return;
-            }
-            const arrayBuffer = await glbFile.arrayBuffer();
-            await writeFile(savePath, new Uint8Array(arrayBuffer));
-            MessagePlugin.success({ content: '导出成功！', duration: 1000 });
-        } catch (error) {
-            console.error("导出失败:", error);
-            MessagePlugin.error({
-                content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
-                duration: 2000
-            });
-        }
+
+    const handleExportSetting = async (type: 'glb' | 'db' | 'json') => {
+        console.log('handleExportSetting', type);
+        await sceneManager.exportSceneData(type, isTauriEnv);
     }
-
-    const handleExportDuck = async () => {
-        console.log('handleExportDuck');
-        if (modelStore.file) {
-            const fileName = modelStore.file?.name ?? "untitled";
-            const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-            const exportFileName = `${fileNameWithoutExtension}.db`;
-            
-            // 显示加载中状态
-            try {
-                const envConfig = {
-                    x: 0, // 经度
-                    y: 0, // 纬度
-                    z: 0,
-                    a: 0,
-                    detail_level: 12
-                };
-
-                const parser = new IFCParser2DB();
-                if (!isTauriEnv) {
-                    MessagePlugin.loading({
-                        content: '正在导出数据库文件，请稍候...',
-                        duration: 0, // 设置为0表示不自动关闭
-                        closeBtn: true
-                    });
-                    const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig);
-                    console.log('result', result);
-                    MessagePlugin.closeAll();
-                    if (result) {
-                        const url = URL.createObjectURL(result);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = exportFileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                        // 显示成功消息
-                        MessagePlugin.success({
-                            content: '导出成功！',
-                            duration: 1000
-                        });
-                    } else {
-                        MessagePlugin.error({
-                            content: '导出失败: 参数错误！',
-                            duration: 1000
-                        });
-                    }
-                    return;
-                }
-                const savePath = await save({
-                title: '请选择.db文件导出路径',
-                defaultPath: exportFileName,
-                filters: [{ name: "", extensions: ['db'] }]
-                });
-                if (!savePath) {
-                    MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-                    return;
-                }
-                MessagePlugin.loading({
-                    content: '正在导出数据库文件，请稍候...',
-                    duration: 0, // 设置为0表示不自动关闭
-                    closeBtn: true
-                });
-                const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig);
-                console.log('result tauri', result);
-                MessagePlugin.closeAll();
-                if (result) {
-                    const arrayBuffer = await result.arrayBuffer();
-                    const uint8Array = new Uint8Array(arrayBuffer);
-                    await writeFile(savePath, uint8Array);
-                  
-                    MessagePlugin.success({
-                        content: '导出成功！',
-                        duration: 1000
-                    });
-                } else {
-                     MessagePlugin.error({
-                        content: '导出失败: 参数错误！',
-                        duration: 1000
-                    });
-                }
-                return;
-            } catch (error) {
-                MessagePlugin.closeAll();
-                console.error("导出失败:", error);
-                MessagePlugin.error({
-                    content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
-                    duration: 1000
-                });
-          
-            }
-    }
-}
-
 
     function clear() {
         if (measure) {
@@ -532,6 +396,47 @@ function createAppCore() {
         }
     };
 
+    const convertFileByCli = async () => {
+        const matches = await getMatches();
+        if (matches.subcommand?.name === 'convert') {
+            const input = matches.subcommand.matches.args.input.value as string;
+            const output = matches.subcommand.matches.args.output.value as string;
+            const extension = output.split('.').pop();
+            await invoke('print_to_terminal', { message: '正在读取文件...' })
+            const content = await invoke('read_file', { path: input });
+            const encoder = new TextEncoder();
+            const buffer = encoder.encode(content as string).buffer;
+            if (buffer) {
+                const file = new File([buffer], 'converted.ifc', { type: 'application/ifc' });
+                const ifcLoader = new IfcLoader(file, sceneManager.scene!);
+                await ifcLoader.load();
+            } else {
+                console.error("无法获取 IFC 文件数据");
+            }
+            await invoke('print_to_terminal', { message: '正在进行文件格式转换...' })
+            if (extension === 'glb') {
+                const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, 'temp');
+                const glbFile = exportResult.files['temp.glb'];
+                if (!(glbFile instanceof Blob)) {
+                    throw new Error("导出的文件格式无效");
+                }
+                const arrayBuffer = await glbFile.arrayBuffer();
+                await invoke('print_to_terminal', { message: '正在进行文件写入...' })
+                await invoke('write_binary_file', {
+                    path: output,
+                    data: Array.from(new Uint8Array(arrayBuffer))
+                });
+                return;
+            } else if (extension === 'json') {
+                const serializedScene = BABYLON.SceneSerializer.Serialize(sceneManager.scene!);
+                const strScene = JSON.stringify(serializedScene, null, 2);
+                await invoke('print_to_terminal', { message: '正在进行文件写入...' })
+                await invoke('write_json_file', { path:output, contents: strScene });
+                return;
+            }
+
+        }
+    }
     onMounted(async () => {
         const ribbonManager = RibbonEventManager.getInstance();
         ribbonManager.initialize({
@@ -547,7 +452,6 @@ function createAppCore() {
                     'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
                     'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
                     'export-settings': handleExportSetting,
-                    'export-db': handleExportDuck
                 };
                 eventMap[eventName]?.(...args);
             }
@@ -568,6 +472,7 @@ function createAppCore() {
         if (isTauriEnv) await invoke('show_mainscreen').catch(console.error);
 
         watch(() => sceneStore.sceneSettings, handleChangeScene, { deep: true });
+        await convertFileByCli();
     });
 
     onUnmounted(() => {
