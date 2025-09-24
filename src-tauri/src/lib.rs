@@ -15,7 +15,7 @@ fn convert_to_glb(_input_path: String, _output_path: String) -> Result<(), Strin
 #[tauri::command]
 async fn read_file(path: String) -> Result<String, String> {
     std::fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read file: {}", e))
+        .map_err(|e| format!("文件读取失败: {}", e))
 }
 #[tauri::command]
 async fn write_binary_file(path: String, data: Vec<u8>) -> Result<(), String> {
@@ -25,13 +25,13 @@ async fn write_binary_file(path: String, data: Vec<u8>) -> Result<(), String> {
     let total_size = data.len();
     let mut file = File::create(&path)
         .await
-        .map_err(|e| format!("Failed to create file: {}", e))?;
+        .map_err(|e| format!("文件创建失败: {}", e))?;
 
     let chunk_size = total_size / 10; 
     for (_i, chunk) in data.chunks(chunk_size).enumerate() {
         file.write_all(chunk)
             .await
-            .map_err(|e| format!("Failed to write chunk: {}", e))?;
+            .map_err(|e| format!("数据块写入失败: {}", e))?;
     }
 
     println!("文件写入完成！");
@@ -43,13 +43,36 @@ async fn write_binary_file(path: String, data: Vec<u8>) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn write_json_file(path: String, contents: String) -> Result<(), String> {
+    use tokio::fs::File;
+    use tokio::io::AsyncWriteExt;
+
+    // 创建文件并写入 JSON 数据
+    let mut file = File::create(&path)
+        .await
+        .map_err(|e| format!("文件创建失败: {}", e))?;
+
+    file.write_all(contents.as_bytes())
+        .await
+        .map_err(|e| format!("文件写入失败: {}", e))?;
+
+    println!("JSON 文件写入完成！");
+    #[cfg(target_os = "windows")]
+    if !cfg!(debug_assertions) {
+        println!("请按任意键继续...");
+    }
+    process::exit(0);
+}
+
+
+#[tauri::command]
 fn print_to_terminal(message: String) {
     println!("{}", message);
 }
 
 #[tauri::command]
 fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+    format!("你好, {}! Rust欢迎你!", name)
 }
 
 #[tauri::command]
@@ -75,7 +98,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
 
-        .invoke_handler(tauri::generate_handler![greet, show_mainscreen, convert_to_glb, read_file, write_binary_file, print_to_terminal])
+        .invoke_handler(tauri::generate_handler![greet, show_mainscreen, convert_to_glb, read_file, write_binary_file,write_json_file,print_to_terminal])
         .setup(|app| {
             match app.cli().matches() {
                 Ok(matches) => {
@@ -90,10 +113,10 @@ pub fn run() {
                         }
                     }
                 }
-                Err(e) => eprintln!("CLI error: {}", e),
+                Err(e) => eprintln!("命令行错误: {}", e),
             }
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("运行tauri应用程序失败");
 }
