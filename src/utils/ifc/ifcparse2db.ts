@@ -373,8 +373,8 @@ export class IFCParser2DB {
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
-            if (this.cnn) await this.cnn.close();
-            if (this.db) await this.db.terminate();
+            // if (this.cnn) await this.cnn.close();
+            // if (this.db) await this.db.terminate();
         }
         return false
     }

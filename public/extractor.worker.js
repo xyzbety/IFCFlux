@@ -583,12 +583,18 @@ function checkIfcType(value, ifcType, ifcTypes) {
     if (typeof value !== 'string') {
         return 3;
     }
+    if (value.length === 0) {
+        return 2
+    }
     return 0
   }
 
   if (ifcTypes === 'array') {
     if (typeof value !== 'string') {
         return 3;
+    }
+    if (value.length === 0) {
+        return 2
     }
     // 值域检查
     // const rawValue = ifcToText(value)
