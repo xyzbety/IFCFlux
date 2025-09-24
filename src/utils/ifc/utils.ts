@@ -1,4 +1,3 @@
-import crypto from 'crypto'
 import * as WebIFC from 'web-ifc'
 
 const IfcElements: { [key: number]: string } = {
@@ -1067,9 +1066,26 @@ const PropNames = {
   }
 }
 
-const getHash = (obj: any) => {
-  return crypto.createHash('md5').update(JSON.stringify(obj)).digest('hex')
+async function digestMessage(message: string, algorithm: 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512' = 'SHA-256'): Promise<string> {
+  // 将字符串编码为 Uint8Array
+  const msgBuffer = new TextEncoder().encode(message);
+
+  // 对数据进行哈希计算
+  const hashBuffer = await crypto.subtle.digest(algorithm, msgBuffer);
+
+  // 将 ArrayBuffer 转换为十六进制字符串
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return hashHex;
 }
+
+// 这是您新的 getHash 函数
+const getHash = async (obj: any): Promise<string> => {
+  const message = JSON.stringify(obj);
+  // 使用更安全的 SHA-256 算法
+  return await digestMessage(message, 'SHA-256');
+};
 
 export {
   IfcElements,

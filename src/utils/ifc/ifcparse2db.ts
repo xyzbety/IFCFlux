@@ -1,10 +1,6 @@
 import { IFCParser, formatGuid } from './parser'
 import { RelationElementInfo } from './utils'
 import * as duckdb from '@duckdb/duckdb-wasm';
-import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
-import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
-import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
-import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
 
 let graphicMaxId = 0;
 let geometryMaxId = 0;
@@ -15,6 +11,7 @@ export class IFCParser2DB {
     private dbName: string;
     // private filePath: string;
     private db: any;
+    private cnn: any;
     private data: any;
     private result: any;
     private projectGuid: any;
@@ -60,26 +57,30 @@ export class IFCParser2DB {
     }
 
     // 创建或打开DuckDB数据库
-    private async initDb(sqlFilePath: string) {
-        if (sqlFilePath.endsWith('.bin')) {
-            const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
-            mvp: {
-                mainModule: duckdb_wasm,
-                mainWorker: mvp_worker,
+    private async initDb(dbName:string) {
+        const baseUrl = window.location.origin
+        const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
+        mvp: {
+            mainModule: `${baseUrl}/duck-db/duckdb_mvp.wasm`,
+            mainWorker: `${baseUrl}/duck-db/duckdb-browser-mvp.worker.js`,
+        },
+        eh: {
+            mainModule: `${baseUrl}/duck-db/duckdb-eh.wasm`,
+            mainWorker: `${baseUrl}/duck-db/duckdb-browser-eh.worker.js`,
             },
-            eh: {
-                mainModule: duckdb_wasm_eh,
-                mainWorker: eh_worker,
-                },
-            };
-            // Select a bundle based on browser checks
-            const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
-            // Instantiate the asynchronous version of DuckDB-wasm
-            const worker = new Worker(bundle.mainWorker!);
-            const logger = new duckdb.ConsoleLogger();
-            this.db = new duckdb.AsyncDuckDB(logger, worker);
-
-        }
+        };
+        // Select a bundle based on browser checks
+        const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
+        // Instantiate the asynchronous version of DuckDB-wasm
+        const worker = new Worker(bundle.mainWorker!);
+        const logger = new duckdb.ConsoleLogger();
+        this.db = new duckdb.AsyncDuckDB(logger, worker);
+        await this.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+        await this.db.open({
+            path: `opfs://${dbName}.db`,
+            accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
+        });
+        this.cnn = await this.db.connect();
     }
     // 初始Result数据
     private async initResult(detail_level: number) {
@@ -116,11 +117,11 @@ export class IFCParser2DB {
     // }
 
     // 处理ifc文件数据并导出到duckdb数据库入口
-    async start(data: Buffer, sqlFilePath: string, uuid: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }) {
+    async start(data: File, dbName: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }) {
         const tableChunks: { [key: string]: string[] } = {};
-        await this.initDb(sqlFilePath);
+        const memoryDbName = `${dbName}_${(new Date).getTime()}`;
+        await this.initDb(memoryDbName);
         this.data = data;
-        this.uuid = uuid;
 
         if (envConfig && 'detail_level' in envConfig) {
             this.detail_level = envConfig.detail_level!;
@@ -164,10 +165,6 @@ export class IFCParser2DB {
         CREATE SEQUENCE seq_scene_dummy_id START 1;
         CREATE SEQUENCE seq_scene_relation_id START 1;
         CREATE SEQUENCE seq_scene_attribute_id START 1;
-        CREATE SEQUENCE seq_scene_material_id START 1;
-        CREATE SEQUENCE seq_scene_geo_id START 1;
-        CREATE SEQUENCE seq_scene_graphic_id START 1;
-        CREATE SEQUENCE seq_scene_texture_id START 1;
         
         CREATE TYPE MODEL_TYPE AS ENUM ('建筑', '人工', '倾斜', '点', '点云', '体素');
         CREATE TYPE ATTRIBUTE_VALUE_TYPE AS ENUM ('INT', 'VARCHAR', 'REAL', 'DOUBLE', 'BOOLEAN', 'DATE', 'TIME', 'ARRAY', 'LIST');
@@ -249,48 +246,6 @@ export class IFCParser2DB {
             value_unit TEXT
         );
         
-        // CREATE TABLE scene_graphic (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_graphic_id'),
-        //     guid UUID,
-        //     obb_center REAL[],
-        //     obb_halfsize REAL[],
-        //     obb_quaternion REAL[],
-        //     with_geometry INT[],
-        //     geometry_transform TEXT
-        // );
-        
-        // CREATE TABLE scene_geometry (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_geo_id'),
-        //     polygon_vertex REAL[],
-        //     polygon_normal REAL[],
-        //     polygon_facet INT[],
-        //     polygon_uv REAL[],
-        //     brep_param TEXT,
-        //     csg_param TEXT,
-        //     with_material INT[]
-        // );
-        
-        // CREATE TABLE scene_material (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_material_id'),
-        //     material_code INTEGER,
-        //     material_name TEXT,
-        //     material_color INT[],
-        //     material_opacity REAL,
-        //     material_gain REAL,
-        //     with_texture INT,
-        // );
-        
-        // CREATE TABLE scene_texture (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_texture_id'),
-        //     texture_code INTEGER,
-        //     texture_name TEXT,
-        //     texture_diffuse BLOB,
-        //     texture_normal BLOB,
-        //     texture_ao BLOB,
-        //     texture_metallic BLOB,
-        //     texture_roughness BLOB,
-        //     texture_displacement BLOB,
-        // );
         
         CREATE TABLE scene_view (
             id INTEGER PRIMARY KEY,
@@ -305,12 +260,12 @@ export class IFCParser2DB {
 
             // 执行.sql文件中的SQL命令
             // console.log(this.db);
-            await this.db.all(sqlCommands);
+            await this.cnn.query(sqlCommands);
             console.log('数据库已成功通过.sql文件创建。');
 
             /* 插入数据到scene_base表中 */
             await insertIntoSceneBase(
-                this.db,
+                this.cnn,
                 this.projectGuid,
                 this.modelName,
                 this.modelType,
@@ -360,7 +315,7 @@ export class IFCParser2DB {
             //===================  虚拟构件部分处理 ===================
             tableChunks['dummy'] = chunkJson(Object.values(this.parser.dummyElements));
             // 插入 虚拟构件 相关数据到scene_geometry元素几何表中，插入到scene_material共享材质表中，插入到scene_dummy元素图形表中
-            const dummyResult = await insertGraphicGeometryMaterial(this.parser, this.db, this.dummySpeckleMeshesMap);
+            // const dummyResult = await insertGraphicGeometryMaterial(this.parser, this.db, this.dummySpeckleMeshesMap);
 
             /* 插入 虚拟构件 相关数据到scene_graphic元素属性表中 */
             // tableChunks['graphic'] = chunkJson(dummyResult.graphic);
@@ -377,10 +332,10 @@ export class IFCParser2DB {
 
 
             // 集中数据导入到db：
-            await insertFromJsonChunks('physical', tableChunks['physical'], this.db);
-            await insertFromJsonChunks('attribute', tableChunks['attribute'], this.db);
-            await insertFromJsonChunks('dummy', tableChunks['dummy'], this.db);
-            await insertFromJsonChunks('relation', tableChunks['relation'], this.db);
+            await insertFromJsonChunks('physical', tableChunks['physical'], this.db, this.cnn);
+            await insertFromJsonChunks('attribute', tableChunks['attribute'], this.db, this.cnn);
+            await insertFromJsonChunks('dummy', tableChunks['dummy'], this.db, this.cnn);
+            await insertFromJsonChunks('relation', tableChunks['relation'], this.db, this.cnn);
             // await insertFromJsonChunks('graphic', tableChunks['graphic'], this.db);
             // await insertFromJsonChunks('geometry', tableChunks['geometry'], this.db);
             // await insertFromJsonChunks('material', tableChunks['material'], this.db);
@@ -397,27 +352,27 @@ export class IFCParser2DB {
             // console.log('siteInfo', this.siteCoord)
             console.log('result', this.result)
             // 使用时间戳命名临时数据库，防止可能的连接冲突
-            await this.db.all(`CHECKPOINT "${this.uuid}"`)
-            const memoryDbName = `memory_db_${(new Date).getTime()}`;
-            await this.db.all(`ATTACH ':memory:' as ${memoryDbName}`);
-            await this.db.all(`USE ${memoryDbName}`);
-            // await this.db.all(`DETACH "${this.uuid}"`);
-            await this.db.close();
-            // await checkWalFileExistence(sqlFilePath); // 检查WAL文件是否存在来决定程序是否退出 
+            await this.cnn.query(`CHECKPOINT "${memoryDbName}"`)
+            // await this.cnn.query(`ATTACH ':memory:' as ${memoryDbName}`);
+            // await this.cnn.query(`USE ${memoryDbName}`);
+            if (this.cnn) await this.cnn.close();
+            const opfsRoot = await navigator.storage.getDirectory();
+            // Get handle to the .db file
+            const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`, {create: false});
+            return await fileHandle.getFile();
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
 
+            // if (this.db) await this.db.terminate();
+            if (this.db) await this.db.terminate();
 
         }
-
-        return {
-            'id': 'OK',
-            'tCount': 200
-        };
+        return false
     }
 
 }
+
 
 // 将原有的函数拆分为两个，一个writeToJson专门写数据到json文件，一个insertJsonDataToTable专门对数据进行导入
 function chunkJson<T>(objects: T[], maxSize: number = 31457280): string[] {
@@ -451,15 +406,17 @@ function chunkJson<T>(objects: T[], maxSize: number = 31457280): string[] {
     return chunks;
 }
 
-async function insertFromJsonChunks(tableName: string, chunks: string[], db: any): Promise<number> {
+async function insertFromJsonChunks(tableName: string, chunks: string[], db: any, cnn:any): Promise<number> {
     for (let i = 0; i < chunks.length; i++) {
+        console.log('chunks[i]', chunks[i]);
         const fileName = `temp_${tableName}_${i}.json`;
         await db.registerFileText(fileName, chunks[i]);
         const query = `INSERT INTO scene_${tableName} FROM (SELECT * FROM read_json_auto('${fileName}', maximum_object_size = 167772160));`
         console.log('DB1:', db, query);
         try {
-            const prepared = await db.prepare(query);
-            await prepared.run();
+            const prepared = await cnn.prepare(query);
+            await prepared.send();
+            // await cnn.query(query);
             console.log('Inserted data from json chunk to table Successfully!');
         } catch (error) {
             console.error('Failed to insert data from json chunk to table!', error, fileName, tableName);
@@ -493,7 +450,7 @@ function generateUUID() {
 
 // 将数据插入到scene_base表中
 async function insertIntoSceneBase(
-    db: any,
+    cnn: any,
     guid: string,
     modelName: string,
     modelType: string,
@@ -512,8 +469,8 @@ async function insertIntoSceneBase(
     // console.log(guid, modelName, modelType, locationEPSG, locationX, locationY, locationZ, createTime, createVersion);
     try {
         // Using prepared statement for safety and performance
-        const prepared = await db.prepare(insertQuery);
-        await prepared.run(guid, modelName, modelType, locationEPSG, locationX, locationY, locationZ, locationAngle, createTime, createVersion);
+        const prepared = await cnn.prepare(insertQuery);
+        await prepared.send(guid, modelName, modelType, locationEPSG, locationX, locationY, locationZ, locationAngle, createTime, createVersion);
         console.log("scene_base表数据写入成功。");
     } catch (error) {
         console.error("scene_base表数据写入失败！", error);
