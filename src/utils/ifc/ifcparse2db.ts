@@ -352,34 +352,27 @@ export class IFCParser2DB {
             // console.log('siteInfo', this.siteCoord)
             console.log('result', this.result)
             // 使用时间戳命名临时数据库，防止可能的连接冲突
-            // await this.cnn.query(`CHECKPOINT "${this.uuid}"`)
-            // const memoryDbName = `memory_db_${(new Date).getTime()}`;
-            // await this.cnn.query(`ATTACH ':memory:' as ${dbNane}`);
-            // await this.cnn.query(`USE ${dbNane}`);
-
-            // this.cnn.send(`COPY (SELECT * FROM memory.scene_attribute) TO '${dbNane}.json' (FORMAT json);`);
-            // const parquet_buffer = await this.db.copyFileToBuffer(`${dbNane}.json`);
-            // return parquet_buffer
+            await this.cnn.query(`CHECKPOINT "${memoryDbName}"`)
+            // await this.cnn.query(`ATTACH ':memory:' as ${memoryDbName}`);
+            // await this.cnn.query(`USE ${memoryDbName}`);
             if (this.cnn) await this.cnn.close();
-            if (this.db) await this.db.terminate();
-
             const opfsRoot = await navigator.storage.getDirectory();
-            console.log('opfsRoot', opfsRoot);
-
             // Get handle to the .db file
-             const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`);
-             
+             const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`, {create: false});
              return await fileHandle.getFile();
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
             // if (this.cnn) await this.cnn.close();
             // if (this.db) await this.db.terminate();
+            if (this.db) await this.db.terminate();
+
         }
         return false
     }
 
 }
+
 
 // 将原有的函数拆分为两个，一个writeToJson专门写数据到json文件，一个insertJsonDataToTable专门对数据进行导入
 function chunkJson<T>(objects: T[], maxSize: number = 31457280): string[] {
@@ -423,7 +416,7 @@ async function insertFromJsonChunks(tableName: string, chunks: string[], db: any
         try {
             const prepared = await cnn.prepare(query);
             await prepared.send();
-            // await db.query(query);
+            // await cnn.query(query);
             console.log('Inserted data from json chunk to table Successfully!');
         } catch (error) {
             console.error('Failed to insert data from json chunk to table!', error, fileName, tableName);

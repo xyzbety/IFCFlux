@@ -250,9 +250,7 @@ function createAppCore() {
         if (modelStore.file) {
             const fileName = modelStore.file?.name ?? "untitled";
             const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-            console.log('fileNameWithoutExtension', fileNameWithoutExtension);
             const exportFileName = `${fileNameWithoutExtension}.db`;
-            console.log('modelStore.file', modelStore.file)
             try {
                 const envConfig = {
                     x: 0, // 经度
@@ -261,6 +259,7 @@ function createAppCore() {
                     a: 0,
                     detail_level: 12
                 };
+
                 const parser = new IFCParser2DB();
                 const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig); // uuid为bin文件的文件名
                 console.log('result', result);
@@ -268,7 +267,7 @@ function createAppCore() {
                     const url = URL.createObjectURL(result);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `${fileNameWithoutExtension}.db`;
+                    a.download = exportFileName;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
