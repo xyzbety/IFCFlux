@@ -34,7 +34,7 @@ async fn write_binary_file(path: String, data: Vec<u8>) -> Result<(), String> {
             .map_err(|e| format!("数据块写入失败: {}", e))?;
     }
 
-    println!("文件写入完成！");
+    println!("文件导出成功！");
     #[cfg(target_os = "windows")]
     if !cfg!(debug_assertions) {
         println!("请按任意键继续...");
@@ -56,7 +56,7 @@ async fn write_json_file(path: String, contents: String) -> Result<(), String> {
         .await
         .map_err(|e| format!("文件写入失败: {}", e))?;
 
-    println!("JSON 文件写入完成！");
+    println!("文件导出成功！");
     #[cfg(target_os = "windows")]
     if !cfg!(debug_assertions) {
         println!("请按任意键继续...");

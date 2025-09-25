@@ -20,7 +20,7 @@ import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
 import { IfcLoader } from '../utils/loader/IfcLoader';
-
+import { IFCParser2DB } from '../utils/ifc/ifcparse2db'
 
 // Global declarations
 declare global {
@@ -406,13 +406,10 @@ function createAppCore() {
             const content = await invoke('read_file', { path: input });
             const encoder = new TextEncoder();
             const buffer = encoder.encode(content as string).buffer;
-            if (buffer) {
-                const file = new File([buffer], 'converted.ifc', { type: 'application/ifc' });
-                const ifcLoader = new IfcLoader(file, sceneManager.scene!);
-                await ifcLoader.load();
-            } else {
-                console.error("无法获取 IFC 文件数据");
-            }
+            if (!buffer) return
+            const file = new File([buffer], 'converted.ifc', { type: 'application/ifc' });
+            const ifcLoader = new IfcLoader(file, sceneManager.scene!);
+            await ifcLoader.load();
             await invoke('print_to_terminal', { message: '正在进行文件格式转换...' })
             if (extension === 'glb') {
                 const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, 'temp');
@@ -421,7 +418,7 @@ function createAppCore() {
                     throw new Error("导出的文件格式无效");
                 }
                 const arrayBuffer = await glbFile.arrayBuffer();
-                await invoke('print_to_terminal', { message: '正在进行文件写入...' })
+                await invoke('print_to_terminal', { message: '正在进行文件导出...' })
                 await invoke('write_binary_file', {
                     path: output,
                     data: Array.from(new Uint8Array(arrayBuffer))
@@ -430,8 +427,34 @@ function createAppCore() {
             } else if (extension === 'json') {
                 const serializedScene = BABYLON.SceneSerializer.Serialize(sceneManager.scene!);
                 const strScene = JSON.stringify(serializedScene, null, 2);
-                await invoke('print_to_terminal', { message: '正在进行文件写入...' })
-                await invoke('write_json_file', { path:output, contents: strScene });
+                await invoke('print_to_terminal', { message: '正在进行文件导出...' })
+                await invoke('write_json_file', { path: output, contents: strScene });
+                return;
+            } else if (extension === 'db') {
+                const fileNameWithExt = input.split('\\').pop() || input;
+                const lastDotIndex = fileNameWithExt.lastIndexOf('.');
+                const fileName = lastDotIndex === -1
+                    ? fileNameWithExt
+                    : fileNameWithExt.substring(0, lastDotIndex);
+                const envConfig = {
+                    x: 0, // 经度
+                    y: 0, // 纬度
+                    z: 0,
+                    a: 0,
+                    detail_level: 12
+                };
+                const parser = new IFCParser2DB();
+                const result = await parser.start(file, fileName, envConfig);
+                if (!result) {
+                    await invoke('print_to_terminal', { message: '无法获取数据库文件' })
+                    return;
+                }
+                const arrayBuffer = await result.arrayBuffer();
+                await invoke('print_to_terminal', { message: '正在进行文件导出...' })
+                await invoke('write_binary_file', {
+                    path: output,
+                    data: Array.from(new Uint8Array(arrayBuffer))
+                });
                 return;
             }
 
