@@ -101,9 +101,9 @@ export class IFCParser {
     // create and save the spatial tree, populating both properties and geometry references
     // where appropriate
     this.spatialNodeCount = 0
-    const structure = await this.createSpatialStructure()
+    // const structure = await this.createSpatialStructure()
     // console.log('1111', this.ifcapi.modelSchemaList)
-    return { id: structure.id, tCount: structure.closureLen }
+    // return { id: structure.id, tCount: structure.closureLen }
   }
 
   // 获取site的坐标

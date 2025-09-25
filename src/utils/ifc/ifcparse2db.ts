@@ -32,6 +32,7 @@ export class IFCParser2DB {
     private locationA: any;
     private detail_level: number;
     private defaultOption: any;
+    private fileNames: any
 
     private uuid: any;
     private elementPsets:{ [key: number]: Set<string> } = {};
@@ -54,6 +55,7 @@ export class IFCParser2DB {
         this.createTime = Date.now();
         this.createVersion = '2.0.17';
         this.detail_level = 12;
+        this.fileNames = []
     }
 
     // 创建或打开DuckDB数据库
@@ -84,7 +86,7 @@ export class IFCParser2DB {
     }
     // 初始Result数据
     private async initResult(detail_level: number) {
-        this.result = await this.parser.parse(this.data, detail_level)
+        await this.parser.parse(this.data, detail_level)
     }
     // 初始siteCoord数据
     private async initSiteCoord() {
@@ -328,14 +330,14 @@ export class IFCParser2DB {
 
 
             //===================  关系元素部分处理 ===================
-            tableChunks['relation'] = chunkJson(Object.values(this.parser.relationElements));
+            // tableChunks['relation'] = chunkJson(Object.values(this.parser.relationElements));
 
 
             // 集中数据导入到db：
-            await insertFromJsonChunks('physical', tableChunks['physical'], this.db, this.cnn);
-            await insertFromJsonChunks('attribute', tableChunks['attribute'], this.db, this.cnn);
-            await insertFromJsonChunks('dummy', tableChunks['dummy'], this.db, this.cnn);
-            await insertFromJsonChunks('relation', tableChunks['relation'], this.db, this.cnn);
+            await insertFromJsonChunks('physical', tableChunks['physical'], this.db, this.cnn, this.fileNames);
+            await insertFromJsonChunks('attribute', tableChunks['attribute'], this.db, this.cnn, this.fileNames);
+            await insertFromJsonChunks('dummy', tableChunks['dummy'], this.db, this.cnn, this.fileNames);
+            // await insertFromJsonChunks('relation', tableChunks['relation'], this.db, this.cnn, this.fileNames);
             // await insertFromJsonChunks('graphic', tableChunks['graphic'], this.db);
             // await insertFromJsonChunks('geometry', tableChunks['geometry'], this.db);
             // await insertFromJsonChunks('material', tableChunks['material'], this.db);
@@ -350,7 +352,6 @@ export class IFCParser2DB {
             // 关闭数据库连接
             // this.db.close(); // ?????????????????????????????????? 切换到空数据库以解锁
             // console.log('siteInfo', this.siteCoord)
-            console.log('result', this.result)
             // 使用时间戳命名临时数据库，防止可能的连接冲突
             await this.cnn.query(`CHECKPOINT "${memoryDbName}"`)
             // await this.cnn.query(`ATTACH ':memory:' as ${memoryDbName}`);
@@ -363,10 +364,10 @@ export class IFCParser2DB {
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
-
-            // if (this.db) await this.db.terminate();
+            this.fileNames.forEach((item:string) => {
+                this.db.dropFile(item)
+            });
             if (this.db) await this.db.terminate();
-
         }
         return false
     }
@@ -406,10 +407,11 @@ function chunkJson<T>(objects: T[], maxSize: number = 31457280): string[] {
     return chunks;
 }
 
-async function insertFromJsonChunks(tableName: string, chunks: string[], db: any, cnn:any): Promise<number> {
+async function insertFromJsonChunks(tableName: string, chunks: string[], db: any, cnn:any, fileNames: any): Promise<number> {
     for (let i = 0; i < chunks.length; i++) {
         console.log('chunks[i]', chunks[i]);
         const fileName = `temp_${tableName}_${i}.json`;
+        fileNames.push(fileName);
         await db.registerFileText(fileName, chunks[i]);
         const query = `INSERT INTO scene_${tableName} FROM (SELECT * FROM read_json_auto('${fileName}', maximum_object_size = 167772160));`
         console.log('DB1:', db, query);
@@ -420,9 +422,10 @@ async function insertFromJsonChunks(tableName: string, chunks: string[], db: any
             console.log('Inserted data from json chunk to table Successfully!');
         } catch (error) {
             console.error('Failed to insert data from json chunk to table!', error, fileName, tableName);
-        } finally {
-            await db.dropFile(fileName);
+        // } finally {
+        //     await db.dropFile(fileName);
         }
+    
     }
     return 1;
 }
