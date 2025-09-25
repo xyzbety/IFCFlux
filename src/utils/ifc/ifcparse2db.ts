@@ -86,7 +86,7 @@ export class IFCParser2DB {
     }
     // 初始Result数据
     private async initResult(detail_level: number) {
-        this.result = await this.parser.parse(this.data, detail_level)
+        await this.parser.parse(this.data, detail_level)
     }
     // 初始siteCoord数据
     private async initSiteCoord() {
@@ -352,7 +352,6 @@ export class IFCParser2DB {
             // 关闭数据库连接
             // this.db.close(); // ?????????????????????????????????? 切换到空数据库以解锁
             // console.log('siteInfo', this.siteCoord)
-            console.log('result', this.result)
             // 使用时间戳命名临时数据库，防止可能的连接冲突
             await this.cnn.query(`CHECKPOINT "${memoryDbName}"`)
             // await this.cnn.query(`ATTACH ':memory:' as ${memoryDbName}`);
