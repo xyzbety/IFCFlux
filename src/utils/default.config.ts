@@ -392,30 +392,6 @@ export default {
     },
     ]
   },
-  // {
-  //   label: '分析',
-  //   ribbonGroups: [{
-  //     label: '分析',
-  //     icon: 'select material-icons',
-  //     ribbonItems: [
-  //       {
-  //         label: '生成空间',
-  //         icon: 'pan_tool material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       },
-  //       {
-  //         label: '导出',
-  //         icon: 'zoom_out_map material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       }]
-  //   }]
-  // },
   {
     label: '设置',
     wrapSize: 'small',

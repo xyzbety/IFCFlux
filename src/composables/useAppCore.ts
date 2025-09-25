@@ -9,7 +9,6 @@ import { useSettingsStore } from '../store/settings';
 import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
 import { updateTempLineLabel } from '../utils/index';
-import { IfcSpaceGen } from "../utils/ifc/ifcspacegen";
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
 import { useLayoutManager } from './useLayoutManager';
 import { ModelManager } from "../services/model-manager";
@@ -110,8 +109,9 @@ function createAppCore() {
             return;
         }
         switch (tabIndex) {
-            case 0: case 2: switchToMode(LM.VIEW); break;
+            case 0: switchToMode(LM.VIEW); break;
             case 1: switchToMode(LM.CANVAS_ONLY); break;
+            case 2: switchToMode(LM.VIEW); break;
             case 3: switchToMode(LM.VIEW); break;
             default: switchToMode(LM.VIEW);
         }
@@ -244,39 +244,6 @@ function createAppCore() {
         inspectType.value = map[event as keyof typeof map];
         switchToMode(LM.INSPECT);
         if (modelStore.file) modelManager.setupInspectDataListener(modelStore.file, event);
-    };
-
-    const handleSpaceGenerate = async (action: 'generate' | 'export') => {
-        if (modelStore.file && sceneManager.scene) {
-            const scene = sceneManager.scene;
-            const gen = new IfcSpaceGen(modelStore.file);
-            const result = await gen.generateSpaces();
-            if (action === 'generate') {
-                result.forEach((mesh: any, idx: number) => {
-                    const customMesh = new BABYLON.Mesh(`space_${idx}`, scene);
-                    const vertexData = new BABYLON.VertexData();
-                    vertexData.positions = mesh.vertexData.flat();
-                    vertexData.indices = mesh.faceData.flat();
-                    if (vertexData.positions && vertexData.indices) {
-                        vertexData.normals = new Array(vertexData.positions.length).fill(0);
-                        BABYLON.VertexData.ComputeNormals(vertexData.positions, vertexData.indices, vertexData.normals);
-                        vertexData.applyToMesh(customMesh);
-                        const mat = new BABYLON.StandardMaterial(`mat_${idx}`, scene);
-                        mat.diffuseColor = new BABYLON.Color3(1, 0, 0);
-                        mat.alpha = 1;
-                        customMesh.material = mat;
-                    }
-                });
-                alert("生成空间成功");
-            } else if (action === 'export') {
-                if (result.length > 0) {
-                    await gen.save();
-                    alert("导出成功！");
-                } else {
-                    alert("导出失败，请检查空间数据或模型！");
-                }
-            }
-        }
     };
 
     const onTableSelectChange = (event: any) => {
@@ -433,11 +400,10 @@ function createAppCore() {
                     'navigate-event': handleNavigate, 'change-view': handleView, 'visible-control': handleVisibility,
                     'measure-event': handleMeasure, 'slice-event': handleSlice, 'build-tree': handleBuildTree,
                     'properties-table': handlePropertiesTable, 'file-uploaded': handleFileUploaded,
-                    'space-generate': handleSpaceGenerate, 'light-settings': handleLightSettings,
-                    'inspect-click': handleInspectClick, 'light-settings-reset': handleLightSettingsReset,
-                    'scene-settings': handleChangeScene, 'ribbon-tab-change': handleRibbonTabChange,
-                    'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
-                    'export-settings': handleExportSetting,
+                    'light-settings': handleLightSettings, 'inspect-click': handleInspectClick,
+                    'light-settings-reset': handleLightSettingsReset, 'scene-settings': handleChangeScene,
+                    'ribbon-tab-change': handleRibbonTabChange, 'toggle-file-menu': toggleFileMenu,
+                    'interaction-settings': handleFocusOnClick, 'export-settings': handleExportSetting,
                 };
                 eventMap[eventName]?.(...args);
             }
@@ -471,7 +437,7 @@ function createAppCore() {
     });
 
     return {
-        isMaximized, isSidebarVisible, layoutState, structureTreeRef, 
+        isMaximized, isSidebarVisible, layoutState, structureTreeRef,
         leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
         themeStyle, inspectType,
         handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,

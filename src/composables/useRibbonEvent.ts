@@ -82,13 +82,6 @@ export class RibbonEventManager {
                 params: ["visible", "x", "y", "z", "reset"]
             },
 
-            // 空间生成事件
-            {
-                labels: ["生成空间", "导出"],
-                type: "space-generate",
-                params: ["generate", "export"]
-            },
-
             // 爆炸图事件
             {
                 labels: ["楼层抽屉", "轴向爆炸", "清除效果"],

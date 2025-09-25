@@ -13,8 +13,6 @@ export interface LayoutState {
 export enum LayoutMode {
   VIEW = 0,        // 查看模式：构件树 + 画布 + 属性表
   INSPECT = 1,     // 检查模式：检查结果 + 画布
-  ANALYSIS = 2,    // 分析模式：检查结果 + 画布
-  MEASURE = 3,     // 测量模式：检查结果 + 画布
   CANVAS_ONLY = 5  // 画布模式：只显示画布
 }
 
@@ -74,8 +72,6 @@ function createLayoutManager() {
   const layoutState = computed<LayoutState>(() => {
     switch (currentMode.value) {
       case LayoutMode.VIEW:
-      case LayoutMode.ANALYSIS:
-      case LayoutMode.MEASURE:
         return {
           showStructureTree: structureTreeVisible.value,
           showPropertyTable: propertyTableVisible.value,
