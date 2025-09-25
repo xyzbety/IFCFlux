@@ -170,7 +170,7 @@ smart-ribbon:focus>div.smart-ribbon {
 /* 确保画布区域正确伸缩 */
 #rightArea {
   transition: flex 0.3s ease;
-  min-width: 300px;
+  width: 300px;
 }
 
 /* 更新中间容器的flex布局 */
