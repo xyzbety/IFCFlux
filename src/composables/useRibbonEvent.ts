@@ -89,13 +89,6 @@ export class RibbonEventManager {
                 params: ["generate", "export"]
             },
 
-            // 动画事件
-            {
-                labels: ["开始", "暂停", "停止", "脚本库"],
-                type: "animation-event",
-                params: ["start", "pause", "stop", "toolbox"]
-            },
-
             // 爆炸图事件
             {
                 labels: ["楼层抽屉", "轴向爆炸", "清除效果"],

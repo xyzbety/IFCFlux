@@ -23,15 +23,6 @@
       :current-width="layoutState.structureTreeWidth" :show-handle="true" @drag-start="handleDragStart" />
 
     <div id="canvas-middle">
-      <!-- 动画控制器组件 -->
-      <div v-show="layoutState.showAnimationPanel"
-        :style="{ width: layoutState.animationPanelWidth, minWidth: layoutState.showAnimationPanel ? '300px' : '0' }">
-        <AnimationController ref="animationControllerRef" :is-visible="layoutState.showAnimationPanel"
-          :scene="sceneManager.scene" :initial-camera-state="sceneManager.initialCameraState"
-          :camera="sceneManager.camera" :original-material-properties="originalMaterialProperties"
-          @animation-event="handleAnimationEvent" />
-      </div>
-
       <!-- 检查结果区域 -->
       <div class="inspect-wrapper" v-show="layoutState.showInspectResult" :style="{
         width: layoutState.inspectResultWidth + 'px',
@@ -48,7 +39,7 @@
       </div>
 
       <!-- 主画布区域 -->
-      <div id="rightArea" :style="{ flex: layoutState.showAnimationPanel ? '2 1 0' : '1 1 0' }">
+      <div id="rightArea" :style="{ flex: '1 1 0' }">
         <div id="viewer" style="position: relative; width: 100%; height: 100%;">
           <BabylonViewer></BabylonViewer>
           <cubeView v-show="modelStore.modelData"></cubeView>
@@ -82,7 +73,6 @@ import Sidebar from './components/menu/Sidebar.vue';
 import TitleBar from './components/menu/TitleBar.vue';
 import DragBar from './components/DragBar.vue';
 import Ribbon from "./components/menu/Ribbon.vue";
-import AnimationController from './components/AnimationController.vue';
 import Dialog from './components/Dialog.vue';
 import Inspect from './components/check/InspectionReport.vue';
 import StructureTree from './components/view/StructureTree.vue';
@@ -95,13 +85,12 @@ import { useModelStore } from './store';
 import { eventManager } from './services/event-manager';
 
 const {
-  isMaximized, isSidebarVisible, layoutState, structureTreeRef, animationControllerRef,
+  isMaximized, isSidebarVisible, layoutState, structureTreeRef, 
   leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab,
   themeStyle, inspectType,
   handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
   toggleStructureTreeDialog, togglePropertyTableDialog, tableRowClick, onTableSelectChange,
   handleDragStart, onInspectVisibleChange, handleTabChange,
-  sceneManager, originalMaterialProperties, handleAnimationEvent
 } = useAppCore();
 
 const modelStore = useModelStore();
@@ -159,13 +148,6 @@ smart-ribbon:focus>div.smart-ribbon {
   margin: 15px;
 }
 
-/* 更新动画面板样式 */
-#canvas-middle>div:first-child {
-  /* 动画面板样式 */
-  background: #f8f8f8;
-  border-right: 1px solid #e0e0e0;
-  transition: width 0.3s ease;
-}
 
 /* 确保画布区域正确伸缩 */
 #rightArea {

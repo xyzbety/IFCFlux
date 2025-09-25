@@ -11,7 +11,6 @@ import { ifcPropertyColumns } from '../utils/config';
 import { updateTempLineLabel } from '../utils/index';
 import { IfcSpaceGen } from "../utils/ifc/ifcspacegen";
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
-import * as animationFns from '../utils/blockly/animation';
 import { useLayoutManager } from './useLayoutManager';
 import { ModelManager } from "../services/model-manager";
 import { useDragResize } from './useDragResize';
@@ -22,27 +21,11 @@ import { eventManager } from '../services/event-manager';
 import { IfcLoader } from '../utils/loader/IfcLoader';
 import { IFCParser2DB } from '../utils/ifc/ifcparse2db'
 
-// Global declarations
-declare global {
-    interface Window {
-        isAnimationStopped: boolean;
-        [key: string]: any;
-    }
-}
-
 // 单例实例存储
 let appCoreInstance: ReturnType<typeof createAppCore> | null = null;
 
 function createAppCore() {
     let initResult: any = null; // 用于存储初始化结果
-    // 批量挂载所有导出函数到 window
-    Object.keys(animationFns).forEach((key: any) => {
-        // 只挂载函数
-        if (typeof (animationFns as any)[key] === 'function') {
-            window[key] = (animationFns as any)[key];
-        }
-    });
-    window.isAnimationStopped = false;
 
     const isTauriEnv = isTauri();
     let isMaximized = ref(true);
@@ -75,7 +58,6 @@ function createAppCore() {
     } = useLayoutManager();
 
     const structureTreeRef = ref();
-    const animationControllerRef = ref();
     const leftDragBarRef = ref<any>(null);
     const inspectDragBarRef = ref<any>(null);
     const rightDragBarRef = ref<any>(null);
@@ -131,12 +113,6 @@ function createAppCore() {
             case 0: case 2: switchToMode(LM.VIEW); break;
             case 1: switchToMode(LM.CANVAS_ONLY); break;
             case 3: switchToMode(LM.VIEW); break;
-            case 4:
-                switchToMode(LM.ANIMATION);
-                if (animationControllerRef.value) {
-                    animationControllerRef.value.initializeBlockly();
-                }
-                break;
             default: switchToMode(LM.VIEW);
         }
     };
@@ -223,9 +199,6 @@ function createAppCore() {
         measure = null;
         CoordinateTemp.point = null;
         sceneManager.clear();
-        if (animationControllerRef.value) {
-            animationControllerRef.value.resetAnimationState();
-        }
     }
 
     const handleFileUploaded = async (file: File) => {
@@ -250,7 +223,6 @@ function createAppCore() {
 
                     sceneManager.setIfcExplosion(new IfcExplosion(scene));
                     switchToMode(LM.VIEW);
-                    if (animationControllerRef.value) animationControllerRef.value.initializeBlockly();
                     sceneManager.setupCameraAndLight();
                     const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
                     if (handleGridCheckbox.checked) {
@@ -264,14 +236,6 @@ function createAppCore() {
         } catch (error) {
             console.error("Error loading model in App.vue:", error);
         }
-    };
-
-    const handleAnimationEvent = async (action: any) => {
-        if (animationControllerRef.value) await animationControllerRef.value.handleAnimationEvent(action);
-    };
-
-    const handleAnimationClick = (event: string) => {
-        if (event === 'click' && animationControllerRef.value) animationControllerRef.value.initializeBlockly();
     };
 
     const handleInspectClick = async (event: number) => {
@@ -471,8 +435,7 @@ function createAppCore() {
                     'properties-table': handlePropertiesTable, 'file-uploaded': handleFileUploaded,
                     'space-generate': handleSpaceGenerate, 'light-settings': handleLightSettings,
                     'inspect-click': handleInspectClick, 'light-settings-reset': handleLightSettingsReset,
-                    'scene-settings': handleChangeScene, 'animation-event': handleAnimationEvent,
-                    'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
+                    'scene-settings': handleChangeScene, 'ribbon-tab-change': handleRibbonTabChange,
                     'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
                     'export-settings': handleExportSetting,
                 };
@@ -508,7 +471,7 @@ function createAppCore() {
     });
 
     return {
-        isMaximized, isSidebarVisible, layoutState, structureTreeRef, animationControllerRef,
+        isMaximized, isSidebarVisible, layoutState, structureTreeRef, 
         leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
         themeStyle, inspectType,
         handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
@@ -516,7 +479,6 @@ function createAppCore() {
         handleDragStart, onInspectVisibleChange, handleTabChange,
         sceneManager,
         originalMaterialProperties,
-        handleAnimationEvent
     };
 }
 

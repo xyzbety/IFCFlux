@@ -4,11 +4,9 @@ export interface LayoutState {
   showStructureTree: boolean;
   showPropertyTable: boolean;
   showInspectResult: boolean;
-  showAnimationPanel: boolean;
   structureTreeWidth: number;
   propertyTableWidth: number;
   inspectResultWidth: number;
-  animationPanelWidth: string; // 使用百分比
 }
 
 // 定义布局模式枚举
@@ -17,7 +15,6 @@ export enum LayoutMode {
   INSPECT = 1,     // 检查模式：检查结果 + 画布
   ANALYSIS = 2,    // 分析模式：检查结果 + 画布
   MEASURE = 3,     // 测量模式：检查结果 + 画布
-  ANIMATION = 4,   // 动画模式：动画面板 + 画布
   CANVAS_ONLY = 5  // 画布模式：只显示画布
 }
 
@@ -38,7 +35,6 @@ function createLayoutManager() {
     structureTree: 300,
     propertyTable: 300,
     inspectResult: 800,
-    animationPanel: '33.33%'
   });
 
   // 默认宽度配置
@@ -46,7 +42,6 @@ function createLayoutManager() {
     structureTree: 300,
     propertyTable: 300,
     inspectResult: 800,
-    animationPanel: '33.33%'
   };
 
   // 更新按钮选中状态的辅助函数
@@ -85,11 +80,9 @@ function createLayoutManager() {
           showStructureTree: structureTreeVisible.value,
           showPropertyTable: propertyTableVisible.value,
           showInspectResult: false,
-          showAnimationPanel: false,
           structureTreeWidth: structureTreeVisible.value ? dynamicWidths.value.structureTree : 0,
           propertyTableWidth: propertyTableVisible.value ? dynamicWidths.value.propertyTable : 0,
           inspectResultWidth: 0,
-          animationPanelWidth: '0%'
         };
 
       case LayoutMode.INSPECT:
@@ -97,23 +90,9 @@ function createLayoutManager() {
           showStructureTree: false,
           showPropertyTable: false,
           showInspectResult: true,
-          showAnimationPanel: false,
           structureTreeWidth: 0,
           propertyTableWidth: 0,
           inspectResultWidth: dynamicWidths.value.inspectResult,
-          animationPanelWidth: '0%'
-        };
-
-      case LayoutMode.ANIMATION:
-        return {
-          showStructureTree: false,
-          showPropertyTable: false,
-          showInspectResult: false,
-          showAnimationPanel: true,
-          structureTreeWidth: 0,
-          propertyTableWidth: 0,
-          inspectResultWidth: 0,
-          animationPanelWidth: dynamicWidths.value.animationPanel
         };
 
       case LayoutMode.CANVAS_ONLY:
@@ -121,11 +100,9 @@ function createLayoutManager() {
           showStructureTree: false,
           showPropertyTable: false,
           showInspectResult: false,
-          showAnimationPanel: false,
           structureTreeWidth: 0,
           propertyTableWidth: 0,
           inspectResultWidth: 0,
-          animationPanelWidth: '0%'
         };
 
       default:
@@ -133,11 +110,9 @@ function createLayoutManager() {
           showStructureTree: structureTreeVisible.value,
           showPropertyTable: propertyTableVisible.value,
           showInspectResult: false,
-          showAnimationPanel: false,
           structureTreeWidth: structureTreeVisible.value ? dynamicWidths.value.structureTree : 0,
           propertyTableWidth: propertyTableVisible.value ? dynamicWidths.value.propertyTable : 0,
           inspectResultWidth: 0,
-          animationPanelWidth: '0%'
         };
     }
   });
@@ -214,10 +189,6 @@ function createLayoutManager() {
     dynamicWidths.value.inspectResult = Math.max(300, width);
   };
 
-  const setAnimationPanelWidth = (width: string) => {
-    dynamicWidths.value.animationPanel = width;
-  };
-
   // 获取当前模式名称
   const getCurrentModeName = () => {
     return LayoutMode[currentMode.value];
@@ -257,7 +228,6 @@ function createLayoutManager() {
     setStructureTreeWidth,
     setPropertyTableWidth,
     setInspectResultWidth,
-    setAnimationPanelWidth,
     getCurrentModeName,
     isMode,
     canToggleComponents,
