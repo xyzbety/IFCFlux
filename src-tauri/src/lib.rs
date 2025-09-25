@@ -64,6 +64,14 @@ async fn write_json_file(path: String, contents: String) -> Result<(), String> {
     process::exit(0);
 }
 
+#[tauri::command]
+fn exit_with_error() {
+    #[cfg(target_os = "windows")]
+    if !cfg!(debug_assertions) {
+        println!("请按任意键继续...");
+    }
+    process::exit(0);
+}
 
 #[tauri::command]
 fn print_to_terminal(message: String) {
@@ -98,7 +106,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
 
-        .invoke_handler(tauri::generate_handler![greet, show_mainscreen, convert_to_glb, read_file, write_binary_file,write_json_file,print_to_terminal])
+        .invoke_handler(tauri::generate_handler![greet, show_mainscreen, convert_to_glb, read_file, write_binary_file,write_json_file,print_to_terminal,exit_with_error])
         .setup(|app| {
             match app.cli().matches() {
                 Ok(matches) => {

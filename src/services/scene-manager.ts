@@ -376,7 +376,10 @@ export class SceneManager {
         if (mesh.material) {
           const originalProps = originalMaterialProperties.get(mesh.id);
           if (originalProps) {
-            mesh.material.alpha = originalProps.alpha;
+            if (mesh.material.name === 'highlightMat') {
+              mesh.material.alpha = 0.5;
+            } else
+              mesh.material.alpha = originalProps.alpha;
           } else {
             mesh.material.alpha = 1;
           }
@@ -764,9 +767,9 @@ export class SceneManager {
             return;
           }
           MessagePlugin.loading({
-              content: '正在导出glb文件，请稍候...',
-              duration: 0, // 设置为0表示不自动关闭
-              closeBtn: true
+            content: '正在导出glb文件，请稍候...',
+            duration: 0, // 设置为0表示不自动关闭
+            closeBtn: true
           });
           const arrayBuffer = await exportFile.arrayBuffer();
           await writeFile(savePath, new Uint8Array(arrayBuffer));
@@ -796,11 +799,11 @@ export class SceneManager {
             return;
           }
           MessagePlugin.loading({
-              content: '正在导出json文件，请稍候...',
-              duration: 0, // 设置为0表示不自动关闭
-              closeBtn: true
+            content: '正在导出json文件，请稍候...',
+            duration: 0, // 设置为0表示不自动关闭
+            closeBtn: true
           });
-          await writeTextFile(savePath, exportFile); 
+          await writeTextFile(savePath, exportFile);
           MessagePlugin.closeAll();
         }
       }
@@ -810,18 +813,18 @@ export class SceneManager {
           const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
           const exportFileName = `${fileNameWithoutExtension}.db`;
           const envConfig = {
-              x: 0, // 经度
-              y: 0, // 纬度
-              z: 0,
-              a: 0,
-              detail_level: 12
+            x: 0, // 经度
+            y: 0, // 纬度
+            z: 0,
+            a: 0,
+            detail_level: 12
           };
           const parser = new IFCParser2DB();
           if (!isTauriEnv) {
             MessagePlugin.loading({
-                content: '正在导出数据库文件，请稍候...',
-                duration: 0, // 设置为0表示不自动关闭
-                closeBtn: true
+              content: '正在导出数据库文件，请稍候...',
+              duration: 0, // 设置为0表示不自动关闭
+              closeBtn: true
             });
             const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
             console.log('result', result);
@@ -837,44 +840,44 @@ export class SceneManager {
               URL.revokeObjectURL(url);
               // 显示成功消息
               MessagePlugin.success({
-                  content: '导出成功！',
-                  duration: 1000
+                content: '导出成功！',
+                duration: 1000
               });
             } else {
-                MessagePlugin.error({
-                    content: '导出失败: 参数错误！',
-                    duration: 1000
-                });
+              MessagePlugin.error({
+                content: '导出失败: 参数错误！',
+                duration: 1000
+              });
             }
             return;
           }
           const savePath = await save(saveDialogConfig);
           if (!savePath) {
-              MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-              return;
+            MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
+            return;
           }
           MessagePlugin.loading({
-              content: '正在导出数据库文件，请稍候...',
-              duration: 0, // 设置为0表示不自动关闭
-              closeBtn: true
+            content: '正在导出数据库文件，请稍候...',
+            duration: 0, // 设置为0表示不自动关闭
+            closeBtn: true
           });
           const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
           console.log('result tauri', result);
           MessagePlugin.closeAll();
           if (result) {
-              const arrayBuffer = await result.arrayBuffer();
-              const uint8Array = new Uint8Array(arrayBuffer);
-              await writeFile(savePath, uint8Array);
-            
-              MessagePlugin.success({
-                  content: '导出成功！',
-                  duration: 1000
-              });
+            const arrayBuffer = await result.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            await writeFile(savePath, uint8Array);
+
+            MessagePlugin.success({
+              content: '导出成功！',
+              duration: 1000
+            });
           } else {
-                MessagePlugin.error({
-                  content: '导出失败: 参数错误！',
-                  duration: 1000
-              });
+            MessagePlugin.error({
+              content: '导出失败: 参数错误！',
+              duration: 1000
+            });
           }
           return;
         }

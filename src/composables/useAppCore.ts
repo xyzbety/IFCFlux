@@ -333,6 +333,11 @@ function createAppCore() {
             const input = matches.subcommand.matches.args.input.value as string;
             const output = matches.subcommand.matches.args.output.value as string;
             const extension = output.split('.').pop();
+            if (extension !== 'glb' && extension !== 'json' && extension !== 'db') {
+                await invoke('print_to_terminal', { message: '错误：不支持的文件格式，仅支持 .glb、.json 或 .db 后缀！' });
+                await invoke('exit_with_error');
+                return;
+            }
             await invoke('print_to_terminal', { message: '正在读取文件...' })
             const content = await invoke('read_file', { path: input });
             const encoder = new TextEncoder();
@@ -342,6 +347,7 @@ function createAppCore() {
             const ifcLoader = new IfcLoader(file, sceneManager.scene!);
             await ifcLoader.load();
             await invoke('print_to_terminal', { message: '正在进行文件格式转换...' })
+
             if (extension === 'glb') {
                 const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, 'temp');
                 const glbFile = exportResult.files['temp.glb'];
@@ -388,7 +394,6 @@ function createAppCore() {
                 });
                 return;
             }
-
         }
     }
     onMounted(async () => {
