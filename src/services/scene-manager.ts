@@ -763,8 +763,14 @@ export class SceneManager {
             MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
             return;
           }
+          MessagePlugin.loading({
+              content: '正在导出glb文件，请稍候...',
+              duration: 0, // 设置为0表示不自动关闭
+              closeBtn: true
+          });
           const arrayBuffer = await exportFile.arrayBuffer();
           await writeFile(savePath, new Uint8Array(arrayBuffer));
+          MessagePlugin.closeAll();
         }
       }
       else if (type === 'json') {
@@ -789,7 +795,13 @@ export class SceneManager {
             MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
             return;
           }
-          await writeTextFile(savePath, exportFile);
+          MessagePlugin.loading({
+              content: '正在导出json文件，请稍候...',
+              duration: 0, // 设置为0表示不自动关闭
+              closeBtn: true
+          });
+          await writeTextFile(savePath, exportFile); 
+          MessagePlugin.closeAll();
         }
       }
       else if (type === 'db') {
