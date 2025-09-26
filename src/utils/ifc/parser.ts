@@ -53,7 +53,7 @@ export class IFCParser {
   public physicalElements: { [key: string]: any } = {}; //存储过滤后的实体元素
   public dummyElements: { [key: string]: any } = {}; //存储过滤后的虚拟元素
   public relationElements: { [key: string]: any } = {}; //存储过滤后的关系元素
-  public classficationLines: Vector<number>; //IfcRelAssociatesClassification
+  // public classficationLines: Vector<number>; //IfcRelAssociatesClassification
   public defindsByTypePropsIdMap: { [key: number]: number[] } = {}; //IFCRELDEFINESBYTYPE定义的属性集
 
 
@@ -91,12 +91,12 @@ export class IFCParser {
     this.psetRelations = psetRelations
     this.properties = properties
     this.allElementsPropsIdMap = allElementsPropsIdMap
-    this.classficationLines = this.ifcapi.GetLineIDsWithType(
-        this.modelId as number,
-        IFCRELASSOCIATESCLASSIFICATION
-    )
+    // this.classficationLines = this.ifcapi.GetLineIDsWithType(
+    //     this.modelId as number,
+    //     IFCRELASSOCIATESCLASSIFICATION
+    // )
     // create and save the geometries; we're storing only references locally.
-    this.geometryReferences = await this.createAndSaveMeshes()
+    // this.geometryReferences = await this.createAndSaveMeshes()
 
     // create and save the spatial tree, populating both properties and geometry references
     // where appropriate
