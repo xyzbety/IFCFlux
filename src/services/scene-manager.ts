@@ -809,7 +809,7 @@ export class SceneManager {
             MessagePlugin.loading({
                 content: '正在导出数据库文件，请稍候...',
                 duration: 0, // 设置为0表示不自动关闭
-                closeBtn: true
+                closeBtn: false
             });
             const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
             console.log('result', result);
@@ -844,7 +844,7 @@ export class SceneManager {
           MessagePlugin.loading({
               content: '正在导出数据库文件，请稍候...',
               duration: 0, // 设置为0表示不自动关闭
-              closeBtn: true
+              closeBtn: false
           });
           const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
           console.log('result tauri', result);
