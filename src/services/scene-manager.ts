@@ -1,9 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
-import { GLTF2Export } from "@babylonjs/serializers";
 import { MessagePlugin } from 'tdesign-vue-next';
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { setupCameraByBoundingBox, createGround } from '../utils';
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
@@ -11,7 +8,7 @@ import { Measure } from '../utils/analysis/measure';
 import { CubeView } from '../services/cube-manager'
 import { CameraHistoryManager } from './history-manager';
 import { useModelStore, useSceneStore } from '../store';
-import { IFCParser2DB } from '../utils/ifc/ifcparse2db'
+import { exportGLB, exportDB, exportJSON } from '../utils/ifc/ifcExporter';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -743,146 +740,19 @@ export class SceneManager {
     };
 
     try {
-      if (type === 'glb') {
-        const options = {
-          shouldExportNode: (node: any) => {
-            if (node instanceof BABYLON.Mesh) {
-              return node.isEnabled() && node.getTotalVertices() > 0;
-            }
-            return true;
-          }
-        };
-        const exportResult = await GLTF2Export.GLBAsync(this.scene!, fileNameWithoutExtension, options);
-        const exportFile = exportResult.files[exportFileName];
-        if (!(exportFile instanceof Blob)) {
-          throw new Error("导出的 GLB 文件格式无效");
-        }
-
-        if (!isTauriEnv) {
-          exportResult.downloadFiles();
-        } else {
-          const savePath = await save(saveDialogConfig);
-          if (!savePath) {
-            MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-            return;
-          }
-          MessagePlugin.loading({
-            content: '正在导出glb文件，请稍候...',
-            duration: 0, // 设置为0表示不自动关闭
-            closeBtn: true
-          });
-          const arrayBuffer = await exportFile.arrayBuffer();
-          await writeFile(savePath, new Uint8Array(arrayBuffer));
-          MessagePlugin.closeAll();
-        }
+      switch (type) {
+        case 'glb':
+          await exportGLB(this.scene,fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
+          break;
+        case 'json':
+          await exportJSON(this.scene,fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
+          break;
+        case 'db':
+          await exportDB(this.modelStore,fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
+          break;
+        default:
+          throw new Error(`不支持的文件类型: ${type}`);
       }
-      else if (type === 'json') {
-        const exportDataScene = BABYLON.SceneSerializer.Serialize(this.scene!);
-        const exportFile = JSON.stringify(exportDataScene, null, 2);
-
-        if (!isTauriEnv) {
-          const blob = new Blob([exportFile], { type: "application/json" });
-          const a = document.createElement('a');
-          const url = URL.createObjectURL(blob);
-          a.href = url;
-          a.download = exportFileName;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }, 0);
-        } else {
-          const savePath = await save(saveDialogConfig);
-          if (!savePath) {
-            MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-            return;
-          }
-          MessagePlugin.loading({
-            content: '正在导出json文件，请稍候...',
-            duration: 0, // 设置为0表示不自动关闭
-            closeBtn: true
-          });
-          await writeTextFile(savePath, exportFile);
-          MessagePlugin.closeAll();
-        }
-      }
-      else if (type === 'db') {
-        if (this.modelStore.file) {
-          const fileName = this.modelStore.file?.name ?? "untitled";
-          const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-          const exportFileName = `${fileNameWithoutExtension}.db`;
-          const envConfig = {
-            x: 0, // 经度
-            y: 0, // 纬度
-            z: 0,
-            a: 0,
-            detail_level: 12
-          };
-          const parser = new IFCParser2DB();
-          if (!isTauriEnv) {
-            MessagePlugin.loading({
-                content: '正在导出数据库文件，请稍候...',
-                duration: 0, // 设置为0表示不自动关闭
-                closeBtn: false
-            });
-            const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
-            console.log('result', result);
-            MessagePlugin.closeAll();
-            if (result) {
-              const url = URL.createObjectURL(result);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = exportFileName;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-              // 显示成功消息
-              MessagePlugin.success({
-                content: '导出成功！',
-                duration: 1000
-              });
-            } else {
-              MessagePlugin.error({
-                content: '导出失败: 参数错误！',
-                duration: 1000
-              });
-            }
-            return;
-          }
-          const savePath = await save(saveDialogConfig);
-          if (!savePath) {
-            MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-            return;
-          }
-          MessagePlugin.loading({
-              content: '正在导出数据库文件，请稍候...',
-              duration: 0, // 设置为0表示不自动关闭
-              closeBtn: false
-          });
-          const result = await parser.start(this.modelStore.file, fileNameWithoutExtension, envConfig);
-          console.log('result tauri', result);
-          MessagePlugin.closeAll();
-          if (result) {
-            const arrayBuffer = await result.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
-            await writeFile(savePath, uint8Array);
-
-            MessagePlugin.success({
-              content: '导出成功！',
-              duration: 1000
-            });
-          } else {
-            MessagePlugin.error({
-              content: '导出失败: 参数错误！',
-              duration: 1000
-            });
-          }
-          return;
-        }
-      }
-      MessagePlugin.success({ content: '导出成功！', duration: 1000 });
     } catch (error) {
       console.error("导出失败:", error);
       MessagePlugin.error({

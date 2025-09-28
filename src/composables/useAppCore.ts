@@ -426,10 +426,13 @@ function createAppCore() {
         eventManager.add('mouse-wheel', handleHisBefore);
         eventManager.add("resize", handleResize);
 
-        if (isTauriEnv) await invoke('show_mainscreen').catch(console.error);
+        if (isTauriEnv) {
+            await invoke('show_mainscreen').catch(console.error);
+            await convertFileByCli();
+        }
 
         watch(() => sceneStore.sceneSettings, handleChangeScene, { deep: true });
-        await convertFileByCli();
+
     });
 
     onUnmounted(() => {
