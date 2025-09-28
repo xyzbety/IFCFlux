@@ -1,7 +1,6 @@
 use tauri::Manager;
 use tauri_plugin_cli::CliExt;
-use std::process;
-
+use tauri_plugin_fs::FsExt;
 
 #[tauri::command]
 fn convert_to_glb(_input_path: String, _output_path: String) -> Result<(), String> {
@@ -18,59 +17,12 @@ async fn read_file(path: String) -> Result<String, String> {
         .map_err(|e| format!("文件读取失败: {}", e))
 }
 #[tauri::command]
-async fn write_binary_file(path: String, data: Vec<u8>) -> Result<(), String> {
-    use tokio::fs::File;
-    use tokio::io::AsyncWriteExt;
-
-    let total_size = data.len();
-    let mut file = File::create(&path)
-        .await
-        .map_err(|e| format!("文件创建失败: {}", e))?;
-
-    let chunk_size = total_size / 10; 
-    for (_i, chunk) in data.chunks(chunk_size).enumerate() {
-        file.write_all(chunk)
-            .await
-            .map_err(|e| format!("数据块写入失败: {}", e))?;
-    }
-
-    println!("文件导出成功！");
+fn exit_process(app: tauri::AppHandle) {
     #[cfg(target_os = "windows")]
     if !cfg!(debug_assertions) {
         println!("请按任意键继续...");
     }
-    process::exit(0);
-}
-
-#[tauri::command]
-async fn write_json_file(path: String, contents: String) -> Result<(), String> {
-    use tokio::fs::File;
-    use tokio::io::AsyncWriteExt;
-
-    // 创建文件并写入 JSON 数据
-    let mut file = File::create(&path)
-        .await
-        .map_err(|e| format!("文件创建失败: {}", e))?;
-
-    file.write_all(contents.as_bytes())
-        .await
-        .map_err(|e| format!("文件写入失败: {}", e))?;
-
-    println!("文件导出成功！");
-    #[cfg(target_os = "windows")]
-    if !cfg!(debug_assertions) {
-        println!("请按任意键继续...");
-    }
-    process::exit(0);
-}
-
-#[tauri::command]
-fn exit_with_error() {
-    #[cfg(target_os = "windows")]
-    if !cfg!(debug_assertions) {
-        println!("请按任意键继续...");
-    }
-    process::exit(0);
+    app.exit(0)
 }
 
 #[tauri::command]
@@ -106,7 +58,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
 
-        .invoke_handler(tauri::generate_handler![greet, show_mainscreen, convert_to_glb, read_file, write_binary_file,write_json_file,print_to_terminal,exit_with_error])
+        .invoke_handler(tauri::generate_handler![greet, show_mainscreen, convert_to_glb, read_file, print_to_terminal,exit_process])
         .setup(|app| {
             match app.cli().matches() {
                 Ok(matches) => {
@@ -116,7 +68,11 @@ pub fn run() {
                                 let input = subcommand.matches.args.get("input").unwrap().value.as_str().unwrap();
                                 let output = subcommand.matches.args.get("output").unwrap().value.as_str().unwrap();
                                 convert_to_glb(input.to_string(), output.to_string()).unwrap();
-                            }
+                                // 动态允许 output 目录
+                                let scope = app.fs_scope();
+                                scope.allow_directory(output, false)
+                                    .unwrap_or_else(|e| eprintln!("无法设置目录权限: {}", e));
+                                    }
                             _ => {}
                         }
                     }

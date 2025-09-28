@@ -2,8 +2,6 @@ import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmou
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import * as BABYLON from '@babylonjs/core';
-import { GLTF2Export } from "@babylonjs/serializers";
 import { useModelStore, useSceneStore, useSelectedStore } from '../store';
 import { useSettingsStore } from '../store/settings';
 import { Measure } from '../utils/analysis/measure';
@@ -18,7 +16,8 @@ import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
 import { IfcLoader } from '../utils/loader/IfcLoader';
-import { IFCParser2DB } from '../utils/ifc/ifcparse2db'
+import { saveAsGLB,saveAsDB,saveAsJSON } from '../utils/ifc/ifcExporter';
+
 
 // 单例实例存储
 let appCoreInstance: ReturnType<typeof createAppCore> | null = null;
@@ -328,74 +327,60 @@ function createAppCore() {
     };
 
     const convertFileByCli = async () => {
-        const matches = await getMatches();
-        if (matches.subcommand?.name === 'convert') {
-            const input = matches.subcommand.matches.args.input.value as string;
-            const output = matches.subcommand.matches.args.output.value as string;
-            const extension = output.split('.').pop();
-            if (extension !== 'glb' && extension !== 'json' && extension !== 'db') {
-                await invoke('print_to_terminal', { message: '错误：不支持的文件格式，仅支持 .glb、.json 或 .db 后缀！' });
-                await invoke('exit_with_error');
-                return;
-            }
-            await invoke('print_to_terminal', { message: '正在读取文件...' })
-            const content = await invoke('read_file', { path: input });
-            const encoder = new TextEncoder();
-            const buffer = encoder.encode(content as string).buffer;
-            if (!buffer) return
-            const file = new File([buffer], 'converted.ifc', { type: 'application/ifc' });
-            const ifcLoader = new IfcLoader(file, sceneManager.scene!);
-            await ifcLoader.load();
-            await invoke('print_to_terminal', { message: '正在进行文件格式转换...' })
-
-            if (extension === 'glb') {
-                const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, 'temp');
-                const glbFile = exportResult.files['temp.glb'];
-                if (!(glbFile instanceof Blob)) {
-                    throw new Error("导出的文件格式无效");
-                }
-                const arrayBuffer = await glbFile.arrayBuffer();
-                await invoke('print_to_terminal', { message: '正在进行文件导出...' })
-                await invoke('write_binary_file', {
-                    path: output,
-                    data: Array.from(new Uint8Array(arrayBuffer))
-                });
-                return;
-            } else if (extension === 'json') {
-                const serializedScene = BABYLON.SceneSerializer.Serialize(sceneManager.scene!);
-                const strScene = JSON.stringify(serializedScene, null, 2);
-                await invoke('print_to_terminal', { message: '正在进行文件导出...' })
-                await invoke('write_json_file', { path: output, contents: strScene });
-                return;
-            } else if (extension === 'db') {
-                const fileNameWithExt = input.split('\\').pop() || input;
-                const lastDotIndex = fileNameWithExt.lastIndexOf('.');
-                const fileName = lastDotIndex === -1
-                    ? fileNameWithExt
-                    : fileNameWithExt.substring(0, lastDotIndex);
-                const envConfig = {
-                    x: 0, // 经度
-                    y: 0, // 纬度
-                    z: 0,
-                    a: 0,
-                    detail_level: 12
-                };
-                const parser = new IFCParser2DB();
-                const result = await parser.start(file, fileName, envConfig);
-                if (!result) {
-                    await invoke('print_to_terminal', { message: '无法获取数据库文件' })
+        try {
+            const matches = await getMatches();
+            if (matches.subcommand?.name === 'convert') {
+                const input = matches.subcommand.matches.args.input.value as string;
+                const output = matches.subcommand.matches.args.output.value as string;
+                const extension = output.split('.').pop();
+                if (extension !== 'glb' && extension !== 'json' && extension !== 'db') {
+                    await invoke('print_to_terminal', { message: '错误：不支持的文件格式，仅支持 .glb、.json 或 .db 后缀！' });
+                    await invoke('exit_process');
                     return;
                 }
-                const arrayBuffer = await result.arrayBuffer();
-                await invoke('print_to_terminal', { message: '正在进行文件导出...' })
-                await invoke('write_binary_file', {
-                    path: output,
-                    data: Array.from(new Uint8Array(arrayBuffer))
-                });
-                return;
+
+                // 读取文件（增加错误捕获）
+                await invoke('print_to_terminal', { message: '正在读取文件...' });
+                let content: string;
+                try {
+                    content = await invoke('read_file', { path: input });
+                } catch (error) {
+                    await invoke('print_to_terminal', { message: `文件读取失败: ${error}` });
+                    await invoke('exit_process');
+                    return;
+                }
+
+                const encoder = new TextEncoder();
+                const buffer = encoder.encode(content).buffer;
+                if (!buffer) return;
+                const file = new File([buffer], 'converted.ifc', { type: 'application/ifc' });
+                const ifcLoader = new IfcLoader(file, sceneManager.scene!);
+                await ifcLoader.load();
+                await invoke('print_to_terminal', { message: '正在进行文件格式转换...' });
+
+                // 根据扩展名处理不同格式
+                try {
+                    await invoke('print_to_terminal', { message: '正在导出文件...' });
+                    if (extension === 'glb') {
+                        await saveAsGLB(sceneManager.scene!, output);
+                    } else if (extension === 'json') {
+                        await saveAsJSON(sceneManager.scene!, output);
+                    } else if (extension === 'db') {
+                        await saveAsDB(file, input, output);
+                    }
+                    await invoke('print_to_terminal', { message: '文件导出成功！' });
+                    await invoke('exit_process');
+                } catch (error) {
+                    await invoke('print_to_terminal', { message: error.message });
+                    await invoke('exit_process');
+                }
             }
+        } catch (error) {
+            await invoke('print_to_terminal', { message: `程序运行异常: ${error}` });
+            await invoke('exit_process');
         }
-    }
+    };
+
     onMounted(async () => {
         const ribbonManager = RibbonEventManager.getInstance();
         ribbonManager.initialize({

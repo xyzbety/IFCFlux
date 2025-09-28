@@ -198,3 +198,80 @@ export async function exportDB(modelStore: any, fileNameWithoutExtension: string
     MessagePlugin.closeAll();
     MessagePlugin.success({ content: '导出成功！', duration: 1000 });
 }
+
+export const saveAsGLB = async (scene: BABYLON.Scene, outputPath: string): Promise<void> => {
+    try {
+        const exportResult = await GLTF2Export.GLBAsync(scene, 'temp');
+        const glbFile = exportResult.files['temp.glb'];
+        if (!(glbFile instanceof Blob)) {
+            throw new Error("导出的文件格式无效");
+        }
+        const arrayBuffer = await glbFile.arrayBuffer();
+        await writeFile(outputPath, new Uint8Array(arrayBuffer));
+    } catch (error) {
+        throw new Error(`GLB 导出失败: ${error}`);
+    }
+};
+
+export const saveAsJSON = async (scene: BABYLON.Scene, outputPath: string): Promise<void> => {
+    try {
+        const serializedScene = BABYLON.SceneSerializer.Serialize(scene);
+        const seenObjects = new WeakSet();
+        const replacer = (key: string, value: any): any => {
+            if (typeof value === 'object' && value !== null) {
+                if (seenObjects.has(value)) {
+                    return '[Circular]';
+                }
+                seenObjects.add(value);
+            }
+            return value;
+        };
+
+        await writeTextFile(outputPath, "{\n", { append: false });
+        const keys = Object.keys(serializedScene);
+        let isFirstField = true;
+
+        for (const key of keys) {
+            try {
+                const value = serializedScene[key];
+                if (value === undefined) continue;
+                const valueString = JSON.stringify(value, replacer, 2);
+                const fieldLine = `  "${key}": ${valueString}`;
+                const formattedLine = isFirstField ? fieldLine : `,\n${fieldLine}`;
+                await writeTextFile(outputPath, formattedLine, { append: true });
+                isFirstField = false;
+            } catch (error) {
+                console.error(`字段 ${key} 序列化失败:`, error);
+            }
+        }
+        await writeTextFile(outputPath, "\n}", { append: true });
+    } catch (error) {
+        throw new Error(`JSON 导出失败: ${error}`);
+    }
+};
+
+export const saveAsDB = async (file: File, inputPath: string, outputPath: string): Promise<void> => {
+    try {
+        const fileNameWithExt = inputPath.split('\\').pop() || inputPath;
+        const lastDotIndex = fileNameWithExt.lastIndexOf('.');
+        const fileName = lastDotIndex === -1
+            ? fileNameWithExt
+            : fileNameWithExt.substring(0, lastDotIndex);
+        const envConfig = {
+            x: 0, // 经度
+            y: 0, // 纬度
+            z: 0,
+            a: 0,
+            detail_level: 12
+        };
+        const parser = new IFCParser2DB();
+        const result = await parser.start(file, fileName, envConfig);
+        if (!result) {
+            throw new Error('无法获取数据库文件');
+        }
+        const arrayBuffer = await result.arrayBuffer();
+        await writeFile(outputPath, new Uint8Array(arrayBuffer));
+    } catch (error) {
+        throw new Error(`数据库导出失败: ${error}`);
+    }
+};
