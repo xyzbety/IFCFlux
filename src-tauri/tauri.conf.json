@@ -17,8 +17,7 @@
         "height": 700,
         "minWidth": 700,
         "decorations": false,
-        "visible": false,
-        "maximized": true
+        "visible": false
       }
     ],
     "security": {
