@@ -16,7 +16,7 @@ import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
 import { IfcLoader } from '../utils/loader/IfcLoader';
-import { saveAsGLB,saveAsDB,saveAsJSON } from '../utils/ifc/ifcExporter';
+import { saveAsGLB, saveAsDB, saveAsJSON } from '../utils/ifc/ifcExporter';
 
 
 // 单例实例存储
@@ -171,7 +171,6 @@ function createAppCore() {
     const togglePropertyTableDialog = () => { if (canToggleComponents.value) togglePropertyTable(); };
     // const handleExplosion = (type: any) => sceneManager.handleExplosion(type);
     const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
-    const handleLightSettingsReset = () => { isHightlight = true; sceneManager.resetLightSettings(); };
     const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
 
     const handleExportSetting = async (type: 'glb' | 'db' | 'json') => {
@@ -311,8 +310,13 @@ function createAppCore() {
         ifcPropertyColumn.value = markRaw(newValue);
     };
 
-    const handleFocusOnClick = (data: any) => {
-        isFocus = data.focusMode
+    const handleInteractionSetting = (data: any) => {
+        if (data.type === 'dragSpeed' && sceneManager.camera) {
+            sceneManager.camera.panningSensibility = 20 - data.value;
+        }
+        if( data.type === 'focusMode') {
+            isFocus = data.value
+        }   
     }
     const handleHisBefore = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
     const handleHisAfter = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
@@ -390,10 +394,9 @@ function createAppCore() {
                     'navigate-event': handleNavigate, 'change-view': handleView, 'visible-control': handleVisibility,
                     'measure-event': handleMeasure, 'slice-event': handleSlice, 'build-tree': handleBuildTree,
                     'properties-table': handlePropertiesTable, 'file-uploaded': handleFileUploaded,
-                    'light-settings': handleLightSettings, 'inspect-click': handleInspectClick,
-                    'light-settings-reset': handleLightSettingsReset, 'scene-settings': handleChangeScene,
+                    'light-settings': handleLightSettings, 'inspect-click': handleInspectClick, 'scene-settings': handleChangeScene,
                     'ribbon-tab-change': handleRibbonTabChange, 'toggle-file-menu': toggleFileMenu,
-                    'interaction-settings': handleFocusOnClick, 'export-settings': handleExportSetting,
+                    'interaction-settings': handleInteractionSetting, 'export-settings': handleExportSetting,
                 };
                 eventMap[eventName]?.(...args);
             }

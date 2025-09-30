@@ -663,40 +663,34 @@ export class SceneManager {
   public setLightSettings(data: any) {
     if (!this.light) return;
 
-    if (data.lightX !== undefined)
-      this.light.direction.x = Number(data.lightX);
-    if (data.lightY !== undefined)
-      this.light.direction.y = Number(data.lightY);
-    if (data.lightZ !== undefined)
-      this.light.direction.z = Number(data.lightZ);
-    if (data.lightIndensity !== undefined)
-      this.light.intensity = Number(data.lightIndensity);
-    if (data.lightShadowEnabled !== undefined)
-      this.light.shadowEnabled = data.lightShadowEnabled;
-  }
+    if (data.type === 'direction-x')
+      this.light.direction.x = Number(data.value);
+    if (data.type === 'direction-y')
+      this.light.direction.y = Number(data.value);
+    if (data.type === 'direction-z')
+      this.light.direction.z = Number(data.value);
+    if (data.type === 'reset') {
+      this.light.direction = new BABYLON.Vector3(1, -0.5, 0.5);
+      this.light.intensity = 0.75;
+      this.light.shadowEnabled = true;
 
-  /**
-   * 重置灯光设置
-   */
-  public resetLightSettings() {
-    console.log("重置灯光设置");
-    if (!this.light) return;
+      const handleSliderX = document.getElementById("horizontalSliderX") as any;
+      const handleSliderY = document.getElementById("horizontalSliderY") as any;
+      const handleSliderZ = document.getElementById("horizontalSliderZ") as any;
+      const inputIndensity = document.getElementById("inputIndensity") as HTMLInputElement;
+      const checkboxShadow = document.getElementById("checkboxShadow") as HTMLInputElement;
 
-    this.light.direction = new BABYLON.Vector3(1, -0.5, 0.5);
-    this.light.intensity = 0.75;
-    this.light.shadowEnabled = true;
+      if (handleSliderX) handleSliderX.val(this.light.direction.x);
+      if (handleSliderY) handleSliderY.val(this.light.direction.y);
+      if (handleSliderZ) handleSliderZ.val(this.light.direction.z);
+      if (inputIndensity) inputIndensity.value = this.light.intensity.toString();
+      if (checkboxShadow) checkboxShadow.checked = true;
+    }
+    if (data.type === 'indensity')
+      this.light.intensity = Number(data.value);
+    if (data.type === 'shadow')
+      this.light.shadowEnabled = data.value;
 
-    const handleSliderX = document.getElementById("horizontalSliderX") as any;
-    const handleSliderY = document.getElementById("horizontalSliderY") as any;
-    const handleSliderZ = document.getElementById("horizontalSliderZ") as any;
-    const inputIndensity = document.getElementById("inputIndensity") as HTMLInputElement;
-    const checkboxShadow = document.getElementById("checkboxShadow") as HTMLInputElement;
-
-    if (handleSliderX) handleSliderX.val(this.light.direction.x);
-    if (handleSliderY) handleSliderY.val(this.light.direction.y);
-    if (handleSliderZ) handleSliderZ.val(this.light.direction.z);
-    if (inputIndensity) inputIndensity.value = this.light.intensity.toString();
-    if (checkboxShadow) checkboxShadow.checked = true;
   }
 
   /**
@@ -707,22 +701,18 @@ export class SceneManager {
     if (!this.scene) return;
 
     const viewer = document.getElementById("viewer-canvas") as HTMLDivElement;
-    if (data.backgroundColor && viewer) {
-      viewer.style.backgroundColor = data.backgroundColor;
+    if (data.type === 'backgroundColor' && viewer) {
+      viewer.style.backgroundColor = data.value;
     }
 
-    if (data.gridMode !== undefined) {
+    if (data.type === 'gridMode') {
       let ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       if (!ground) {
         this.setupGround(true);
         ground = this.scene.meshes.find(mesh => mesh.name === 'infiniteGrid');
       } else {
-        ground.setEnabled(data.gridMode);
+        ground.setEnabled(data.value);
       }
-    }
-
-    if (data.dragSpeed !== undefined && this.camera) {
-      this.camera.panningSensibility = 20 - data.dragSpeed;
     }
   }
 
@@ -742,13 +732,13 @@ export class SceneManager {
     try {
       switch (type) {
         case 'glb':
-          await exportGLB(this.scene,fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
+          await exportGLB(this.scene, fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
           break;
         case 'json':
-          await exportJSON(this.scene,fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
+          await exportJSON(this.scene, fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
           break;
         case 'db':
-          await exportDB(this.modelStore,fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
+          await exportDB(this.modelStore, fileNameWithoutExtension, isTauriEnv, saveDialogConfig);
           break;
         default:
           throw new Error(`不支持的文件类型: ${type}`);
