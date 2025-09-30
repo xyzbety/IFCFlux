@@ -119,7 +119,6 @@ export class IfcLoader {
         this.model = new BABYLON.Mesh('modelMesh', this.scene);
         this.ifcApi = new WEBIFC.IfcAPI();
         this.ifcApi.SetWasmPath('/web-ifc/', true);
-        this.ifcParser = new IfcParser(this.ifcApi);
     }
 
     /**
@@ -129,7 +128,7 @@ export class IfcLoader {
      */
     public async load(onProgress: ProgressCallback | null = null): Promise<void> {
         await this.loadFileToArrayBuffer();
-
+        this.ifcParser = new IfcParser(this.ifcApi);
         if (this.isParser) {
             // Pass null for onProgress to make property parsing silent
             const parsedData: any = await this.ifcParser.load(null, this.modelID!);
