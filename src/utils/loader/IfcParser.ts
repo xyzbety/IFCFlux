@@ -57,6 +57,9 @@ export class IfcParser {
   /** 片段键到片段ID的映射 */
   private fragmentKeyToIdMap: { [key: number]: string } = {};
 
+  private psetLines?: WEBIFC.Vector<number> // 存储所有属性集（Pset）的行 ID
+  private psetRelations?: number[][] // 存储属性集与元素之间的关系
+
 
   constructor(webIfc: any = null) {
     if (webIfc) {
@@ -96,6 +99,8 @@ export class IfcParser {
     keyFragments: Record<number, string>;
     _groupSystems: Record<string, any>;
     properties: Record<string, any>;
+    psetRelations: number[][];
+    psetLines: WEBIFC.Vector<number>
   }> {
     if (data === null && modelID === null) {
       throw new Error('Either data or modelID must be provided');
@@ -124,8 +129,12 @@ export class IfcParser {
     this.getAllElementCategories(model.modelID);
     this.generateModelData(model);
     this.groupByEntityType(model);
-    model.properties = await this.getModelProperties(model.modelID);
 
+    const {properties, psetLines, psetRelations, total} = await this.getModelProperties(model.modelID);
+
+    model.properties = properties;
+    this.psetRelations = psetRelations;
+    this.psetLines = psetLines;
     const spatialTree = getSpatialTree({
       expandedIds: [],
       properties: model.properties,
@@ -138,6 +147,8 @@ export class IfcParser {
       keyFragments: model.keyFragments,
       _groupSystems: {},
       properties: model.properties,
+      psetRelations: this.psetRelations,
+      psetLines: this.psetLines,
       ...spatialTree
     };
   }
@@ -223,8 +234,13 @@ export class IfcParser {
    * @returns 包含所有非几何元素属性的对象
    */
   async getModelProperties(modelID: number): Promise<IfcProperties> {
+    const psetLines = this.webIfc.GetLineIDsWithType(
+      modelID as number,
+      WEBIFC.IFCRELDEFINESBYPROPERTIES
+    )
+    const psetRelations = []
     const geometriesIDs = await this.getAllGeometriesIDs(modelID, this.webIfc)
-    let properties: any = {};
+    const properties = {} as { [key: string]: any }
     properties.coordinationMatrix = this.webIfc.GetCoordinationMatrix(modelID);
     const allLinesIDs = await this.webIfc.GetAllLines(modelID);
     const linesCount = allLinesIDs.size();
@@ -233,16 +249,27 @@ export class IfcParser {
     let counter = 0;
     for (let i = 0; i < linesCount; i++) {
       const id = allLinesIDs.get(i);
+      let props;
       if (!geometriesIDs.has(id)) {
         try {
-          properties[id] = await this.webIfc.GetLine(modelID, id);
+          props = await this.webIfc.GetLine(modelID, id);
         } catch (e) {
           console.log(`Properties of the element ${id} could not be processed`);
         }
+        if (props) {
+          if (props.type === 4186316022 && props.RelatedObjects) {
+            psetRelations.push(props.RelatedObjects.map((item) => {
+              if (item && item.value) return item.value
+              return item
+            }));
+          }
+        }
+        properties[id] = props;
+
         counter++;
       }
     }
-    return properties
+    return {properties, psetLines, psetRelations}
   }
   /**
    * 保存元素ID到片段键的映射关系
