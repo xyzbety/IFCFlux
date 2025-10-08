@@ -72,6 +72,8 @@ export class IfcLoader {
     public ifcTree: any; // 用于存储解析后的IFC树
     public properties: any;
     public ifcExpressIds: any;
+    public psetLines: any;
+    public psetRelations: any;
 
     private url: string | File;
     private scene: BABYLON.Scene;
@@ -135,6 +137,8 @@ export class IfcLoader {
             this.ifcTree = parsedData.tree;
             this.properties = parsedData.properties;
             this.ifcExpressIds = parsedData.ifcExpressIds;
+            this.psetLines = parsedData.psetLines;
+            this.psetRelations = parsedData.psetRelations;
             console.log('IFC树已加载,解析完成');
         }
 

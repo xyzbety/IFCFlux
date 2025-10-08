@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, shallowRef } from 'vue';
 
 export const useModelStore = defineStore('model', {
     state: () => ({
         file: null as File | null,
         modelData: null as any,
+        psetLines: shallowRef<any>(null),
         modelInspectData: null as any,
         loading: false,
         progress: {
@@ -15,9 +16,10 @@ export const useModelStore = defineStore('model', {
         }
     }),
     actions: {
-        setModel(file: File, modelData: any) {
+        setModel(file: File, modelData: any, psetLines: any) {
             this.file = file
             this.modelData = modelData
+            this.psetLines = psetLines
         },
         setModelInspectData(modelInspectData: any) {
             this.modelInspectData = modelInspectData

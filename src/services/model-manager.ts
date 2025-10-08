@@ -80,8 +80,9 @@ export class ModelManager {
           properties: ifcLoader.properties,
           ifcExpressIds: ifcLoader.ifcExpressIds,
           ifcManager: ifcLoader.ifcApi,
-          modelID: ifcLoader.modelID
-        });
+          modelID: ifcLoader.modelID,
+          psetRelations: ifcLoader.psetRelations
+        }, ifcLoader.psetLines);
 
         this.updateProgress(100, "完成");
 

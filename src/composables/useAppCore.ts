@@ -67,7 +67,8 @@ function createAppCore() {
         ifcExpressIds: [] as any[],
         propertyAll: [] as any[],
         property: [] as any[],
-        groupMap: {} as Map<number, any>
+        groupMap: {} as Map<number, any>,
+        psetRelations: [] as any[],
     });
 
     const themeStyle = computed(() => ({
@@ -217,6 +218,7 @@ function createAppCore() {
                     pageState.groupMap = new Map<number, any>();
                     pageState.ifcExpressIds = initResult.ifcExpressIds;
                     pageState.propertyAll = initResult.propertyAll;
+                    pageState.psetRelations = initResult.psetRelations;
                     eventManager.emit('file-loaded');
 
                     sceneManager.setIfcExplosion(new IfcExplosion(scene));
@@ -296,7 +298,7 @@ function createAppCore() {
         }
 
         selectedMeshId = expressID;
-        let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds);
+        let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds, pageState.psetRelations, modelStore.psetLines);
         const { items, groupRowMap } = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
         pageState.property = items;
         pageState.groupMap = groupRowMap;
