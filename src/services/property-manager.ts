@@ -221,27 +221,27 @@ export class IfcPropertyUtils {
     };
     const processedExpressID = extractNumbers(expressID);
     const pset = propertyAll[Number(processedExpressID)];
-    // let spec: any[] = [];
-    // const expressIdsArray = Object.values(ifcExpressIds);
+    let spec: any[] = [];
+    const expressIdsArray = Object.values(ifcExpressIds);
 
-    // // 找到当前expressID的索引
-    // const currentIndex = expressIdsArray.findIndex(id => id === processedExpressID);
+    // 找到当前expressID的索引
+    const currentIndex = expressIdsArray.findIndex(id => id === processedExpressID);
 
-    // if (currentIndex !== -1) {
-    //   const currentElement = expressIdsArray[currentIndex];
-    //   const nextElement = expressIdsArray[currentIndex + 1];
+    if (currentIndex !== -1) {
+      const currentElement = expressIdsArray[currentIndex];
+      const nextElement = expressIdsArray[currentIndex + 1];
 
-    //   if (currentElement && nextElement) {
-    //     for (let i = Number(currentElement); i < Number(nextElement); i++) {
-    //       const currentData = propertyAll[i];
-    //       if (currentData) {
-    //         spec.push(currentData);
-    //       }
-    //     }
-    //   }
-    // } else {
-    //   console.log(`未找到expressID: ${processedExpressID}`);
-    // }
+      if (currentElement && nextElement) {
+        for (let i = Number(currentElement); i < Number(nextElement); i++) {
+          const currentData = propertyAll[i];
+          if (currentData) {
+            spec.push(currentData);
+          }
+        }
+      }
+    } else {
+      console.log(`未找到expressID: ${processedExpressID}`);
+    }
 
     if (pset === undefined) {
       return [];
@@ -280,6 +280,38 @@ export class IfcPropertyUtils {
         }),
       };
       property.push(specific);
+      
+      // 获取关联属性集
+      spec.forEach((p: any) => {
+        if (p.type === 1451395588) {
+          id++;
+          property.push({
+            id,
+            name: p.Name?.value,
+            value: '',
+            children: p.HasProperties.map((v: any) => {
+              const value = propertyAll[v?.value];
+              let nominalValue = value.NominalValue;
+              if (typeof nominalValue === 'boolean') {
+                nominalValue = nominalValue ? '是' : '否';
+              }
+              else if (typeof nominalValue === 'object' && nominalValue !== null && 'value' in nominalValue) {
+                if (typeof nominalValue.value === 'boolean') {
+                  nominalValue = nominalValue.value ? '是' : '否';
+                } else {
+                  nominalValue = nominalValue.value;
+                }
+              }
+              id++;
+              return {
+                id,
+                name: value.Name.value,
+                value: nominalValue
+              };
+            }),
+          });
+        }
+      });
 
       const psetIds = [] as any
       // 查找与此元素关联的属性集
@@ -309,36 +341,7 @@ export class IfcPropertyUtils {
       })
     }
 
-      // spec.forEach((p: any) => {
-      //   if (p.type === 1451395588) {
-      //     id++;
-      //     property.push({
-      //       id,
-      //       name: p.Name?.value,
-      //       value: '',
-      //       children: p.HasProperties.map((v: any) => {
-      //         const value = propertyAll[v?.value];
-      //         let nominalValue = value.NominalValue;
-      //         if (typeof nominalValue === 'boolean') {
-      //           nominalValue = nominalValue ? '是' : '否';
-      //         }
-      //         else if (typeof nominalValue === 'object' && nominalValue !== null && 'value' in nominalValue) {
-      //           if (typeof nominalValue.value === 'boolean') {
-      //             nominalValue = nominalValue.value ? '是' : '否';
-      //           } else {
-      //             nominalValue = nominalValue.value;
-      //           }
-      //         }
-      //         id++;
-      //         return {
-      //           id,
-      //           name: value.Name.value,
-      //           value: nominalValue
-      //         };
-      //       }),
-      //     });
-      //   }
-      // });
+
     }
 
     return property;
