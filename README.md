@@ -4,13 +4,13 @@
 
 ## 技术栈
 
-- **前端框架**: Vue 3 Composition API
-- **构建工具**: Vite 6
-- **类型系统**: TypeScript 5
-- **3D渲染引擎**: Babylon.js
-- **桌面应用框架**: Tauri 2
+- **前端框架**: Vue 3
+- **构建工具**: Vite
+- **类型系统**: TypeScript
+- **3D渲染引擎**: Babylon
+- **桌面应用框架**: Tauri
 - **UI组件库**: Smart Web Components
-- **状态管理**: Vue内置响应式系统
+- **状态管理**: Pinia
 - **样式预处理**: Less
 - **BIM数据处理**: web-ifc
 
@@ -20,7 +20,7 @@
 
 - **专业IFC文件查看**：支持加载、渲染和交互式浏览IFC格式的BIM模型
 - **高性能3D渲染**：基于Babylon.js实现的高质量3D可视化引擎
-- **直观的用户界面**：采用Ribbon风格界面，提供丰富的操作工具和选项pnpm
+- **直观的用户界面**：采用Ribbon风格界面，提供丰富的操作工具和选项
 - **跨平台支持**：基于Tauri框架，可在Windows、macOS和Linux上运行
 - **Vue 3 + TypeScript**：利用现代前端技术栈确保代码质量和开发效率
 - **Vite极速构建**：享受毫秒级的热模块替换和快速的开发体验
@@ -88,13 +88,10 @@ ifcflux/
 │   ├── logo.png            # 应用Logo
 │   ├── fonts/              # 字体文件
 │   ├── icons/              # SVG图标
-│   ├── rules/              # 检查规则文件
-│   ├── textures/           # 3D纹理资源
 │   └── web-ifc/            # Web-IFC库相关文件
 ├── src/                    # 前端源代码目录
 │   ├── App.vue             # 主应用组件
 │   ├── main.ts             # 应用入口文件
-│   ├── shims-js.d.ts       # JS模块的TypeScript声明文件
 │   ├── types.ts            # 全局TypeScript类型定义
 │   ├── vite-env.d.ts       # Vite环境变量的类型声明
 │   ├── components/         # Vue组件
@@ -114,7 +111,7 @@ ifcflux/
     └── src/                # Rust源代码
 ```
 
-## ⚙️ 配置
+## 配置
 
 ### Vite配置
 开发服务器端口、代理和其他构建配置可以在 `vite.config.ts` 中修改。

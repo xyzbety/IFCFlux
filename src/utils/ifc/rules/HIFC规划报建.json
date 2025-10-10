@@ -40,8 +40,16 @@
                 "楼层属性信息": "IfcText"
             }
         },
-        "IfcDoor": { "Pset_门信息属性集": { "开启方向": "IfcLabel" } },
-        "IfcDuctSegment": { "Pset_风管段信息属性集": { "隔热层厚度": "IfcReal" } },
+        "IfcDoor": {
+            "Pset_门信息属性集": {
+                "开启方向": "IfcLabel"
+            }
+        },
+        "IfcDuctSegment": {
+            "Pset_风管段信息属性集": {
+                "隔热层厚度": "IfcReal"
+            }
+        },
         "IfcOrganization": {
             "Pset_组织通用属性集": {
                 "企业名称": "IfcLabel",
@@ -176,7 +184,9 @@
                 "停车位位置信息": "IfcText",
                 "备注": "IfcText"
             },
-            "Pset_居住建筑空间信息属性集": { "人数": "IfcInteger" }
+            "Pset_居住建筑空间信息属性集": {
+                "人数": "IfcInteger"
+            }
         },
         "IfcSpatialZone": {
             "Pset_建筑区域信息属性集": {

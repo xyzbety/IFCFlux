@@ -20,8 +20,8 @@ import {
 } from './utils'
 import {
   IFCParserProps,
-  ISpeckleMesh,
-  SpeckleMeshes,
+  IExportMesh,
+  ExportMeshes,
   IGeometryReference,
   IMaterial,
   INode,
@@ -43,10 +43,10 @@ export class IFCParser {
   private allElementsPropsIdMap: { [key: number]: number[] } = {}; // 存储所有元素的属性ID映射
   private propCache: { [key: number]: any } = {} // 属性缓存，避免重复解析
   private geometryReferences: IGeometryReferences = {} // 几何引用，存储每个元素对应的几何体ID
-  private speckleMeshes: ISpeckleMesh[] = []; // 存储所有物理元素的几何网格数据
-  private dummySpeckleMeshes: ISpeckleMesh[] = []; // 存储所有虚拟元素（如 IfcSpace）的几何网格数据
-  private speckleMeshesMap: { [key: number]: ISpeckleMesh[] } = {}; // 映射表：元素 expressID -> 其对应的物理几何网格数组
-  private dummySpeckleMeshesMap: { [key: number]: ISpeckleMesh[] } = {}; // 映射表：元素 expressID -> 其对应的虚拟几何网格数组
+  private exportMeshes: IExportMesh[] = []; // 存储所有物理元素的几何网格数据
+  private dummyExportMeshes: IExportMesh[] = []; // 存储所有虚拟元素（如 IfcSpace）的几何网格数据
+  private exportMeshesMap: { [key: number]: IExportMesh[] } = {}; // 映射表：元素 expressID -> 其对应的物理几何网格数组
+  private dummyExportMeshesMap: { [key: number]: IExportMesh[] } = {}; // 映射表：元素 expressID -> 其对应的虚拟几何网格数组
   //@ts-ignore
   private spatialNodeCount: number = 0 // 空间结构节点的计数器
   //@ts-ignore
@@ -333,25 +333,25 @@ export class IFCParser {
 
   // 获取包含实体几何数据的 mesh 映射表
   // 描述的是一个实体 Element 和几何 ShapeRepresentation 之间的关系
-  public async getSpeckleMeshesMap() {
-    return this.speckleMeshesMap;
+  public async getExportMeshesMap() {
+    return this.exportMeshesMap;
   }
 
   // 获取包含虚拟几何数据的 mesh 映射表
   // 描述的是一个虚拟 Element 和几何 ShapeRepresentation 之间的关系
-  public async getDummySpeckleMeshesMap() {
-    return this.dummySpeckleMeshesMap;
+  public async getDummyExportMeshesMap() {
+    return this.dummyExportMeshesMap;
   }
 
 
-  // 获取所有的实体几何相关数据，存储在 speckleMeshes 中
-  public async getAllSpeckleMeshes() {
-    return this.speckleMeshes;
+  // 获取所有的实体几何相关数据，存储在 exportMeshes 中
+  public async getAllExportMeshes() {
+    return this.exportMeshes;
   }
 
-  // 获取所有的虚拟实体几何相关数据，存储在 dummySpeckleMeshes 中
-  public async getAllDummySpeckleMeshes() {
-    return this.dummySpeckleMeshes;
+  // 获取所有的虚拟实体几何相关数据，存储在 dummyExportMeshes 中
+  public async getAllDummyExportMeshes() {
+    return this.dummyExportMeshes;
   }
 
 
@@ -376,7 +376,7 @@ export class IFCParser {
     const project = {
       expressID: allProjectLines.get(0),
       type: 'IFCPROJECT',
-      speckle_type: 'Base',
+      export_type: 'Base',
       elements: [],
       closure: []
     } as INode
@@ -462,7 +462,7 @@ export class IFCParser {
     // @ts-ignore
     // 将子节点作为引用添加到当前节点
     node[prop] = nodes.map((node) => ({
-      speckle_type: 'reference',
+      export_type: 'reference',
       referencedId: node.id
     }))
   }
@@ -670,7 +670,7 @@ export class IFCParser {
   createNode(id: number): INode {
     const typeName = this.getNodeType(id)
     return {
-      speckle_type: typeName,
+      export_type: typeName,
       expressID: id,
       type: typeName,
       elements: [],
@@ -711,13 +711,13 @@ export class IFCParser {
     const geometryReferences: IGeometryReferences = {}
     const dummyGeometryReferences: IGeometryReferences = {}
 
-    this.speckleMeshes = [];
-    this.dummySpeckleMeshes = [];
+    this.exportMeshes = [];
+    this.dummyExportMeshes = [];
     // 这一部分主要进行虚拟构件的几何处理，当前主要处理 IFCSPACE
     this.ifcapi.StreamAllMeshesWithTypes(this.modelId as number, [IFCSPACE], async (mesh: { geometries: any; expressID: number }) => {
       const placedGeometries = mesh.geometries
       dummyGeometryReferences[mesh.expressID] = []
-      this.dummySpeckleMeshesMap[mesh.expressID] = [];  // 初始化该 expressID 的列表
+      this.dummyExportMeshesMap[mesh.expressID] = [];  // 初始化该 expressID 的列表
       for (let i = 0; i < placedGeometries.size(); i++) {
         const placedGeometry = placedGeometries.get(i)
         const geometry = this.ifcapi.GetGeometry(
@@ -733,9 +733,9 @@ export class IFCParser {
         const { vertices, normals } = this.extractVertexData(verts, placedGeometry.flatTransformation)
         const faces = this.extractFaces(indices) // 提取面
 
-        // 创建 Speckle 网格对象
-        const speckleMesh = {
-          speckle_type: 'Objects.Geometry.Mesh',
+        // 创建 Export 网格对象
+        const exportMesh = {
+          export_type: 'Objects.Geometry.Mesh',
           units: 'm',
           volume: 0,
           area: 0,
@@ -743,16 +743,16 @@ export class IFCParser {
           normals,
           faces,
           renderMaterial: placedGeometry.color ? this.colorToMaterial(placedGeometry.color) : null
-        } as ISpeckleMesh
+        } as IExportMesh
 
-        speckleMesh.id = getHash(speckleMesh) // 计算哈希 ID
+        exportMesh.id = getHash(exportMesh) // 计算哈希 ID
 
-        this.dummySpeckleMeshes.push(speckleMesh)
+        this.dummyExportMeshes.push(exportMesh)
         dummyGeometryReferences[mesh.expressID].push({
-          speckle_type: 'reference',
-          referencedId: speckleMesh.id
+          export_type: 'reference',
+          referencedId: exportMesh.id
         } as IGeometryReference)
-        this.dummySpeckleMeshesMap[mesh.expressID].push(speckleMesh);  // 添加 speckleMesh 到对应的列表中
+        this.dummyExportMeshesMap[mesh.expressID].push(exportMesh);  // 添加 exportMesh 到对应的列表中
       }
     })
 
@@ -760,7 +760,7 @@ export class IFCParser {
     this.ifcapi.StreamAllMeshes(this.modelId as number, async (mesh: { geometries: any; expressID: number }) => {
       const placedGeometries = mesh.geometries
       geometryReferences[mesh.expressID] = []
-      this.speckleMeshesMap[mesh.expressID] = [];  // 初始化该 expressID 的列表
+      this.exportMeshesMap[mesh.expressID] = [];  // 初始化该 expressID 的列表
       for (let i = 0; i < placedGeometries.size(); i++) {
         const placedGeometry = placedGeometries.get(i)
         const geometry = this.ifcapi.GetGeometry(
@@ -775,9 +775,9 @@ export class IFCParser {
         const { vertices, normals } = this.extractVertexData(verts, placedGeometry.flatTransformation)
         const faces = this.extractFaces(indices)
 
-        // 创建 Speckle 网格对象
-        const speckleMesh = {
-          speckle_type: 'Objects.Geometry.Mesh',
+        // 创建 Export 网格对象
+        const exportMesh = {
+          export_type: 'Objects.Geometry.Mesh',
           units: 'm',
           volume: 0,
           area: 0,
@@ -785,16 +785,16 @@ export class IFCParser {
           normals,
           faces,
           renderMaterial: placedGeometry.color ? this.colorToMaterial(placedGeometry.color) : null
-        } as ISpeckleMesh
+        } as IExportMesh
 
-        speckleMesh.id = getHash(speckleMesh)
+        exportMesh.id = getHash(exportMesh)
 
-        this.speckleMeshes.push(speckleMesh)
+        this.exportMeshes.push(exportMesh)
         geometryReferences[mesh.expressID].push({
-          speckle_type: 'reference',
-          referencedId: speckleMesh.id
+          export_type: 'reference',
+          referencedId: exportMesh.id
         } as IGeometryReference)
-        this.speckleMeshesMap[mesh.expressID].push(speckleMesh);  // 添加 speckleMesh 到对应的列表中
+        this.exportMeshesMap[mesh.expressID].push(exportMesh);  // 添加 exportMesh 到对应的列表中
       }
     })
 
@@ -807,7 +807,7 @@ export class IFCParser {
   extractFaces(indices: any[]) {
     const faces = []
     for (let i = 0; i < indices.length; i++) {
-      // Speckle 的面格式通常是 [number_of_vertices, v1, v2, v3, ...]
+      // Export 的面格式通常是 [number_of_vertices, v1, v2, v3, ...]
       // web-ifc 直接提供三角面索引，所以这里可能需要根据目标格式调整
       // if (i % 3 === 0) faces.push(0) // 如果需要面顶点数量前缀
       faces.push(indices[i])
@@ -845,7 +845,7 @@ export class IFCParser {
     return { vertices, normals }
   }
 
-  // 将 web-ifc 的颜色对象转换为 Speckle 的渲染材质对象
+  // 将 web-ifc 的颜色对象转换为 Export 的渲染材质对象
   colorToMaterial(color: Color) {
     // 将 RGBA 颜色分量转换为一个整数
     const intColor = Math.floor(
@@ -862,7 +862,7 @@ export class IFCParser {
       opacity: color.w,
       metalness: 0,
       roughness: 1,
-      speckle_type: 'Objects.Other.RenderMaterial'
+      export_type: 'Objects.Other.RenderMaterial'
     }
     material.id = getHash(material) // 计算材质的哈希 ID
     return material

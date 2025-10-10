@@ -23,9 +23,9 @@ export class IFCParser2DB {
     private createVersion: any;
     private allBuildingElements: any;
     private allElementsProperties: any;
-    private allSpeckleMeshes: any;
-    private speckleMeshesMap: any;
-    private dummySpeckleMeshesMap: any;
+    private allExportMeshes: any;
+    private exportMeshesMap: any;
+    private dummyExportMeshesMap: any;
     private locationX: any;
     private locationY: any;
     private locationZ: any;
@@ -63,12 +63,12 @@ export class IFCParser2DB {
         const baseUrl = window.location.origin
         const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
         mvp: {
-            mainModule: `${baseUrl}/duck-db/duckdb_mvp.wasm`,
-            mainWorker: `${baseUrl}/duck-db/duckdb-browser-mvp.worker.js`,
+            mainModule: `${baseUrl}/duckdb/duckdb_mvp.wasm`,
+            mainWorker: `${baseUrl}/duckdb/duckdb-browser-mvp.worker.js`,
         },
         eh: {
-            mainModule: `${baseUrl}/duck-db/duckdb-eh.wasm`,
-            mainWorker: `${baseUrl}/duck-db/duckdb-browser-eh.worker.js`,
+            mainModule: `${baseUrl}/duckdb/duckdb-eh.wasm`,
+            mainWorker: `${baseUrl}/duckdb/duckdb-browser-eh.worker.js`,
             },
         };
         // Select a bundle based on browser checks
@@ -106,16 +106,16 @@ export class IFCParser2DB {
         this.allElementsProperties = await this.parser.getAllElementsProps()
     }
     // 初始所有构件几何数据
-    // private async initAllSpeckleMeshes() {
-    //     this.allSpeckleMeshes = await this.parser.getAllSpeckleMeshes();
+    // private async initAllExportMeshes() {
+    //     this.allExportMeshes = await this.parser.getAllExportMeshes();
     // }
     // 初始所有构件与实体几何关联映射关系数据
-    // private async initSpeckleMeshesMap() {
-    //     this.speckleMeshesMap = await this.parser.getSpeckleMeshesMap();
+    // private async initExportMeshesMap() {
+    //     this.exportMeshesMap = await this.parser.getExportMeshesMap();
     // }
     // 初始所有构件与虚拟几何关联映射关系数据
-    // private async initDummySpeckleMeshesMap() {
-    //     this.dummySpeckleMeshesMap = await this.parser.getDummySpeckleMeshesMap();
+    // private async initDummyExportMeshesMap() {
+    //     this.dummyExportMeshesMap = await this.parser.getDummyExportMeshesMap();
     // }
 
     // 处理ifc文件数据并导出到duckdb数据库入口
@@ -151,9 +151,9 @@ export class IFCParser2DB {
 
         await this.initAllBuildingElements();
         await this.initAllElementsProperties();
-        // await this.initAllSpeckleMeshes();
-        // await this.initSpeckleMeshesMap();
-        // await this.initDummySpeckleMeshesMap();
+        // await this.initAllExportMeshes();
+        // await this.initExportMeshesMap();
+        // await this.initDummyExportMeshesMap();
         try {
             // 读取.sql文件内容
             // const sqlCommands = fs.readFileSync(dbPath, 'utf8');
@@ -301,7 +301,7 @@ export class IFCParser2DB {
             tableChunks['attribute'] = chunkJson(attrResults);
 
             // 插入 实体构件 相关数据 到scene_geometry元素几何表中，插入到scene_material共享材质表中，插入到scene_graphic元素图形表中
-            // const result = await insertGraphicGeometryMaterial(this.parser, this.db, this.speckleMeshesMap);
+            // const result = await insertGraphicGeometryMaterial(this.parser, this.db, this.exportMeshesMap);
 
             /* 插入 实体构件相关数据到scene_graphic元素属性表中 */
             // tableChunks['graphic'] = chunkJson(result.graphic);
@@ -317,7 +317,7 @@ export class IFCParser2DB {
             //===================  虚拟构件部分处理 ===================
             tableChunks['dummy'] = chunkJson(Object.values(this.parser.dummyElements));
             // 插入 虚拟构件 相关数据到scene_geometry元素几何表中，插入到scene_material共享材质表中，插入到scene_dummy元素图形表中
-            // const dummyResult = await insertGraphicGeometryMaterial(this.parser, this.db, this.dummySpeckleMeshesMap);
+            // const dummyResult = await insertGraphicGeometryMaterial(this.parser, this.db, this.dummyExportMeshesMap);
 
             /* 插入 虚拟构件 相关数据到scene_graphic元素属性表中 */
             // tableChunks['graphic'] = chunkJson(dummyResult.graphic);
@@ -730,14 +730,14 @@ async function appendClassficationProps(parser: any, existProprs: any[]): Promis
 
 
 // 插入数据到scene_graphic、scene_geometry和scene_material表中
-async function insertGraphicGeometryMaterial(parser: any, db: any, speckleMeshesMap: { [key: number]: any[] }): Promise<{ graphic: any[], geometry: any[], material: any[] }> {
-    console.log(`包含几何的构件个数: ${Object.keys(speckleMeshesMap).length}`);
+async function insertGraphicGeometryMaterial(parser: any, db: any, exportMeshesMap: { [key: number]: any[] }): Promise<{ graphic: any[], geometry: any[], material: any[] }> {
+    console.log(`包含几何的构件个数: ${Object.keys(exportMeshesMap).length}`);
     const graphicData: any[] = [];
     const geometryData: any[] = [];
     const materialData: any[] = [];
 
     // expressID是构件的实体id值，meshes是该构件下的所有几何mesh数据
-    for (const [expressID, meshes] of Object.entries(speckleMeshesMap)) {
+    for (const [expressID, meshes] of Object.entries(exportMeshesMap)) {
         // console.log(`Processing express ID ${expressID} with ${meshes.length} meshes`);
         const entity = await parser.getLineById(parseInt(expressID, 10));
         const entityGuid = formatGuid(entity.GlobalId.value); // 获取构件的ISOGUID
