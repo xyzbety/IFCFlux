@@ -6,7 +6,7 @@ export interface IFCParserProps {
 }
 
 export interface IGeometryReference {
-  speckle_type: 'reference',
+  export_type: 'reference',
   referencedId: string
 }
 
@@ -21,14 +21,14 @@ export interface IMaterial {
   opacity: number
   metalness: number,
   roughness: number,
-  speckle_type: 'Objects.Other.RenderMaterial'
+  export_type: 'Objects.Other.RenderMaterial'
 }
 
-export type SpeckleMeshes = Array<ISpeckleMesh>
+export type ExportMeshes = Array<IExportMesh>
 
-export interface ISpeckleMesh {
+export interface IExportMesh {
   id?: string,
-  speckle_type: 'Objects.Geometry.Mesh',
+  export_type: 'Objects.Geometry.Mesh',
   units: 'm',
   volume: 0,
   area: 0,
@@ -41,7 +41,7 @@ export interface ISpeckleMesh {
 export interface INode {
   id?: string
   fileId?: string
-  speckle_type: string
+  export_type: string
   expressID: number
   type: string
   elements: any[]
