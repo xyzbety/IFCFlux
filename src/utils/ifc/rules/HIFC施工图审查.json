@@ -1,8 +1,5 @@
 {
   "name": "湖北省BIM基础数据交换标准 施工图审查MVD",
-  "code": "DB42/T XXXX-2025",
-  "description": "忽略实体类型，展开继承关系，在施工图审查应用中按实体导出所有适用的属性集。",
-  "date": "2025-9-16",
   "version": "送审稿",
   "data_sheet": {
     "IfcAlarm": {

@@ -4,13 +4,13 @@
 
 ## 技术栈
 
-- **前端框架**: Vue 3 Composition API
+- **前端框架**: Vue 3
 - **构建工具**: Vite 6
 - **类型系统**: TypeScript 5
-- **3D渲染引擎**: Babylon.js
+- **3D渲染引擎**: Babylon
 - **桌面应用框架**: Tauri 2
 - **UI组件库**: Smart Web Components
-- **状态管理**: Vue内置响应式系统
+- **状态管理**: Pinia
 - **样式预处理**: Less
 - **BIM数据处理**: web-ifc
 
@@ -88,13 +88,10 @@ ifcflux/
 │   ├── logo.png            # 应用Logo
 │   ├── fonts/              # 字体文件
 │   ├── icons/              # SVG图标
-│   ├── rules/              # 检查规则文件
-│   ├── textures/           # 3D纹理资源
 │   └── web-ifc/            # Web-IFC库相关文件
 ├── src/                    # 前端源代码目录
 │   ├── App.vue             # 主应用组件
 │   ├── main.ts             # 应用入口文件
-│   ├── shims-js.d.ts       # JS模块的TypeScript声明文件
 │   ├── types.ts            # 全局TypeScript类型定义
 │   ├── vite-env.d.ts       # Vite环境变量的类型声明
 │   ├── components/         # Vue组件
@@ -114,7 +111,7 @@ ifcflux/
     └── src/                # Rust源代码
 ```
 
-## ⚙️ 配置
+## 配置
 
 ### Vite配置
 开发服务器端口、代理和其他构建配置可以在 `vite.config.ts` 中修改。

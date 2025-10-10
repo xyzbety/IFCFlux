@@ -1,12 +1,12 @@
 {
   "name": "湖北省BIM基础数据交换标准 基础数据MVD",
-  "code": "DB42/T XXXX-2025",
-  "description": "忽略实体类型，展开继承关系，按实体导出所有适用的属性集。",
-  "date": "2025-9-15",
   "version": "送审稿",
   "data_sheet": {
     "IfcActuator": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -17,7 +17,10 @@
       }
     },
     "IfcAirTerminal": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -35,7 +38,10 @@
       }
     },
     "IfcAirTerminalBox": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -46,7 +52,10 @@
       }
     },
     "IfcAirToAirHeatRecovery": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -57,7 +66,10 @@
       }
     },
     "IfcAlarm": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -74,7 +86,10 @@
       }
     },
     "IfcAudioVisualAppliance": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -92,7 +107,10 @@
       }
     },
     "IfcBeam": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -111,10 +129,15 @@
         "梁顶标高2": "IfcReal",
         "水平投影面积": "IfcReal"
       },
-      "Pset_型钢混凝土梁信息属性集": { "厚度": "IfcReal" }
+      "Pset_型钢混凝土梁信息属性集": {
+        "厚度": "IfcReal"
+      }
     },
     "IfcBoiler": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -210,7 +233,10 @@
       }
     },
     "IfcChiller": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -221,7 +247,10 @@
       }
     },
     "IfcCoil": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -230,7 +259,9 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_风机盘管信息属性集": { "高度": "IfcReal" }
+      "Pset_风机盘管信息属性集": {
+        "高度": "IfcReal"
+      }
     },
     "IfcColumn": {
       "Pset_位置特征属性集": {
@@ -248,10 +279,15 @@
         "体积": "IfcReal",
         "柱底标高": "IfcReal"
       },
-      "Pset_结构柱信息属性集": { "表面积": "IfcReal" }
+      "Pset_结构柱信息属性集": {
+        "表面积": "IfcReal"
+      }
     },
     "IfcCommunicationsAppliance": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -260,17 +296,24 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_广播设备信息属性集": { "厚度": "IfcReal" },
+      "Pset_广播设备信息属性集": {
+        "厚度": "IfcReal"
+      },
       "Pset_通信设备信息属性集": {
         "厚度": "IfcReal",
         "高度": "IfcReal",
         "宽度": "IfcReal",
         "深度": "IfcReal"
       },
-      "Pset_交换机信息属性集": { "长度": "IfcReal" }
+      "Pset_交换机信息属性集": {
+        "长度": "IfcReal"
+      }
     },
     "IfcController": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -281,7 +324,10 @@
       }
     },
     "IfcCoolingTower": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -298,7 +344,10 @@
       }
     },
     "IfcCovering": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -327,10 +376,16 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_幕墙信息属性集": { "高度": "IfcReal", "厚度": "IfcReal" }
+      "Pset_幕墙信息属性集": {
+        "高度": "IfcReal",
+        "厚度": "IfcReal"
+      }
     },
     "IfcDamper": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -347,7 +402,10 @@
       }
     },
     "IfcDistributionChamberElement": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -382,10 +440,16 @@
         "厚度": "IfcReal",
         "标高": "IfcReal"
       },
-      "Pset_出入口信息属性集": { "边长": "IfcReal", "直径": "IfcReal" }
+      "Pset_出入口信息属性集": {
+        "边长": "IfcReal",
+        "直径": "IfcReal"
+      }
     },
     "IfcDuctFitting": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -422,10 +486,15 @@
         "终点宽度": "IfcReal",
         "终点高度": "IfcReal"
       },
-      "Pset_支吊架信息属性集": { "长度": "IfcReal" }
+      "Pset_支吊架信息属性集": {
+        "长度": "IfcReal"
+      }
     },
     "IfcDuctSegment": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -450,7 +519,10 @@
       }
     },
     "IfcDuctSilencer": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -467,7 +539,10 @@
       }
     },
     "IfcElectricAppliance": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -478,7 +553,10 @@
       }
     },
     "IfcElectricDistributionBoard": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -546,7 +624,10 @@
       }
     },
     "IfcElementAssembly": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -557,7 +638,10 @@
       }
     },
     "IfcFan": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -574,7 +658,10 @@
       }
     },
     "IfcFilter": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -590,7 +677,10 @@
       }
     },
     "IfcFireSuppressionTerminal": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -605,7 +695,9 @@
         "宽度": "IfcReal",
         "高度": "IfcReal"
       },
-      "Pset_消火栓箱信息属性集": { "厚度": "IfcReal" },
+      "Pset_消火栓箱信息属性集": {
+        "厚度": "IfcReal"
+      },
       "Pset_消防喷头信息属性集": {
         "标高": "IfcReal",
         "长度": "IfcReal",
@@ -618,10 +710,16 @@
         "宽度": "IfcReal",
         "高度": "IfcReal"
       },
-      "Pset_灭火器箱信息属性集": { "长度": "IfcReal", "标高": "IfcReal" }
+      "Pset_灭火器箱信息属性集": {
+        "长度": "IfcReal",
+        "标高": "IfcReal"
+      }
     },
     "IfcFlowInstrument": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -630,10 +728,15 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_流量传感器信息属性集": { "公称直径": "IfcReal" }
+      "Pset_流量传感器信息属性集": {
+        "公称直径": "IfcReal"
+      }
     },
     "IfcFlowMeter": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -642,7 +745,9 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_水机械仪表信息属性集": { "公称直径": "IfcReal" }
+      "Pset_水机械仪表信息属性集": {
+        "公称直径": "IfcReal"
+      }
     },
     "IfcFooting": {
       "Pset_位置特征属性集": {
@@ -660,7 +765,9 @@
         "高度": "IfcReal",
         "外径": "IfcReal"
       },
-      "Pset_柱墩信息属性集": { "柱墩尺寸": "IfcReal" },
+      "Pset_柱墩信息属性集": {
+        "柱墩尺寸": "IfcReal"
+      },
       "Pset_承台信息属性集": {
         "承台顶部高程": "IfcReal",
         "承台垫层厚度": "IfcReal",
@@ -670,12 +777,16 @@
         "锚固段长度": "IfcReal",
         "自由段长度": "IfcReal"
       },
-      "Pset_有筋扩展基础信息属性集": { "垫层厚度": "IfcReal" },
+      "Pset_有筋扩展基础信息属性集": {
+        "垫层厚度": "IfcReal"
+      },
       "Pset_柱下基础信息属性集": {
         "梁截面尺寸": "IfcReal",
         "垫层尺寸": "IfcReal"
       },
-      "Pset_地下连续墙信息属性集": { "顶部高程": "IfcReal" }
+      "Pset_地下连续墙信息属性集": {
+        "顶部高程": "IfcReal"
+      }
     },
     "IfcFurniture": {
       "Pset_位置特征属性集": {
@@ -691,10 +802,16 @@
         "宽度": "IfcReal",
         "高度": "IfcReal"
       },
-      "Pset_室内绿化信息属性集": { "厚度": "IfcReal", "外径": "IfcReal" }
+      "Pset_室内绿化信息属性集": {
+        "厚度": "IfcReal",
+        "外径": "IfcReal"
+      }
     },
     "IfcHeatExchanger": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -735,7 +852,10 @@
       }
     },
     "IfcLightFixture": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -753,7 +873,10 @@
       }
     },
     "IfcOpeningElement": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -807,7 +930,10 @@
       }
     },
     "IfcPipeFitting": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -834,7 +960,9 @@
         "支管1直径": "IfcReal",
         "支管2直径": "IfcReal"
       },
-      "Pset_水管弯头信息属性集": { "公称直径": "IfcReal" },
+      "Pset_水管弯头信息属性集": {
+        "公称直径": "IfcReal"
+      },
       "Pset_水管变径信息属性集": {
         "长度": "IfcReal",
         "角度": "IfcReal",
@@ -843,7 +971,10 @@
       }
     },
     "IfcPipeSegment": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -870,7 +1001,10 @@
       }
     },
     "IfcProtectiveDevice": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -886,7 +1020,10 @@
       }
     },
     "IfcPump": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -904,7 +1041,10 @@
       }
     },
     "IfcRailing": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -961,7 +1101,9 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_卫生洁具信息属性集": { "标高": "IfcReal" }
+      "Pset_卫生洁具信息属性集": {
+        "标高": "IfcReal"
+      }
     },
     "IfcSensor": {
       "Pset_位置特征属性集": {
@@ -980,7 +1122,10 @@
       }
     },
     "IfcShadingDevice": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -1005,7 +1150,10 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_场地信息属性集": { "长度": "IfcReal", "宽度": "IfcReal" }
+      "Pset_场地信息属性集": {
+        "长度": "IfcReal",
+        "宽度": "IfcReal"
+      }
     },
     "IfcSlab": {
       "Pset_位置特征属性集": {
@@ -1084,7 +1232,9 @@
         "区域长度": "IfcReal",
         "区域宽度": "IfcReal"
       },
-      "Pset_消防车登高操作场地信息属性集": { "坡度": "IfcReal" }
+      "Pset_消防车登高操作场地信息属性集": {
+        "坡度": "IfcReal"
+      }
     },
     "IfcStackTerminal": {
       "Pset_位置特征属性集": {
@@ -1141,7 +1291,10 @@
       }
     },
     "IfcSwitchingDevice": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -1157,7 +1310,10 @@
       }
     },
     "IfcTank": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -1199,7 +1355,9 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_运输元素信息属性集": { "长度": "IfcReal" },
+      "Pset_运输元素信息属性集": {
+        "长度": "IfcReal"
+      },
       "Pset_垂直电梯信息属性集": {
         "轿厢高度": "IfcReal",
         "轿厢宽度": "IfcReal",
@@ -1218,7 +1376,10 @@
       }
     },
     "IfcUnitaryControlElement": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -1234,7 +1395,10 @@
       }
     },
     "IfcUnitaryEquipment": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -1249,7 +1413,10 @@
       }
     },
     "IfcValve": {
-      "Pset_产品规格属性集": { "表面积": "IfcReal", "体积": "IfcReal" },
+      "Pset_产品规格属性集": {
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
       "Pset_位置特征属性集": {
         "起点坐标X": "IfcReal",
         "起点坐标Y": "IfcReal",
@@ -1292,7 +1459,10 @@
         "厚度": "IfcReal",
         "墙高": "IfcReal"
       },
-      "Pset_支护墙信息属性集": { "长度": "IfcReal", "宽度": "IfcReal" }
+      "Pset_支护墙信息属性集": {
+        "长度": "IfcReal",
+        "宽度": "IfcReal"
+      }
     },
     "IfcWasteTerminal": {
       "Pset_位置特征属性集": {
@@ -1309,7 +1479,9 @@
         "宽度": "IfcReal",
         "高度": "IfcReal"
       },
-      "Pset_存水弯信息属性集": { "直径": "IfcReal" }
+      "Pset_存水弯信息属性集": {
+        "直径": "IfcReal"
+      }
     },
     "IfcWindow": {
       "Pset_位置特征属性集": {
