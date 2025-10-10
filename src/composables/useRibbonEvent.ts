@@ -1,4 +1,4 @@
-import { ref, Ref } from "vue";
+import { ref } from "vue";
 import { debounce } from "../utils/index";
 export interface RibbonEventsOptions {
     modelStore: any;
@@ -82,20 +82,6 @@ export class RibbonEventManager {
                 params: ["visible", "x", "y", "z", "reset"]
             },
 
-            // 空间生成事件
-            {
-                labels: ["生成空间", "导出"],
-                type: "space-generate",
-                params: ["generate", "export"]
-            },
-
-            // 动画事件
-            {
-                labels: ["开始", "暂停", "停止", "脚本库"],
-                type: "animation-event",
-                params: ["start", "pause", "stop", "toolbox"]
-            },
-
             // 爆炸图事件
             {
                 labels: ["楼层抽屉", "轴向爆炸", "清除效果"],
@@ -108,7 +94,14 @@ export class RibbonEventManager {
                 labels: ["基础数据", "规划报建", "施工图审查", "智慧工地监管", "竣工验收"],
                 type: "inspect-click",
                 params: [1, 2, 3, 4, 5]
-            }
+            },
+
+            // 数据导出事件
+            {
+                labels: ["导出GLB", "导出DB", "导出JSON"],
+                type: "export-settings",
+                params: ['glb', 'db', 'json']
+            },
         ];
 
         eventDefinitions.forEach(({ labels, type, params }) => {
@@ -127,10 +120,7 @@ export class RibbonEventManager {
         this.singleEvents.clear(); // 清空之前的事件
         this.singleEvents.set("构件树", debounce(() => this.options!.emit("build-tree")));
         this.singleEvents.set("属性表", debounce(() => this.options!.emit("properties-table")));
-        this.singleEvents.set("重置光照", debounce(() => this.options!.emit("light-settings-reset")));
-        this.singleEvents.set("导出GLB", debounce(() => this.options!.emit("export-settings", "glb")));
-        this.singleEvents.set("导出DB", debounce(() => this.options!.emit("export-settings", "db")));
-        this.singleEvents.set("导出JSON", debounce(() => this.options!.emit("export-settings", "json")));
+        this.singleEvents.set("重置光照", debounce(() => this.options?.emit('light-settings', { type: 'reset'})));
     }
     /**
      * 处理按钮点击
@@ -256,7 +246,7 @@ export class RibbonEventManager {
             if (existingHandler) {
                 element.removeEventListener('change', existingHandler);
             }
-            
+
             // 添加新的监听器
             element.addEventListener('change', callback);
             this.settingsEventHandlers.set(elementId, callback);
@@ -270,53 +260,44 @@ export class RibbonEventManager {
             // 清理之前的事件监听器
             this.cleanupSettingsEvents();
 
-            // TODO: When the settings tab is opened, the initial value of the control should be set from the scene.
-            // This logic should be handled by the parent component (e.g., App.vue) listening for the 'ribbon-tab-change' event.
-
             // 绑定光照设置 X 轴滑块
             this.createEventHandler("horizontalSliderX", (event: any) => {
-                this.options?.emit('light-settings', { lightX: event.detail.value });
+                this.options?.emit('light-settings', { type: 'direction-x', value: event.detail.value });
             });
 
             // 绑定光照设置 Y 轴滑块
             this.createEventHandler("horizontalSliderY", (event: any) => {
-                this.options?.emit('light-settings', { lightY: event.detail.value });
+                this.options?.emit('light-settings', { type: 'direction-y', value: event.detail.value });
             });
 
             // 绑定光照设置 Z 轴滑块
             this.createEventHandler("horizontalSliderZ", (event: any) => {
-                this.options?.emit('light-settings', { lightZ: event.detail.value });
+                this.options?.emit('light-settings', { type: 'direction-z', value: event.detail.value });
             });
 
             // 绑定光照强度输入框
             this.createEventHandler("inputIndensity", (event: any) => {
-                this.options?.emit('light-settings', { lightIndensity: event.detail.value });
+                this.options?.emit('light-settings', { type: 'indensity', value: event.detail.value });
             });
 
             // 绑定阴影复选框
             this.createEventHandler("checkboxShadow", (event: any) => {
-                this.options?.emit('light-settings', { lightShadowEnabled: event.detail.value });
+                this.options?.emit('light-settings', { type: 'shadow', value: event.detail.value });
             });
 
             // 绑定拖动速度滑块
             this.createEventHandler("horizontalSliderSpeed", (event: any) => {
-                const speed = event.detail.value;
-                console.log("拖动速度:", speed);
-                this.options?.emit('scene-settings', { dragSpeed: speed });
+                this.options?.emit('interaction-settings', { type:'dragSpeed', value: event.detail.value });
             });
 
             // 绑定焦点模式复选框
             this.createEventHandler("focusCheckbox", (event: any) => {
-                const isChecked = event.detail.value;
-                console.log("Focus mode:", isChecked);
-                this.options?.emit('interaction-settings', { focusMode: isChecked });
+                this.options?.emit('interaction-settings', { type:'focusMode', value: event.detail.value });
             });
 
             // 绑定网格模式复选框
             this.createEventHandler("gridCheckbox", (event: any) => {
-                const isChecked = event.detail.value;
-                console.log("Grid mode:", isChecked);
-                this.options?.emit('scene-settings', { gridMode: isChecked }); // 修正了这里的参数名
+                this.options?.emit('scene-settings', { type:'gridMode', value: event.detail.value }); 
             });
 
             // 绑定颜色选择器
@@ -325,11 +306,9 @@ export class RibbonEventManager {
             if (handleColorPicker && viewerCanvas) {
                 const bgColor = window.getComputedStyle(viewerCanvas).backgroundColor;
                 handleColorPicker.value = bgColor;
-                
+
                 this.createEventHandler("colorPicker", (event: any) => {
-                    const color = event.detail.value;
-                    console.log("背景颜色改变:", color);
-                    this.options?.emit('scene-settings', { backgroundColor: color });
+                    this.options?.emit('scene-settings', { type:'backgroundColor', value: event.detail.value });
                 });
             }
         }

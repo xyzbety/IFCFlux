@@ -72,6 +72,8 @@ export class IfcLoader {
     public ifcTree: any; // 用于存储解析后的IFC树
     public properties: any;
     public ifcExpressIds: any;
+    public psetLines: any;
+    public psetRelations: any;
 
     private url: string | File;
     private scene: BABYLON.Scene;
@@ -119,7 +121,6 @@ export class IfcLoader {
         this.model = new BABYLON.Mesh('modelMesh', this.scene);
         this.ifcApi = new WEBIFC.IfcAPI();
         this.ifcApi.SetWasmPath('/web-ifc/', true);
-        this.ifcParser = new IfcParser(this.ifcApi);
     }
 
     /**
@@ -129,13 +130,15 @@ export class IfcLoader {
      */
     public async load(onProgress: ProgressCallback | null = null): Promise<void> {
         await this.loadFileToArrayBuffer();
-
+        this.ifcParser = new IfcParser(this.ifcApi);
         if (this.isParser) {
             // Pass null for onProgress to make property parsing silent
             const parsedData: any = await this.ifcParser.load(null, this.modelID!);
             this.ifcTree = parsedData.tree;
             this.properties = parsedData.properties;
             this.ifcExpressIds = parsedData.ifcExpressIds;
+            this.psetLines = parsedData.psetLines;
+            this.psetRelations = parsedData.psetRelations;
             console.log('IFC树已加载,解析完成');
         }
 
@@ -259,7 +262,6 @@ export class IfcLoader {
                 buffer = await this.loadBinary(this.url);
             }
         }
-
         if (buffer) {
             this.modelID = await this.ifcApi.OpenModel(new Uint8Array(buffer), {
                 COORDINATE_TO_ORIGIN: false

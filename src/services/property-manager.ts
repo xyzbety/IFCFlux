@@ -209,7 +209,9 @@ export class IfcPropertyUtils {
   public async getProperty(
     expressID: string,
     propertyAll: any[],
-    ifcExpressIds: any[]
+    ifcExpressIds: any[],
+    psetRelations: any[],
+    psetLines: any,
   ): Promise<any[]> {
     const showPropertyKey = ['GlobalId', 'Name', 'LongName', 'ObjectType', 'Tag', 'Phase', 'type'];
     const property = [];
@@ -278,7 +280,8 @@ export class IfcPropertyUtils {
         }),
       };
       property.push(specific);
-
+      
+      // 获取关联属性集
       spec.forEach((p: any) => {
         if (p.type === 1451395588) {
           id++;
@@ -309,10 +312,72 @@ export class IfcPropertyUtils {
           });
         }
       });
+
+      const psetIds = [] as any
+      // 查找与此元素关联的属性集
+      if (psetRelations && psetLines) {
+        for (let i = 0; i < psetRelations.length; i++) {
+          if (psetRelations[i].includes(Number(processedExpressID))) {
+            psetIds.push(psetLines.get(i))
+          }
+        }
+      }
+
+      // 获取属性集的定义 ID
+      const rawPsetIds = psetIds.map((id: number) =>
+        propertyAll[id].RelatingPropertyDefinition.value
+      )
+
+      // 获取属性集对象
+    const rawPsets = rawPsetIds.map((id: number) => propertyAll[id])
+    for (const pset of rawPsets) {
+      //@ts-ignore
+      // 解包属性集并添加到属性对象中
+      // property[pset.Name] = this.unpackPsetOrComplexProp(pset, propertyAll)
+      property.push({
+        id,
+        name: pset.Name?.value,
+        children: this.unpackPsetOrComplexProp(pset, propertyAll, id)
+      })
+    }
+
+
     }
 
     return property;
   }
+
+// 解包属性集或复杂属性
+private unpackPsetOrComplexProp(pset: { HasProperties: any }, properties: any, id:any) {
+  const parsed: any = []
+  if (!pset.HasProperties || !Array.isArray(pset.HasProperties)) return parsed
+  for (const psetId of pset.HasProperties) {
+    const value = properties[psetId.value]
+    id++;
+    if (value?.type === 2542286263) {
+      parsed[value.Name] = this.unpackPsetOrComplexProp(value, properties, id) // 递归解包复杂属性
+    } else if (value?.type === 3650150729) {
+      let nominalValue = value.NominalValue;
+      if (typeof nominalValue === 'boolean') {
+        nominalValue = nominalValue ? '是' : '否';
+      }
+      else if (typeof nominalValue === 'object' && nominalValue !== null && 'value' in nominalValue) {
+        if (typeof nominalValue.value === 'boolean') {
+          nominalValue = nominalValue.value ? '是' : '否';
+        } else {
+          nominalValue = nominalValue.value;
+        }
+      }
+      id++;
+      parsed.push({
+        id,
+        name: value.Name.value,
+        value: nominalValue
+      })
+    }
+  }
+  return parsed
+}
 
 public async flattenTreeToGroupedItems(treeData: any[]): Promise<{
   items: any[];
@@ -384,17 +449,20 @@ public async flattenTreeToGroupedItems(treeData: any[]): Promise<{
     treeData: any[];
     ifcExpressIds: any[];
     propertyAll: any[];
+    psetRelations: any;
   } {
     const treeData = modelData.tree;
     IfcPropertyUtils.rootExpressId = modelData.tree[0].expressId;
 
     const ifcExpressIds = modelData.ifcExpressIds;
     const propertyAll = modelData.properties;
+    const psetRelations = modelData.psetRelations;
 
     return {
       treeData,
       ifcExpressIds,
-      propertyAll
+      propertyAll,
+      psetRelations,
     };
   }
 

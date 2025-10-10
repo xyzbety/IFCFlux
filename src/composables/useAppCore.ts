@@ -1,20 +1,13 @@
 import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
-import { MessagePlugin } from 'tdesign-vue-next';
-import { invoke } from '@tauri-apps/api/core';
-import { isTauri } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
+import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile } from '@tauri-apps/plugin-fs';
-import * as BABYLON from '@babylonjs/core';
-import { GLTF2Export } from "@babylonjs/serializers";
 import { useModelStore, useSceneStore, useSelectedStore } from '../store';
 import { useSettingsStore } from '../store/settings';
 import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
 import { updateTempLineLabel } from '../utils/index';
-import { IfcSpaceGen } from "../utils/ifc/ifcspacegen";
 import { IfcExplosion } from '../utils/ifc/IfcExplosion';
-import * as animationFns from '../utils/blockly/animation';
 import { useLayoutManager } from './useLayoutManager';
 import { ModelManager } from "../services/model-manager";
 import { useDragResize } from './useDragResize';
@@ -22,27 +15,15 @@ import { IfcPropertyUtils } from '../services/property-manager';
 import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
 import { eventManager } from '../services/event-manager';
-// Global declarations
-declare global {
-    interface Window {
-        isAnimationStopped: boolean;
-        [key: string]: any;
-    }
-}
+import { IfcLoader } from '../utils/loader/IfcLoader';
+import { saveAsGLB, saveAsDB, saveAsJSON } from '../utils/ifc/ifcExporter';
+
 
 // 单例实例存储
 let appCoreInstance: ReturnType<typeof createAppCore> | null = null;
 
 function createAppCore() {
     let initResult: any = null; // 用于存储初始化结果
-    // 批量挂载所有导出函数到 window
-    Object.keys(animationFns).forEach((key: any) => {
-        // 只挂载函数
-        if (typeof (animationFns as any)[key] === 'function') {
-            window[key] = (animationFns as any)[key];
-        }
-    });
-    window.isAnimationStopped = false;
 
     const isTauriEnv = isTauri();
     let isMaximized = ref(true);
@@ -75,7 +56,6 @@ function createAppCore() {
     } = useLayoutManager();
 
     const structureTreeRef = ref();
-    const animationControllerRef = ref();
     const leftDragBarRef = ref<any>(null);
     const inspectDragBarRef = ref<any>(null);
     const rightDragBarRef = ref<any>(null);
@@ -87,7 +67,8 @@ function createAppCore() {
         ifcExpressIds: [] as any[],
         propertyAll: [] as any[],
         property: [] as any[],
-        groupMap: {} as Map<number, any>
+        groupMap: {} as Map<number, any>,
+        psetRelations: [] as any[],
     });
 
     const themeStyle = computed(() => ({
@@ -128,15 +109,10 @@ function createAppCore() {
             return;
         }
         switch (tabIndex) {
-            case 0: case 2: switchToMode(LM.VIEW); break;
+            case 0: switchToMode(LM.VIEW); break;
             case 1: switchToMode(LM.CANVAS_ONLY); break;
+            case 2: switchToMode(LM.VIEW); break;
             case 3: switchToMode(LM.VIEW); break;
-            case 4:
-                switchToMode(LM.ANIMATION);
-                if (animationControllerRef.value) {
-                    animationControllerRef.value.initializeBlockly();
-                }
-                break;
             default: switchToMode(LM.VIEW);
         }
     };
@@ -196,50 +172,11 @@ function createAppCore() {
     const togglePropertyTableDialog = () => { if (canToggleComponents.value) togglePropertyTable(); };
     // const handleExplosion = (type: any) => sceneManager.handleExplosion(type);
     const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
-    const handleLightSettingsReset = () => { isHightlight = true; sceneManager.resetLightSettings(); };
     const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
-    const handleExportSetting = async (type: string) => {
-        const fileName = modelStore.file?.name ?? "untitled";
-        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-        const exportFileName = `${fileNameWithoutExtension}.glb`;
-        try {
-            const options = {
-                shouldExportNode: (node: any) => {
-                    if (node instanceof BABYLON.Mesh) {
-                        return node.isEnabled() && node.getTotalVertices() > 0;
-                    }
-                    return true;
-                }
-            };
-            const exportResult = await GLTF2Export.GLBAsync(sceneManager.scene!, fileNameWithoutExtension, options);
-            const glbFile = exportResult.files[exportFileName];
-            if (!(glbFile instanceof Blob)) {
-                throw new Error("导出的文件格式无效");
-            }
-            if (!isTauriEnv) {
-                exportResult.downloadFiles();
-                MessagePlugin.success({ content: '导出成功！', duration: 1000 });
-                return;
-            }
-            const savePath = await save({
-                title: '请选择.glb文件导出路径',
-                defaultPath: exportFileName,
-                filters: [{ name: "", extensions: ['glb'] }]
-            });
-            if (!savePath) {
-                MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
-                return;
-            }
-            const arrayBuffer = await glbFile.arrayBuffer();
-            await writeFile(savePath, new Uint8Array(arrayBuffer));
-            MessagePlugin.success({ content: '导出成功！', duration: 1000 });
-        } catch (error) {
-            console.error("导出失败:", error);
-            MessagePlugin.error({
-                content: `导出失败: ${error instanceof Error ? error.message : String(error)}`,
-                duration: 2000
-            });
-        }
+
+    const handleExportSetting = async (type: 'glb' | 'db' | 'json') => {
+        console.log('handleExportSetting', type);
+        await sceneManager.exportSceneData(type, isTauriEnv);
     }
 
     function clear() {
@@ -261,9 +198,6 @@ function createAppCore() {
         measure = null;
         CoordinateTemp.point = null;
         sceneManager.clear();
-        if (animationControllerRef.value) {
-            animationControllerRef.value.resetAnimationState();
-        }
     }
 
     const handleFileUploaded = async (file: File) => {
@@ -284,11 +218,11 @@ function createAppCore() {
                     pageState.groupMap = new Map<number, any>();
                     pageState.ifcExpressIds = initResult.ifcExpressIds;
                     pageState.propertyAll = initResult.propertyAll;
+                    pageState.psetRelations = initResult.psetRelations;
                     eventManager.emit('file-loaded');
 
                     sceneManager.setIfcExplosion(new IfcExplosion(scene));
                     switchToMode(LM.VIEW);
-                    if (animationControllerRef.value) animationControllerRef.value.initializeBlockly();
                     sceneManager.setupCameraAndLight();
                     const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
                     if (handleGridCheckbox.checked) {
@@ -304,53 +238,12 @@ function createAppCore() {
         }
     };
 
-    const handleAnimationEvent = async (action: any) => {
-        if (animationControllerRef.value) await animationControllerRef.value.handleAnimationEvent(action);
-    };
-
-    const handleAnimationClick = (event: string) => {
-        if (event === 'click' && animationControllerRef.value) animationControllerRef.value.initializeBlockly();
-    };
-
     const handleInspectClick = async (event: number) => {
         if (!sceneManager.scene) return;
         const map = { 1: "基础数据", 2: "规划报建", 3: "施工图审查", 4: "智慧工地监管", 5: "竣工验收" } as const;
         inspectType.value = map[event as keyof typeof map];
         switchToMode(LM.INSPECT);
         if (modelStore.file) modelManager.setupInspectDataListener(modelStore.file, event);
-    };
-
-    const handleSpaceGenerate = async (action: 'generate' | 'export') => {
-        if (modelStore.file && sceneManager.scene) {
-            const scene = sceneManager.scene;
-            const gen = new IfcSpaceGen(modelStore.file);
-            const result = await gen.generateSpaces();
-            if (action === 'generate') {
-                result.forEach((mesh: any, idx: number) => {
-                    const customMesh = new BABYLON.Mesh(`space_${idx}`, scene);
-                    const vertexData = new BABYLON.VertexData();
-                    vertexData.positions = mesh.vertexData.flat();
-                    vertexData.indices = mesh.faceData.flat();
-                    if (vertexData.positions && vertexData.indices) {
-                        vertexData.normals = new Array(vertexData.positions.length).fill(0);
-                        BABYLON.VertexData.ComputeNormals(vertexData.positions, vertexData.indices, vertexData.normals);
-                        vertexData.applyToMesh(customMesh);
-                        const mat = new BABYLON.StandardMaterial(`mat_${idx}`, scene);
-                        mat.diffuseColor = new BABYLON.Color3(1, 0, 0);
-                        mat.alpha = 1;
-                        customMesh.material = mat;
-                    }
-                });
-                alert("生成空间成功");
-            } else if (action === 'export') {
-                if (result.length > 0) {
-                    await gen.save();
-                    alert("导出成功！");
-                } else {
-                    alert("导出失败，请检查空间数据或模型！");
-                }
-            }
-        }
     };
 
     const onTableSelectChange = (event: any) => {
@@ -405,7 +298,7 @@ function createAppCore() {
         }
 
         selectedMeshId = expressID;
-        let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds);
+        let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds, pageState.psetRelations, modelStore.psetLines);
         const { items, groupRowMap } = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
         pageState.property = items;
         pageState.groupMap = groupRowMap;
@@ -419,8 +312,13 @@ function createAppCore() {
         ifcPropertyColumn.value = markRaw(newValue);
     };
 
-    const handleFocusOnClick = (data: any) => {
-        isFocus = data.focusMode
+    const handleInteractionSetting = (data: any) => {
+        if (data.type === 'dragSpeed' && sceneManager.camera) {
+            sceneManager.camera.panningSensibility = 20 - data.value;
+        }
+        if( data.type === 'focusMode') {
+            isFocus = data.value
+        }   
     }
     const handleHisBefore = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
     const handleHisAfter = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
@@ -434,6 +332,61 @@ function createAppCore() {
         }
     };
 
+    const convertFileByCli = async () => {
+        try {
+            const matches = await getMatches();
+            if (matches.subcommand?.name === 'convert') {
+                const input = matches.subcommand.matches.args.input.value as string;
+                const output = matches.subcommand.matches.args.output.value as string;
+                const extension = output.split('.').pop();
+                if (extension !== 'glb' && extension !== 'json' && extension !== 'db') {
+                    await invoke('print_to_terminal', { message: '错误：不支持的文件格式，仅支持 .glb、.json 或 .db 后缀！' });
+                    await invoke('exit_process');
+                    return;
+                }
+
+                // 读取文件（增加错误捕获）
+                await invoke('print_to_terminal', { message: '正在读取文件...' });
+                let content: string;
+                try {
+                    content = await invoke('read_file', { path: input });
+                } catch (error) {
+                    await invoke('print_to_terminal', { message: `文件读取失败: ${error}` });
+                    await invoke('exit_process');
+                    return;
+                }
+
+                const encoder = new TextEncoder();
+                const buffer = encoder.encode(content).buffer;
+                if (!buffer) return;
+                const file = new File([buffer], 'converted.ifc', { type: 'application/ifc' });
+                const ifcLoader = new IfcLoader(file, sceneManager.scene!);
+                await ifcLoader.load();
+                await invoke('print_to_terminal', { message: '正在进行文件格式转换...' });
+
+                // 根据扩展名处理不同格式
+                try {
+                    await invoke('print_to_terminal', { message: '正在导出文件...' });
+                    if (extension === 'glb') {
+                        await saveAsGLB(sceneManager.scene!, output);
+                    } else if (extension === 'json') {
+                        await saveAsJSON(sceneManager.scene!, output);
+                    } else if (extension === 'db') {
+                        await saveAsDB(file, input, output);
+                    }
+                    await invoke('print_to_terminal', { message: '文件导出成功！' });
+                    await invoke('exit_process');
+                } catch (error) {
+                    await invoke('print_to_terminal', { message: error.message });
+                    await invoke('exit_process');
+                }
+            }
+        } catch (error) {
+            await invoke('print_to_terminal', { message: `程序运行异常: ${error}` });
+            await invoke('exit_process');
+        }
+    };
+
     onMounted(async () => {
         const ribbonManager = RibbonEventManager.getInstance();
         ribbonManager.initialize({
@@ -443,12 +396,9 @@ function createAppCore() {
                     'navigate-event': handleNavigate, 'change-view': handleView, 'visible-control': handleVisibility,
                     'measure-event': handleMeasure, 'slice-event': handleSlice, 'build-tree': handleBuildTree,
                     'properties-table': handlePropertiesTable, 'file-uploaded': handleFileUploaded,
-                    'space-generate': handleSpaceGenerate, 'light-settings': handleLightSettings,
-                    'inspect-click': handleInspectClick, 'light-settings-reset': handleLightSettingsReset,
-                    'scene-settings': handleChangeScene, 'animation-event': handleAnimationEvent,
-                    'animation-click': handleAnimationClick, 'ribbon-tab-change': handleRibbonTabChange,
-                    'toggle-file-menu': toggleFileMenu, 'interaction-settings': handleFocusOnClick,
-                    'export-settings': handleExportSetting
+                    'light-settings': handleLightSettings, 'inspect-click': handleInspectClick, 'scene-settings': handleChangeScene,
+                    'ribbon-tab-change': handleRibbonTabChange, 'toggle-file-menu': toggleFileMenu,
+                    'interaction-settings': handleInteractionSetting, 'export-settings': handleExportSetting,
                 };
                 eventMap[eventName]?.(...args);
             }
@@ -466,9 +416,13 @@ function createAppCore() {
         eventManager.add('mouse-wheel', handleHisBefore);
         eventManager.add("resize", handleResize);
 
-        if (isTauriEnv) await invoke('show_mainscreen').catch(console.error);
+        if (isTauriEnv) {
+            await invoke('show_mainscreen').catch(console.error);
+            await convertFileByCli();
+        }
 
         watch(() => sceneStore.sceneSettings, handleChangeScene, { deep: true });
+
     });
 
     onUnmounted(() => {
@@ -481,7 +435,7 @@ function createAppCore() {
     });
 
     return {
-        isMaximized, isSidebarVisible, layoutState, structureTreeRef, animationControllerRef,
+        isMaximized, isSidebarVisible, layoutState, structureTreeRef,
         leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
         themeStyle, inspectType,
         handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
@@ -489,7 +443,6 @@ function createAppCore() {
         handleDragStart, onInspectVisibleChange, handleTabChange,
         sceneManager,
         originalMaterialProperties,
-        handleAnimationEvent
     };
 }
 

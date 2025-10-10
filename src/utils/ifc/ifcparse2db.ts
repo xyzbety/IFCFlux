@@ -1,9 +1,6 @@
 import { IFCParser, formatGuid } from './parser'
 import { RelationElementInfo } from './utils'
-import { Database } from "duckdb-async";
-import { mkdirSync, rmSync, existsSync } from 'fs';
-import * as path from 'path';
-import * as fs from 'fs';
+import * as duckdb from '@duckdb/duckdb-wasm';
 
 let graphicMaxId = 0;
 let geometryMaxId = 0;
@@ -14,6 +11,7 @@ export class IFCParser2DB {
     private dbName: string;
     // private filePath: string;
     private db: any;
+    private cnn: any;
     private data: any;
     private result: any;
     private projectGuid: any;
@@ -34,6 +32,7 @@ export class IFCParser2DB {
     private locationA: any;
     private detail_level: number;
     private defaultOption: any;
+    private fileNames: any
 
     private uuid: any;
     private elementPsets:{ [key: number]: Set<string> } = {};
@@ -56,17 +55,38 @@ export class IFCParser2DB {
         this.createTime = Date.now();
         this.createVersion = '2.0.17';
         this.detail_level = 12;
+        this.fileNames = []
     }
 
     // 创建或打开DuckDB数据库
-    private async initDb(sqlFilePath: string) {
-        if (sqlFilePath.endsWith('.bin')) {
-            this.db = await Database.create(`${sqlFilePath}`, this.defaultOption);
-        }
+    private async initDb(dbName:string) {
+        const baseUrl = window.location.origin
+        const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
+        mvp: {
+            mainModule: `${baseUrl}/duck-db/duckdb_mvp.wasm`,
+            mainWorker: `${baseUrl}/duck-db/duckdb-browser-mvp.worker.js`,
+        },
+        eh: {
+            mainModule: `${baseUrl}/duck-db/duckdb-eh.wasm`,
+            mainWorker: `${baseUrl}/duck-db/duckdb-browser-eh.worker.js`,
+            },
+        };
+        // Select a bundle based on browser checks
+        const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
+        // Instantiate the asynchronous version of DuckDB-wasm
+        const worker = new Worker(bundle.mainWorker!);
+        const logger = new duckdb.ConsoleLogger();
+        this.db = new duckdb.AsyncDuckDB(logger, worker);
+        await this.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+        await this.db.open({
+            path: `opfs://${dbName}.db`,
+            accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
+        });
+        this.cnn = await this.db.connect();
     }
     // 初始Result数据
     private async initResult(detail_level: number) {
-        this.result = await this.parser.parse(this.data, detail_level)
+        await this.parser.parse(this.data, detail_level)
     }
     // 初始siteCoord数据
     private async initSiteCoord() {
@@ -99,12 +119,11 @@ export class IFCParser2DB {
     // }
 
     // 处理ifc文件数据并导出到duckdb数据库入口
-    async start(data: Buffer, sqlFilePath: string, uuid: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }) {
-        const folderPath: string = `./data_temp/${uuid}`;
-        createFolder(folderPath); // 创建文件夹
-        await this.initDb(sqlFilePath);
+    async start(data: File, dbName: string, envConfig?: { x: number; y: number; z: number; a: number, detail_level: number }) {
+        const tableChunks: { [key: string]: string[] } = {};
+        const memoryDbName = `${dbName}_${(new Date).getTime()}`;
+        await this.initDb(memoryDbName);
         this.data = data;
-        this.uuid = uuid;
 
         if (envConfig && 'detail_level' in envConfig) {
             this.detail_level = envConfig.detail_level!;
@@ -148,10 +167,6 @@ export class IFCParser2DB {
         CREATE SEQUENCE seq_scene_dummy_id START 1;
         CREATE SEQUENCE seq_scene_relation_id START 1;
         CREATE SEQUENCE seq_scene_attribute_id START 1;
-        CREATE SEQUENCE seq_scene_material_id START 1;
-        CREATE SEQUENCE seq_scene_geo_id START 1;
-        CREATE SEQUENCE seq_scene_graphic_id START 1;
-        CREATE SEQUENCE seq_scene_texture_id START 1;
         
         CREATE TYPE MODEL_TYPE AS ENUM ('建筑', '人工', '倾斜', '点', '点云', '体素');
         CREATE TYPE ATTRIBUTE_VALUE_TYPE AS ENUM ('INT', 'VARCHAR', 'REAL', 'DOUBLE', 'BOOLEAN', 'DATE', 'TIME', 'ARRAY', 'LIST');
@@ -233,48 +248,6 @@ export class IFCParser2DB {
             value_unit TEXT
         );
         
-        // CREATE TABLE scene_graphic (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_graphic_id'),
-        //     guid UUID,
-        //     obb_center REAL[],
-        //     obb_halfsize REAL[],
-        //     obb_quaternion REAL[],
-        //     with_geometry INT[],
-        //     geometry_transform TEXT
-        // );
-        
-        // CREATE TABLE scene_geometry (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_geo_id'),
-        //     polygon_vertex REAL[],
-        //     polygon_normal REAL[],
-        //     polygon_facet INT[],
-        //     polygon_uv REAL[],
-        //     brep_param TEXT,
-        //     csg_param TEXT,
-        //     with_material INT[]
-        // );
-        
-        // CREATE TABLE scene_material (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_material_id'),
-        //     material_code INTEGER,
-        //     material_name TEXT,
-        //     material_color INT[],
-        //     material_opacity REAL,
-        //     material_gain REAL,
-        //     with_texture INT,
-        // );
-        
-        // CREATE TABLE scene_texture (
-        //     id INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_scene_texture_id'),
-        //     texture_code INTEGER,
-        //     texture_name TEXT,
-        //     texture_diffuse BLOB,
-        //     texture_normal BLOB,
-        //     texture_ao BLOB,
-        //     texture_metallic BLOB,
-        //     texture_roughness BLOB,
-        //     texture_displacement BLOB,
-        // );
         
         CREATE TABLE scene_view (
             id INTEGER PRIMARY KEY,
@@ -289,12 +262,12 @@ export class IFCParser2DB {
 
             // 执行.sql文件中的SQL命令
             // console.log(this.db);
-            await this.db.all(sqlCommands);
+            await this.cnn.query(sqlCommands);
             console.log('数据库已成功通过.sql文件创建。');
 
             /* 插入数据到scene_base表中 */
             await insertIntoSceneBase(
-                this.db,
+                this.cnn,
                 this.projectGuid,
                 this.modelName,
                 this.modelType,
@@ -313,7 +286,7 @@ export class IFCParser2DB {
             // TODO: 2. 解析 level，针对 IfcBuildingStorey的字符串属性进行解析
             // 对被筛选出的IfcElements构件们进行属性的读取和处理 */
             // let count = 0; // TEMP: 初始化计数器，用作限制数据产生内容
-            writeToJson(folderPath, Object.values(this.parser.physicalElements), 'physical')
+            tableChunks['physical'] = chunkJson(Object.values(this.parser.physicalElements));
 
 
             /* 插入到scene_attribute元素属性表中 */
@@ -325,49 +298,49 @@ export class IFCParser2DB {
             /* 追加分类信息属性 */
             // await appendClassficationProps(this.parser, attrResults);
 
-            writeToJson(folderPath, attrResults, 'attribute')
+            tableChunks['attribute'] = chunkJson(attrResults);
 
             // 插入 实体构件 相关数据 到scene_geometry元素几何表中，插入到scene_material共享材质表中，插入到scene_graphic元素图形表中
             // const result = await insertGraphicGeometryMaterial(this.parser, this.db, this.speckleMeshesMap);
 
             /* 插入 实体构件相关数据到scene_graphic元素属性表中 */
-            // writeToJson(folderPath, result.graphic, 'graphic')
+            // tableChunks['graphic'] = chunkJson(result.graphic);
 
             /* 插入 实体构件 相关数据到scene_geometry元素属性表中 */
-            // writeToJson(folderPath, result.geometry, 'geometry')
+            // tableChunks['geometry'] = chunkJson(result.geometry);
 
             /* 插入 实体构件 相关数据到scene_material元素属性表中 */
-            // writeToJson(folderPath, result.material, 'material')
+            // tableChunks['material'] = chunkJson(result.material);
 
 
 
             //===================  虚拟构件部分处理 ===================
-            writeToJson(folderPath, Object.values(this.parser.dummyElements), 'dummy')
+            tableChunks['dummy'] = chunkJson(Object.values(this.parser.dummyElements));
             // 插入 虚拟构件 相关数据到scene_geometry元素几何表中，插入到scene_material共享材质表中，插入到scene_dummy元素图形表中
-            const dummyResult = await insertGraphicGeometryMaterial(this.parser, this.db, this.dummySpeckleMeshesMap);
+            // const dummyResult = await insertGraphicGeometryMaterial(this.parser, this.db, this.dummySpeckleMeshesMap);
 
             /* 插入 虚拟构件 相关数据到scene_graphic元素属性表中 */
-            // writeToJson(folderPath, dummyResult.graphic, 'graphic')
+            // tableChunks['graphic'] = chunkJson(dummyResult.graphic);
 
             /* 插入 虚拟构件 相关数据到scene_geometry元素属性表中 */
-            // writeToJson(folderPath, dummyResult.geometry, 'geometry')
+            // tableChunks['geometry'] = chunkJson(dummyResult.geometry);
 
             /* 插入 虚拟构件 相关数据到scene_material元素属性表中 */
-            // writeToJson(folderPath, dummyResult.material, 'material')
+            // tableChunks['material'] = chunkJson(dummyResult.material);
 
 
             //===================  关系元素部分处理 ===================
-            writeToJson(folderPath, Object.values(this.parser.relationElements), 'relation')
+            // tableChunks['relation'] = chunkJson(Object.values(this.parser.relationElements));
 
 
             // 集中数据导入到db：
-            await insertJsonDataToTable(folderPath, 'physical', this.db);
-            await insertJsonDataToTable(folderPath, 'attribute', this.db);
-            await insertJsonDataToTable(folderPath, 'dummy', this.db);
-            await insertJsonDataToTable(folderPath, 'relation', this.db);
-            // await insertJsonDataToTable(folderPath, 'graphic', this.db);
-            // await insertJsonDataToTable(folderPath, 'geometry', this.db);
-            // await insertJsonDataToTable(folderPath, 'material', this.db);
+            await insertFromJsonChunks('physical', tableChunks['physical'], this.db, this.cnn, this.fileNames);
+            await insertFromJsonChunks('attribute', tableChunks['attribute'], this.db, this.cnn, this.fileNames);
+            await insertFromJsonChunks('dummy', tableChunks['dummy'], this.db, this.cnn, this.fileNames);
+            // await insertFromJsonChunks('relation', tableChunks['relation'], this.db, this.cnn, this.fileNames);
+            // await insertFromJsonChunks('graphic', tableChunks['graphic'], this.db);
+            // await insertFromJsonChunks('geometry', tableChunks['geometry'], this.db);
+            // await insertFromJsonChunks('material', tableChunks['material'], this.db);
 
             // 插入到scene_texture共享纹理表
             // TBD: 暂时无数据
@@ -379,83 +352,83 @@ export class IFCParser2DB {
             // 关闭数据库连接
             // this.db.close(); // ?????????????????????????????????? 切换到空数据库以解锁
             // console.log('siteInfo', this.siteCoord)
-            console.log('result', this.result)
-            deleteFolder(folderPath); // 删除文件夹
             // 使用时间戳命名临时数据库，防止可能的连接冲突
-            await this.db.all(`CHECKPOINT "${this.uuid}"`)
-            const memoryDbName = `memory_db_${(new Date).getTime()}`;
-            await this.db.all(`ATTACH ':memory:' as ${memoryDbName}`);
-            await this.db.all(`USE ${memoryDbName}`);
-            // await this.db.all(`DETACH "${this.uuid}"`);
-            await this.db.close();
-            // await checkWalFileExistence(sqlFilePath); // 检查WAL文件是否存在来决定程序是否退出 
+            await this.cnn.query(`CHECKPOINT "${memoryDbName}"`)
+            // await this.cnn.query(`ATTACH ':memory:' as ${memoryDbName}`);
+            // await this.cnn.query(`USE ${memoryDbName}`);
+            if (this.cnn) await this.cnn.close();
+            const opfsRoot = await navigator.storage.getDirectory();
+            // Get handle to the .db file
+            const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`, {create: false});
+            return await fileHandle.getFile();
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
-
-
+            this.fileNames.forEach((item:string) => {
+                this.db.dropFile(item)
+            });
+            if (this.db) await this.db.terminate();
         }
-
-        return {
-            'id': 'OK',
-            'tCount': 200
-        };
+        return false
     }
 
 }
+
 
 // 将原有的函数拆分为两个，一个writeToJson专门写数据到json文件，一个insertJsonDataToTable专门对数据进行导入
-function writeToJson(folderPath: string, data: any[], tableName: string): void {
-    const tableFolderPath = path.join(folderPath, tableName);
-    createFolder(tableFolderPath);
-    writeListToJson(path.join(tableFolderPath, tableName), data);
-}
+function chunkJson<T>(objects: T[], maxSize: number = 31457280): string[] {
+    let chunks: string[] = [];
+    let tempList: T[] = [];
+    let currentSize: number = 0;
+    const encoder = new TextEncoder();
 
-async function insertJsonDataToTable(folderPath: string, tableName: string, db: any): Promise<number> {
-    return new Promise((resolve, reject) => {
-        const tableFolderPath = path.join(folderPath, tableName);
+    // 自定义 replacer 函数来处理 BigInt
+    const replacer = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+            return value.toString();
+        }
+        return value;
+    };
 
-        fs.readdir(tableFolderPath, async (err, files) => {
-            if (err) {
-                console.error(`Error reading directory: ${err}`);
-                reject(err);
-                return;
-            }
-
-            for (const file of files) {
-                const filePath = path.join(tableFolderPath, file);
-                await copyJson2Duckdb(db, 'scene_' + tableName, filePath);
-            }
-            resolve(1);
-        });
-    });
-
-}
-
-
-// 创建文件夹的函数
-function createFolder(folderPath: string): void {
-    if (!existsSync(folderPath)) {
-        mkdirSync(folderPath, { recursive: true });
-        console.log(`文件夹 ${folderPath} 创建成功！`);
-    } else {
-        console.log(`文件夹 ${folderPath}已存在。`);
+    for (const obj of objects) {
+        const tempStr = JSON.stringify(obj, replacer);
+        const tempBytes = encoder.encode(tempStr).length;
+        if (currentSize + tempBytes > maxSize && tempList.length > 0) {
+            chunks.push(JSON.stringify(tempList, replacer));
+            tempList = [];
+            currentSize = 0;
+        }
+        tempList.push(obj);
+        currentSize += tempBytes;
     }
-}
-
-// 删除文件夹的函数
-function deleteFolder(folderPath: string): void {
-    if (existsSync(folderPath)) {
-        rmSync(folderPath, { recursive: true, force: true });
-        console.log('文件夹已删除。');
-    } else {
-        console.log('文件夹不存在。');
+    if (tempList.length > 0) {
+        chunks.push(JSON.stringify(tempList, replacer));
     }
+    return chunks;
 }
 
-// const folderPath: string = './data_temp';
-
-
+async function insertFromJsonChunks(tableName: string, chunks: string[], db: any, cnn:any, fileNames: any): Promise<number> {
+    for (let i = 0; i < chunks.length; i++) {
+        console.log('chunks[i]', chunks[i]);
+        const fileName = `temp_${tableName}_${i}.json`;
+        fileNames.push(fileName);
+        await db.registerFileText(fileName, chunks[i]);
+        const query = `INSERT INTO scene_${tableName} FROM (SELECT * FROM read_json_auto('${fileName}', maximum_object_size = 167772160));`
+        console.log('DB1:', db, query);
+        try {
+            const prepared = await cnn.prepare(query);
+            await prepared.send();
+            // await cnn.query(query);
+            console.log('Inserted data from json chunk to table Successfully!');
+        } catch (error) {
+            console.error('Failed to insert data from json chunk to table!', error, fileName, tableName);
+        // } finally {
+        //     await db.dropFile(fileName);
+        }
+    
+    }
+    return 1;
+}
 
 
 // 产生随机uuid
@@ -476,26 +449,11 @@ function generateUUID() {
 }
 
 
-async function copyJson2Duckdb(db: any, tableName: string, fileName: string): Promise<void> {
-    // const query = `COPY ${tableName} FROM '${fileName}' (FORMAT JSON, AUTO_DETECT true);`
-    const query = `INSERT INTO ${tableName} FROM (SELECT * FROM read_json_auto('${fileName}', maximum_object_size = 167772160));`
-    console.log('DB1:', db, query);
-    try {
-        const prepared = await db.prepare(query);
-        await prepared.run();
-        console.log('Copy data from json file to table Successfully!');
-    }
-    catch (error) {
-        console.error('Failed to copy data from json file to table!', error, fileName, tableName);
-    }
-}
-
-
 
 
 // 将数据插入到scene_base表中
 async function insertIntoSceneBase(
-    db: any,
+    cnn: any,
     guid: string,
     modelName: string,
     modelType: string,
@@ -514,8 +472,8 @@ async function insertIntoSceneBase(
     // console.log(guid, modelName, modelType, locationEPSG, locationX, locationY, locationZ, createTime, createVersion);
     try {
         // Using prepared statement for safety and performance
-        const prepared = await db.prepare(insertQuery);
-        await prepared.run(guid, modelName, modelType, locationEPSG, locationX, locationY, locationZ, locationAngle, createTime, createVersion);
+        const prepared = await cnn.prepare(insertQuery);
+        await prepared.send(guid, modelName, modelType, locationEPSG, locationX, locationY, locationZ, locationAngle, createTime, createVersion);
         console.log("scene_base表数据写入成功。");
     } catch (error) {
         console.error("scene_base表数据写入失败！", error);
@@ -839,121 +797,4 @@ async function insertGraphicGeometryMaterial(parser: any, db: any, speckleMeshes
 
     }
     return { graphic: graphicData, geometry: geometryData, material: materialData };
-}
-
-function getFileCount(directoryPath: string): number {
-    try {
-        // 同步读取目录内容
-        const files = fs.readdirSync(directoryPath);
-        // 过滤出文件（不包括目录）
-        const fileCount = files.filter(file => {
-            const filePath = path.join(directoryPath, file);
-            return fs.statSync(filePath).isFile();
-        }).length;
-        return fileCount;
-    } catch (error) {
-        console.error('Error counting files:', error);
-        return 0;
-    }
-}
-
-
-function writeListToJson<T>(filePath: string, objects: T[], maxSize: number = 31457280): void {
-    let tempList: T[] = [];
-    let currentSize: number = 0;
-    const directory = path.dirname(filePath);
-    let fileIndex: number = getFileCount(directory);
-
-    // 自定义 replacer 函数来处理 BigInt
-    const replacer = (key: string, value: any) => {
-        if (typeof value === 'bigint') {
-            return value.toString();
-        }
-        return value;
-    };
-
-    for (const obj of objects) {
-        // 使用自定义 replacer 函数进行序列化
-        const tempBytes = Buffer.from(JSON.stringify(obj, replacer));
-        if (currentSize + tempBytes.length > maxSize && tempList.length > 0) {
-            // 将当前列表写入一个新的JSON文件
-            writeToFile(filePath, tempList, fileIndex++, replacer);
-            // 重置临时列表和当前大小计数
-            tempList = [];
-            currentSize = 0;
-        }
-        tempList.push(obj);
-        currentSize += tempBytes.length;
-    }
-    if (tempList.length > 0) {
-        // 写入最后一批数据
-        writeToFile(filePath, tempList, fileIndex, replacer);
-    }
-}
-// TypeScript中的泛型使用大写字母T
-// function writeListToJson<T>(filePath: string, objects: T[], maxSize: number = 31457280): void {
-//     let tempList: T[] = [];
-//     let currentSize: number = 0;
-//     const directory = path.dirname(filePath);
-//     let fileIndex: number = getFileCount(directory);
-
-//     // console.log('writeListToJson:', filePath, fileIndex, objects)
-//     for (const obj of objects) {
-//         // TypeScript中使用JSON.stringify来序列化对象
-//         const tempBytes = Buffer.from(JSON.stringify(obj));
-//         if (currentSize + tempBytes.length > maxSize && tempList.length > 0) {
-//             // 将当前列表写入一个新的JSON文件
-//             writeToFile(filePath, tempList, fileIndex++);
-//             // 重置临时列表和当前大小计数
-//             tempList = [];
-//             currentSize = 0;
-//         }
-//         tempList.push(obj);
-//         currentSize += tempBytes.length;
-//     }
-//     if (tempList.length > 0) {
-//         // 写入最后一批数据
-//         writeToFile(filePath, tempList, fileIndex);
-//     }
-// }
-
-// 辅助函数，用于将数据写入文件
-// function writeToFile<T>(filePath: string, data: T[], index: number): void {
-//     const fileName = `${filePath}_${index}.json`;
-//     // TypeScript中使用writeFileSync来写入文件
-//     writeFileSync(fileName, JSON.stringify(data));
-// }
-// 修改 writeToFile 函数以接受 replacer 函数
-function writeToFile<T>(filePath: string, data: T[], index: number, replacer: (key: string, value: any) => any): void {
-    const fileName = `${path.basename(filePath, '.json')}_${index}.json`;
-    const fullPath = path.join(path.dirname(filePath), fileName);
-    const jsonString = JSON.stringify(data, replacer, 2); // 使用 replacer 和缩进
-    fs.writeFileSync(fullPath, jsonString);
-}
-
-// 由于神秘的win机制，db在close之后wal文件实际上还存在需要被回收，这里会导致程序报错，增加检查WAL文件是否存在来决定程序是否退出 
-async function checkWalFileExistence(dbPath: string, timeout = 30000, checkInterval = 1000): Promise<boolean> {
-    return new Promise((resolve) => {
-        const walPath = dbPath + '.wal';
-        let total = 0;
-
-        const check = () => {
-            const readable = fs.existsSync(walPath);
-            if (!readable) {
-                console.log('>total', total)
-                resolve(true);
-                return;
-            }
-
-            total += checkInterval;
-            if (total > timeout) {
-                resolve(false);
-                return;
-            }
-
-            setTimeout(check, checkInterval);
-        };
-
-        check(); // 立即开始第一次检查
-    });
 }

@@ -30,12 +30,11 @@ const progress = modelManager.loadProgress;
 const modelStore = useModelStore();
 const emit = defineEmits([
   'navigate-event', 'change-view', 'visible-control', 'explosion-event', 'inspect-click',
-  'measure-event', 'slice-event', 'build-tree', 'properties-table', 'file-uploaded', 'space-generate',
-  'light-settings', 'light-settings-reset', 'scene-settings', 'animation-event', 'animation-click',
-  'toggle-file-menu', 'ribbon-tab-change'
+  'measure-event', 'slice-event', 'build-tree', 'properties-table', 'file-uploaded',
+  'light-settings', 'light-settings-reset', 'scene-settings', 'toggle-file-menu', 'ribbon-tab-change'
 ]);
 
-let  eventManager = RibbonEventManager.getInstance();
+let eventManager = RibbonEventManager.getInstance();
 eventManager.initialize({ modelStore, emit });
 
 onMounted(() => {

@@ -110,6 +110,9 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
     }
     relations[id].forEach((expressId: string) => {
       const property = properties[expressId]
+      if (!property) {
+        return
+      }
       if (!entities.includes(IfcCategoryMap[property.type]) && property.type === 'IFCSITE') {
         return
       }

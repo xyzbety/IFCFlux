@@ -392,84 +392,12 @@ export default {
     },
     ]
   },
-  // {
-  //   label: '分析',
-  //   ribbonGroups: [{
-  //     label: '分析',
-  //     icon: 'select material-icons',
-  //     ribbonItems: [
-  //       {
-  //         label: '生成空间',
-  //         icon: 'pan_tool material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       },
-  //       {
-  //         label: '导出',
-  //         icon: 'zoom_out_map material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       }]
-  //   }]
-  // },
-  // {
-  //   label: '动画',
-  //   ribbonGroups: [{
-  //     label: '动画控制',
-  //     icon: 'select material-icons',
-  //     ribbonItems: [
-  //       {
-  //         label: '开始',
-  //         icon: 'pan_tool material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       },
-  //       {
-  //         label: '暂停',
-  //         icon: 'rotate material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       },
-
-  //       {
-  //         label: '停止',
-  //         icon: 'zoom_out_map material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       },
-  //       {
-  //         label: '脚本库',
-  //         icon: 'zoom_in_map material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       },
-  //       {
-  //         label: '编辑器',
-  //         icon: 'rotate_right material-icons',
-  //         type: 'button',
-  //         cssClass: 'flat',
-  //         size: 'normal',
-  //         allowedSizes: ['normal']
-  //       },]
-  //   }]
-  // },
   {
     label: '设置',
     wrapSize: 'small',
     ribbonGroups: [{
       label: '灯光设置',
+      icon: 'light_setting material-icons',
       ribbonItems: [{
         type: 'group',
         direction: 'horizontal',
@@ -479,15 +407,20 @@ export default {
           ribbonItems: [{
             label: 'X',
             itemTemplate: '<smart-slider value="1" id="horizontalSliderX" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
+            cssClass: 'normal',
+            allowedSizes: ['normal']
           },
           {
             label: 'Y',
             itemTemplate: '<smart-slider value="-0.5" id="horizontalSliderY" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
+            cssClass: 'normal',
+            allowedSizes: ['normal']
           },
           {
             label: 'Z',
             itemTemplate: '<smart-slider value="0.5" id="horizontalSliderZ" show-tooltip orientation="horizontal" min="-5" max="5"  scale-position="none"></smart-slider>',
-
+            cssClass: 'normal',
+            allowedSizes: ['normal']
           }]
         }]
       },
@@ -508,7 +441,8 @@ export default {
         ribbonItems: [{
           label: '光照强度',
           itemTemplate: '<smart-number-input id="inputIndensity"  step="0.05" min="0.0" value="0.75"></smart-number-input>',
-          cssClass: 'small'
+          cssClass: 'small',
+          allowedSizes: ['small']
         },
         {
           type: 'group',
@@ -517,32 +451,36 @@ export default {
             {
               label: '',
               itemTemplate: '<smart-check-box id="checkboxShadow" checked right-to-left>阴影开关</smart-check-box>',
-              cssClass: 'verySmall'
+              cssClass: 'verySmall',
+              allowedSizes: ['verySmall']
             }
           ]
         }
-        ]
+        ],
       }]
     },
     {
       label: '交互设置',
-      icon: 'format_bold material-icons',
+      icon: 'interaction_setting material-icons',
       type: 'group',
       direction: 'vertical',
       ribbonItems: [
         {
           label: '拖动速度',
           itemTemplate: '<smart-slider id="horizontalSliderSpeed" show-tooltip tooltip-position="far" orientation="horizontal" min="1" max="10" scale-position="none"></smart-slider>',
+          cssClass: 'normal',
+          allowedSizes: ['normal']
         },
         {
           label: '',
-          itemTemplate: '<smart-check-box id="focusCheckbox" right-to-left>点击聚焦</smart-check-box>'
-
+          itemTemplate: '<smart-check-box id="focusCheckbox" right-to-left>点击聚焦</smart-check-box>',
+          cssClass: 'normal',
+          allowedSizes: ['normal']
         }]
     },
     {
       label: '场景设置',
-      icon: 'format_bold material-icons',
+      icon: 'scene_setting material-icons',
       type: 'group',
       direction: 'vertical',
       cssClass: 'sceneSetting',
