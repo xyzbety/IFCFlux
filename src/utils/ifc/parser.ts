@@ -91,9 +91,6 @@ export class IFCParser {
 
     // 预先缓存属性集、它们与对象的关系，以及所有属性
     const { psetLines, psetRelations, properties, allElementsPropsIdMap } = await this.getAllProps()
-    console.log('psetRelations', psetRelations);
-    console.log('psetLines', psetLines);
-    console.log('properties', properties);
     this.psetLines = psetLines
     this.psetRelations = psetRelations
     this.properties = properties

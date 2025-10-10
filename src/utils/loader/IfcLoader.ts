@@ -128,8 +128,8 @@ export class IfcLoader {
      * @param onProgress - a callback function that will be called with the loading progress
      * @returns 返回包含模型的根网格或null（加载失败时）
      */
-    public async load(onProgress: ProgressCallback | null = null): Promise<void> {
-        await this.loadFileToArrayBuffer();
+    public async load(onProgress: ProgressCallback | null = null, detail_level:number = 12): Promise<void> {
+        await this.loadFileToArrayBuffer(detail_level);
         this.ifcParser = new IfcParser(this.ifcApi);
         if (this.isParser) {
             // Pass null for onProgress to make property parsing silent
@@ -246,7 +246,7 @@ export class IfcLoader {
         }
     }
 
-    private async loadFileToArrayBuffer(): Promise<null> {
+    private async loadFileToArrayBuffer(detail_level: number): Promise<null> {
         // 初始化web-ifc API
         await this.ifcApi.Init();
 
@@ -264,7 +264,12 @@ export class IfcLoader {
         }
         if (buffer) {
             this.modelID = await this.ifcApi.OpenModel(new Uint8Array(buffer), {
-                COORDINATE_TO_ORIGIN: false
+                COORDINATE_TO_ORIGIN: false, // 不将坐标系移动到原点
+                // OPTIMIZE_PROFILES: true, // 优化轮廓
+                CIRCLE_SEGMENTS: detail_level, // 设置圆的线段数，影响几何精细度
+                // MEMORY_LIMIT: 8294967296, // 内存限制
+                // TAPE_SIZE: 6, // 磁带大小
+                // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
             });
         } else {
             console.error("无法获取IFC文件数据");
