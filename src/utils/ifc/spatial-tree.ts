@@ -88,7 +88,6 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
     const guid = ifcGuidToUuid(property.GlobalId.value)
     //  ifc project  顶级节点
     if (property.type === 103090709) {
-      // console.log('property', property);
       const item = {
         name: property.Name?.value,
         typeZH: '',
@@ -116,6 +115,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
       if (!entities.includes(IfcCategoryMap[property.type]) && property.type === 'IFCSITE') {
         return
       }
+      const guid = ifcGuidToUuid(property.GlobalId.value)
       const item = {
         name: property.Name?.value,
         typeZH: '',
