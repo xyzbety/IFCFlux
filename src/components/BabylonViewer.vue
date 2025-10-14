@@ -16,26 +16,25 @@ onMounted(() => {
     const engine = new BABYLON.Engine(bjsCanvas.value, true);
     const scene = new BABYLON.Scene(engine);
 
-    // Get singleton instances of managers
+    // 初始化场景管理器
     const sceneManager = SceneManager.getInstance();
     const modelManager = ModelManager.getInstance();
-
-    // Initialize managers with the created scene
-    // This step is crucial as it sets up the camera and lights
     sceneManager.initializeScene(scene);
     modelManager.initialize(scene);
 
-    // Now that the scene is initialized with a camera, run the render loop
+    // 运行渲染循环
     engine.runRenderLoop(() => {
       scene.render();
     });
 
-    // Handle window 
+    // 处理窗口大小变化
     eventManager.add("resize", () => {
       engine.resize();
     });
   }
 });
+
+
 </script>
 
 <style scoped>

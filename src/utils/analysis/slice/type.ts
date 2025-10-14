@@ -6,11 +6,11 @@ export interface ISliceShape {
 }
 export const DEFAULT_SHAPE_STYLE = {
   border: {
-    color: '#407bFF',
+    color: '#cb6b20',
     width: 1
   },
   fill: {
-    color: '#407bFF',
+    color: '#cb6b20',
     opacity: 0.1
   }
 }

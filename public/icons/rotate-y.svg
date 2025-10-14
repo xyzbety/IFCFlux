@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="none" version="2.0"><style id="theme-style">
+      .contrast-fill { fill: #ffffff; fill-opacity: 1; }
+      .contrast-stroke { stroke: #ffffff; stroke-opacity: 1;  }
+      .accent-fill { fill: #ff7f00; fill-opacity: 0.5; }
+      .accent-stroke { stroke: #ff7f00; stroke-opacity:  0.5; }</style><path d="M28 0a28 28 0 1 1 0 56 28 28 0 0 1 0-56" class="accent-fill"/><path stroke-width="4.99" d="M20.05 40.86a15.05 15.05 0 0 0 17.14-1.5 15.05 15.05 0 0 0 4.47-16.65 15.05 15.05 0 0 0-22.72-7.15 15.05 15.05 0 0 0-5.5 7.15" class="contrast-stroke"/><path d="m10.97 35.57 5.38 12.07 7.79-13.47z" class="contrast-fill"/></svg>
