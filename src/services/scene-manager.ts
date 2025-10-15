@@ -619,6 +619,9 @@ export class SceneManager {
         this.slicePlane.destroy();
         this.slicePlane = null;
       }
+      this.scene.meshes.forEach(mesh => {
+        mesh.isPickable = true
+      });
       return;
     }
 
@@ -627,6 +630,9 @@ export class SceneManager {
       this.slicePlane.destroy();
       this.slicePlane = null;
     }
+          this.scene.meshes.forEach(mesh => {
+        mesh.isPickable = false
+      });
     let slicePlaneSize = 20; // 默认大小
     // if (this.bbox) {
     //   const boundingBoxSize = this.bbox.extendSize.scale(2);

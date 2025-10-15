@@ -193,38 +193,18 @@ export function setupScenePointerHandlers(scene: BABYLON.Scene) {
     resetDragState(scene);
     scene.activeCamera?.attachControl(scene.getEngine().getRenderingCanvas()!, true);
   };
+  
+  scene.onPointerDown = () => {
+    const plane = scene.meshes.find(m => m.name === "slicePlane");
+    if (plane) {
+      const dragBehavior = plane.behaviors.find(b => b instanceof BABYLON.PointerDragBehavior) as BABYLON.PointerDragBehavior | undefined;
+      if (dragBehavior) {
+        dragBehavior.enabled = true; // 确保拖拽行为启用
+      }
+    }
+  }
 }
 
-/**
- * 设置箭头拖拽逻辑
- */
-export function setupArrowDragWithPlaneMove(
-  scene: BABYLON.Scene,
-  arrow: BABYLON.Mesh,
-  plane: BABYLON.Mesh,
-  updateClipPlane: () => void,
-  camera: BABYLON.ArcRotateCamera
-): void {
-  arrow.actionManager = new BABYLON.ActionManager(scene);
-
-  arrow.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, () => {
-      arrow.scaling = new BABYLON.Vector3(1.3, 1.3, 1.3);
-    })
-  );
-
-  arrow.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, (evt) => {
-      if (camera) camera.detachControl();
-      dragArrowState.initialMousePosition = new BABYLON.Vector2(evt.pointerX, evt.pointerY);
-      dragArrowState.initialPlanePosition = plane.position.clone();
-      dragArrowState.arrow = arrow;
-      dragArrowState.plane = plane;
-      dragArrowState.updateClipPlane = updateClipPlane;
-      dragArrowState.camera = camera;
-    })
-  );
-}
 
 /**
  * 设置旋转逻辑
@@ -243,116 +223,141 @@ export function setupRotationAndDrag(
   setupSmallPlaneActions(scene, options.smallPlaneTop, plane, "y", updateClipPlane, camera);
 }
 
+
 /**
- * 创建四个角的边框
+ * 创建四条管道，沿着平面的四个边延伸
+ * @param scene 场景对象
+ * @param plane 平面对象
+ * @param size 平面的尺寸
+ * @param tubeRadius 管道半径（默认为 0.1）
+ * @param tubeColor 管道颜色
+ * @returns 返回所有管道的数组
  */
-export function createCornerBorders(
+export function createCornerTubes(
   scene: BABYLON.Scene,
   plane: BABYLON.Mesh,
   size: number,
-  borderLength: number = 2,
-  borderThickness: number = 0.1,
-  hoverBorderThickness: number = 0.3,
-  borderColor: BABYLON.Color3 = new BABYLON.Color3(1, 0.5, 0)
+  tubeLength: number = 2,
+  tubeRadius: number = 0.1,
+  tubeColor: BABYLON.Color3 = new BABYLON.Color3(1, 0.5, 0),
+  hoverTubeRadius: number = 0.13 // 悬停时的管道半径
 ): BABYLON.Mesh[] {
-  const borderMaterial = new BABYLON.StandardMaterial("borderMaterial", scene);
-  borderMaterial.diffuseColor = borderColor;
+  const tubes: BABYLON.Mesh[] = [];
+  const halfSize = size / 2;
+  const material = new BABYLON.StandardMaterial("tubeMaterial", scene);
+  material.diffuseColor = tubeColor;
+  material.clipPlane = false;
 
-  const cornerGroups: Record<string, BABYLON.Mesh[]> = {
-    topRight: [],
-    bottomRight: [],
-    topLeft: [],
-    bottomLeft: [],
-  };
-
-  // 创建右上角边框（水平方向）
-  const topBorder = createBorder(scene, plane, "topBorder", {
-    width: borderLength,
-    height: borderThickness,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(size / 2 - borderLength / 2, size / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.topRight,
-  });
-
-  // 创建右上角垂直边框（垂直方向）
-  const rightBorder = createBorder(scene, plane, "rightBorder", {
-    width: borderThickness,
-    height: borderLength,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(size / 2, size / 2 - borderLength / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.topRight,
-  });
-
-  // 创建右下角边框（水平方向）
-  const bottomBorder = createBorder(scene, plane, "bottomBorder", {
-    width: borderLength,
-    height: borderThickness,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(size / 2 - borderLength / 2, -size / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.bottomRight,
-  });
-
-  // 创建右下角垂直边框（垂直方向）
-  const rightBorderBottom = createBorder(scene, plane, "rightBorderBottom", {
-    width: borderThickness,
-    height: borderLength,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(size / 2, -size / 2 + borderLength / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.bottomRight,
-  });
-
-  // 创建左上角边框（水平方向）
-  const topBorderLeft = createBorder(scene, plane, "topBorderLeft", {
-    width: borderLength,
-    height: borderThickness,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(-size / 2 + borderLength / 2, size / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.topLeft,
-  });
-
-  // 创建左上角垂直边框（垂直方向）
-  const leftBorderTop = createBorder(scene, plane, "leftBorderTop", {
-    width: borderThickness,
-    height: borderLength,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(-size / 2, size / 2 - borderLength / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.topLeft,
-  });
-
-  // 创建左下角边框（水平方向）
-  const bottomBorderLeft = createBorder(scene, plane, "bottomBorderLeft", {
-    width: borderLength,
-    height: borderThickness,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(-size / 2 + borderLength / 2, -size / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.bottomLeft,
-  });
-
-  // 创建左下角垂直边框（垂直方向）
-  const leftBorderBottom = createBorder(scene, plane, "leftBorderBottom", {
-    width: borderThickness,
-    height: borderLength,
-    depth: borderThickness,
-    position: new BABYLON.Vector3(-size / 2, -size / 2 + borderLength / 2, 0),
-    material: borderMaterial,
-    group: cornerGroups.bottomLeft,
-  });
-
-  // 为所有边框添加悬停和拖拽逻辑
-  const borders = [
-    topBorder, rightBorder, bottomBorder, rightBorderBottom,
-    topBorderLeft, leftBorderTop, bottomBorderLeft, leftBorderBottom,
+  // 定义四个角的坐标和方向
+  const corners = [
+    {
+      name: "topRight",
+      x: halfSize,
+      y: halfSize,
+      horizontalDir: 1,  // 水平方向：向右（X 轴正方向）
+      verticalDir: -1   // 垂直方向：向下（Y 轴负方向）
+    },
+    {
+      name: "topLeft",
+      x: -halfSize,
+      y: halfSize,
+      horizontalDir: -1, // 水平方向：向左（X 轴负方向）
+      verticalDir: -1    // 垂直方向：向下（Y 轴负方向）
+    },
+    {
+      name: "bottomLeft",
+      x: -halfSize,
+      y: -halfSize,
+      horizontalDir: -1, // 水平方向：向左（X 轴负方向）
+      verticalDir: 1     // 垂直方向：向上（Y 轴正方向）
+    },
+    {
+      name: "bottomRight",
+      x: halfSize,
+      y: -halfSize,
+      horizontalDir: 1,  // 水平方向：向右（X 轴正方向）
+      verticalDir: 1    // 垂直方向：向上（Y 轴正方向）
+    }
   ];
-  borders.forEach(border => setupBorderActions(scene, border, cornerGroups, borderThickness, hoverBorderThickness));
-  return borders
+
+  // 为每个角创建一个“L”形管道
+  corners.forEach(corner => {
+    // 定义“L”形管道的路径（水平 + 垂直）
+    const lShapePoints = [
+      new BABYLON.Vector3(corner.x - corner.horizontalDir * tubeLength, corner.y, 0), // 起点（角点）
+      new BABYLON.Vector3(
+        corner.x, // 水平终点
+        corner.y,
+        0
+      ),
+      new BABYLON.Vector3(
+        corner.x, // 垂直起点（与水平终点重合）
+        corner.y + corner.verticalDir * tubeLength,  // 垂直终点
+        0
+      )
+    ];
+
+    const lShapeTube = BABYLON.MeshBuilder.CreateTube(
+      `${corner.name}LShapeTube`,
+      {
+        path: lShapePoints,
+        radius: tubeRadius,
+      },
+      scene
+    );
+    lShapeTube.material = material;
+    lShapeTube.parent = plane;
+    const pivotMatrix = BABYLON.Matrix.Translation(-corner.x, -corner.y, 0);
+    lShapeTube.setPivotMatrix(pivotMatrix);
+
+    tubes.push(lShapeTube);
+
+    // 设置悬停、移出和拖拽逻辑
+    setupTubeActions(scene, lShapeTube, tubeRadius, hoverTubeRadius);
+  });
+
+  return tubes;
 }
+
+function setupTubeActions(
+  scene: BABYLON.Scene,
+  tube: BABYLON.Mesh,
+  tubeRadius: number,
+  hoverTubeRadius: number
+): void {
+  tube.actionManager = new BABYLON.ActionManager(scene);
+
+  // 悬停效果：增大管道半径
+  tube.actionManager.registerAction(
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, () => {
+      tube.scaling = new BABYLON.Vector3(
+        hoverTubeRadius / tubeRadius,
+        hoverTubeRadius / tubeRadius,
+        hoverTubeRadius / tubeRadius
+      );
+    })
+  );
+
+  // 移出恢复：恢复管道半径
+  tube.actionManager.registerAction(
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOutTrigger, () => {
+      tube.scaling = new BABYLON.Vector3(1, 1, 1);
+    })
+  );
+
+  // 拖拽逻辑
+  tube.actionManager.registerAction(
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, (evt) => {
+      if (scene.activeCamera) scene.activeCamera.detachControl();
+      dragState.initialMousePosition = new BABYLON.Vector2(evt.pointerX, evt.pointerY);
+      dragState.initialPlaneScaling = dragState.plane?.scaling.clone() || new BABYLON.Vector3(1, 1, 1);
+      dragState.activeBorder = tube;
+      dragState.plane = tube.parent as BABYLON.Mesh;
+      dragState.isVertical = tube.name.includes("Right") || tube.name.includes("Left");
+    })
+  );
+}
+
 
 function createCylinder(scene: BABYLON.Scene, name: string, options: { height: number; diameter: number }): BABYLON.Mesh {
   return BABYLON.MeshBuilder.CreateCylinder(name, options, scene);
@@ -381,7 +386,7 @@ function createStandardMaterial(
   const material = new BABYLON.StandardMaterial(name, scene);
   material.diffuseColor = color;
   if (emissive) material.emissiveColor = color;
-  material.clipPlane = clipPlane; 
+  material.clipPlane = clipPlane;
   return material;
 }
 
@@ -395,7 +400,7 @@ function createTextureMaterial(
   material.diffuseTexture = new BABYLON.Texture(texturePath, scene);
   material.diffuseTexture.hasAlpha = true;
   material.backFaceCulling = false;
-  material.clipPlane = clipPlane; 
+  material.clipPlane = clipPlane;
   return material;
 }
 
@@ -501,13 +506,13 @@ function setupSmallPlaneActions(
   smallPlane.actionManager = new BABYLON.ActionManager(scene);
 
   smallPlane.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, () => {
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, (evt) => {
       smallPlane.scaling = new BABYLON.Vector3(1.3, 1.3, 1.3);
     })
   );
 
   smallPlane.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, (evt) => {
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnLeftPickTrigger, (evt) => {
       camera.detachControl();
       rotateState.initialRotation = axis === "x" ? plane.rotation.x : plane.rotation.y;
       rotateState.initialMousePosition = new BABYLON.Vector2(evt.pointerX, evt.pointerY);
@@ -519,85 +524,6 @@ function setupSmallPlaneActions(
   );
 }
 
-function createBorder(
-  scene: BABYLON.Scene,
-  parent: BABYLON.Mesh,
-  name: string,
-  options: {
-    width: number;
-    height: number;
-    depth: number;
-    position: BABYLON.Vector3;
-    material: BABYLON.StandardMaterial;
-    group: BABYLON.Mesh[];
-  }
-): BABYLON.Mesh {
-  const border = BABYLON.MeshBuilder.CreateBox(name, {
-    width: options.width,
-    height: options.height,
-    depth: options.depth,
-  }, scene);
-  border.position = options.position;
-  border.material = options.material;
-  border.parent = parent;
-  options.group.push(border);
-  return border;
-}
-
-function setupBorderActions(
-  scene: BABYLON.Scene,
-  border: BABYLON.Mesh,
-  cornerGroups: Record<string, BABYLON.Mesh[]>,
-  borderThickness: number,
-  hoverBorderThickness: number
-): void {
-  border.actionManager = new BABYLON.ActionManager(scene);
-
-  // 悬停效果
-  border.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, () => {
-      const group = findBorderGroup(border, cornerGroups);
-      if (group) updateBorderScaling(group, hoverBorderThickness / borderThickness);
-    })
-  );
-
-  // 移出恢复
-  border.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOutTrigger, () => {
-      const group = findBorderGroup(border, cornerGroups);
-      if (group) updateBorderScaling(group, 1);
-    })
-  );
-
-  // 拖拽逻辑
-  border.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, (evt) => {
-      if (scene.activeCamera) scene.activeCamera.detachControl();
-      dragState.initialMousePosition = new BABYLON.Vector2(evt.pointerX, evt.pointerY);
-      dragState.initialPlaneScaling = dragState.plane?.scaling.clone() || new BABYLON.Vector3(1, 1, 1);
-      dragState.activeBorder = border;
-      dragState.plane = border.parent as BABYLON.Mesh;
-      dragState.isVertical = border.name.includes("right") || border.name.includes("left");
-    })
-  );
-}
-
-function findBorderGroup(border: BABYLON.Mesh, cornerGroups: Record<string, BABYLON.Mesh[]>): BABYLON.Mesh[] | undefined {
-  for (const group of Object.values(cornerGroups)) {
-    if (group.includes(border)) return group;
-  }
-  return undefined;
-}
-
-function updateBorderScaling(group: BABYLON.Mesh[], scale: number): void {
-  group.forEach(b => {
-    if (b.name.includes("top") || b.name.includes("bottom")) {
-      b.scaling.y = scale;
-    } else {
-      b.scaling.x = scale;
-    }
-  });
-}
 
 function handleArrowDrag(scene: BABYLON.Scene): void {
   if (!dragArrowState.initialMousePosition || !dragArrowState.initialPlanePosition || !dragArrowState.plane) return;
@@ -608,14 +534,19 @@ function handleArrowDrag(scene: BABYLON.Scene): void {
   const dragSpeed = 0.05;
 
   dragArrowState.plane.position = dragArrowState.initialPlanePosition.add(
-    new BABYLON.Vector3(deltaX * dragSpeed, -deltaY * dragSpeed, deltaY * dragSpeed)
+    new BABYLON.Vector3(deltaX * dragSpeed, -deltaY * dragSpeed, -deltaY * dragSpeed)
   );
   dragArrowState.updateClipPlane?.();
 }
 
 function handleRotation(scene: BABYLON.Scene): void {
-  if (!rotateState.initialMousePosition || !rotateState.activeRotationAxis || !rotateState.plane) return;
 
+  if (!rotateState.initialMousePosition || !rotateState.activeRotationAxis || !rotateState.plane) return;
+  // 禁用拖拽行为
+  const dragBehavior = rotateState.plane.behaviors.find(b => b instanceof BABYLON.PointerDragBehavior) as BABYLON.PointerDragBehavior | undefined;
+  if (dragBehavior) {
+    dragBehavior.enabled = false;
+  }
   const currentMousePosition = new BABYLON.Vector2(scene.pointerX, scene.pointerY);
   const deltaX = currentMousePosition.x - rotateState.initialMousePosition.x;
   const rotationSpeed = 0.005;
@@ -629,22 +560,25 @@ function handleRotation(scene: BABYLON.Scene): void {
 }
 
 function handleBorderDrag(scene: BABYLON.Scene): void {
-  if (!dragState.initialMousePosition || !dragState.initialPlaneScaling || !dragState.activeBorder || !dragState.plane) return;
+  if (!dragState.initialMousePosition || !dragState.plane) return;
+  const dragBehavior = dragState.plane.behaviors.find(b => b instanceof BABYLON.PointerDragBehavior) as BABYLON.PointerDragBehavior | undefined;
+  if (dragBehavior) {
+    dragBehavior.enabled = false;
+  }
 
   const currentMousePosition = new BABYLON.Vector2(scene.pointerX, scene.pointerY);
   const deltaX = currentMousePosition.x - dragState.initialMousePosition.x;
   const deltaY = currentMousePosition.y - dragState.initialMousePosition.y;
   const dragSpeed = 0.005;
 
-  if (dragState.isVertical) {
-    // 水平方向缩放（左右拖动）
-    dragState.plane.scaling.x = Math.max(0.1, dragState.initialPlaneScaling.x + deltaX * dragSpeed);
-  } else {
-    // 垂直方向缩放（上下拖动）
-    // 鼠标往下移动（deltaY为正）时减小缩放，往上移动（deltaY为负）时增加缩放
-    dragState.plane.scaling.y = Math.max(0.1, dragState.initialPlaneScaling.y - deltaY * dragSpeed);
-  }
+  // 直接基于当前缩放值进行增量调整
+  dragState.plane.scaling.x = Math.max(0.1, dragState.plane.scaling.x + deltaX * dragSpeed);
+  dragState.plane.scaling.y = Math.max(0.1, dragState.plane.scaling.y - deltaY * dragSpeed);
+
+  // 更新初始鼠标位置，以便下一次拖拽基于新的位置
+  dragState.initialMousePosition = currentMousePosition;
 }
+
 
 
 function resetDragArrowState(scene: BABYLON.Scene): void {

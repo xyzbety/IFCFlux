@@ -1,8 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import { type ISliceShape, type IBaseSlice, type ISlicePlane, type ISliceShapeBorder, type ISliceShapeFill, type ISliceShapeStyle, DEFAULT_SHAPE_STYLE } from "./type";
-import { deepMerge } from "./utils";
 import { SceneManager } from "../../../services/scene-manager";
-import { createArrowWithLine, createSmallPlane, setupRotationAndDrag, createCornerBorders, setupArrowDragWithPlaneMove, setupScenePointerHandlers } from "./utils";
+import { createArrowWithLine, createSmallPlane, setupRotationAndDrag, setupScenePointerHandlers, createCornerTubes, deepMerge } from "./utils";
 
 export class SlicePlane implements IBaseSlice {
   border!: ISliceShapeBorder;
@@ -108,6 +107,11 @@ export class SlicePlane implements IBaseSlice {
   }
 
   private setupPlaneAppearance(plane: BABYLON.Mesh, style: ISliceShapeStyle) {
+    const pointerDragBehavior = new BABYLON.PointerDragBehavior();
+    pointerDragBehavior.onDragEndObservable.add(() => {
+      this.updateClipPlane()
+    });
+    plane.addBehavior(pointerDragBehavior);
     plane.enableEdgesRendering();
     plane.edgesWidth = 5;
     plane.edgesColor = BABYLON.Color4.FromHexString(style.border.color);
@@ -116,6 +120,7 @@ export class SlicePlane implements IBaseSlice {
     material.diffuseColor = BABYLON.Color3.FromHexString(style.fill.color);
     material.alpha = style.fill.opacity;
     material.backFaceCulling = false;
+    material.clipPlane = false
     plane.material = material;
   }
 
@@ -144,26 +149,15 @@ export class SlicePlane implements IBaseSlice {
     });
     smallPlaneTop.renderingGroupId = 1;
 
-    const borders = createCornerBorders(
-      this.scene,
-      plane,
-      this.size,
-      2,
-      0.1,
-      0.3,
-      new BABYLON.Color3(1, 0.5, 0)
-    );
-    borders.forEach(border => {
-      border.renderingGroupId = 1;
-    });
-    setupArrowDragWithPlaneMove(this.scene, arrow, plane, () => this.updateClipPlane(), this.scene.activeCamera);
+    const lines = createCornerTubes(this.scene, plane, this.size, 2);
+    lines.forEach(line => line.renderingGroupId = 1);
     setupRotationAndDrag(this.scene, plane, { smallPlaneRight, smallPlaneTop }, () => this.updateClipPlane(), this.scene.activeCamera);
     setupScenePointerHandlers(this.scene);
   }
 
-  updateClipPlane() {
+  async updateClipPlane() {
     if (!this.plane) return;
-
+    await new Promise(resolve => setTimeout(resolve, 10));
     this.plane.computeWorldMatrix(true);
     const normal = this.plane.getFacetNormal(0);
     const sourcePlane = BABYLON.Plane.FromPositionAndNormal(this.plane.position, normal);
