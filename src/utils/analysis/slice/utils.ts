@@ -95,15 +95,16 @@ export function createArrowWithLine(
     arrowOffset: number;
     arrowColor: BABYLON.Color3;
     lineColor: BABYLON.Color3;
+    scaleFactor: number;
   }
 ): BABYLON.Mesh {
   const parentHalfSize = parentSize / 2;
   const localPosition = getLocalPosition(options.position, parentHalfSize, options.arrowOffset);
 
   // 创建箭身和箭头部件
-  const cylinder = createCylinder(scene, "arrowCylinder", { height: 1.5, diameter: 0.2 });
-  const cone1 = createCone(scene, "arrowCone1", { height: 0.5, diameter: 0.5 }, new BABYLON.Vector3(0, 1, 0));
-  const cone2 = createCone(scene, "arrowCone2", { height: 0.5, diameter: 0.5 }, new BABYLON.Vector3(0, -1, 0), Math.PI);
+  const cylinder = createCylinder(scene, "arrowCylinder", { height: 1.0, diameter: 0.15 });
+  const cone1 = createCone(scene, "arrowCone1", { height: 0.5, diameter: 0.5 }, new BABYLON.Vector3(0, 0.6, 0));
+  const cone2 = createCone(scene, "arrowCone2", { height: 0.5, diameter: 0.5 }, new BABYLON.Vector3(0, -0.6, 0), Math.PI);
 
   // 设置材质（禁用剖切）
   const material = createStandardMaterial(scene, "arrowMaterial", options.arrowColor, false, false);
@@ -119,10 +120,12 @@ export function createArrowWithLine(
   mergedMesh.parent = parent;
 
   // 创建连接线（禁用剖切）
-  const linePoints = getLinePoints(options.position, parentHalfSize, options.arrowOffset);
+  const linePoints = getLinePoints(options.position, parentHalfSize, options.arrowOffset, 0.075 * options.scaleFactor);
   const line = BABYLON.MeshBuilder.CreateLines("arrowConnectorLine", { points: linePoints }, scene);
   line.parent = parent;
   line.material = createStandardMaterial(scene, "lineMaterial", options.lineColor, true, false);
+  mergedMesh.scaling = new BABYLON.Vector3(options.scaleFactor, options.scaleFactor, options.scaleFactor);
+
 
   return mergedMesh;
 }
@@ -172,7 +175,7 @@ export function setupScenePointerHandlers(scene: BABYLON.Scene) {
   // 清理旧处理器
   scene.onPointerMove = undefined;
   scene.onPointerUp = undefined;
-  isCameraMoving(scene); // 持续检测相机状态
+  isCameraMoving(scene);
 
   // 绑定新处理器
   scene.onPointerMove = () => {
@@ -194,7 +197,7 @@ export function setupScenePointerHandlers(scene: BABYLON.Scene) {
     scene.activeCamera?.attachControl(scene.getEngine().getRenderingCanvas()!, true);
   };
 
-  scene.onPointerDown = (evt) => {
+  scene.onPointerDown = () => {
     if (isCameraMoving(scene)) {
       return; // 如果相机正在旋转，不启用拖拽
     }
@@ -317,7 +320,38 @@ export function createCornerTubes(
 
   return tubes;
 }
+export function createPlaneEdges(scene: BABYLON.Scene, plane: BABYLON.Mesh, size: number, color: BABYLON.Color3): BABYLON.LinesMesh[] {
+  const edges: BABYLON.LinesMesh[] = [];
+  const halfSize = size / 2;
 
+  // 定义四个边缘的顶点位置
+  const positions = [
+    // 上边缘
+    new BABYLON.Vector3(-halfSize, halfSize, 0),
+    new BABYLON.Vector3(halfSize, halfSize, 0),
+    // 右边缘
+    new BABYLON.Vector3(halfSize, halfSize, 0),
+    new BABYLON.Vector3(halfSize, -halfSize, 0),
+    // 下边缘
+    new BABYLON.Vector3(halfSize, -halfSize, 0),
+    new BABYLON.Vector3(-halfSize, -halfSize, 0),
+    // 左边缘
+    new BABYLON.Vector3(-halfSize, -halfSize, 0),
+    new BABYLON.Vector3(-halfSize, halfSize, 0),
+  ];
+
+  // 创建线段
+  const edgeLines = BABYLON.MeshBuilder.CreateLines("planeEdges", {
+    points: positions
+  }, scene);
+  edgeLines.material = createStandardMaterial(scene, "lineMaterial", color, true, false);
+
+  // 将线段附加到平面上
+  edgeLines.parent = plane;
+  edges.push(edgeLines);
+
+  return edges;
+}
 function setupTubeActions(
   scene: BABYLON.Scene,
   tube: BABYLON.Mesh,
@@ -337,10 +371,14 @@ function setupTubeActions(
     })
   );
 
-  // 移出恢复：恢复管道半径
+  // 按下效果：增大管道半径
   tube.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOutTrigger, () => {
-      tube.scaling = new BABYLON.Vector3(1, 1, 1);
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, () => {
+      tube.scaling = new BABYLON.Vector3(
+        hoverTubeRadius / tubeRadius,
+        hoverTubeRadius / tubeRadius,
+        hoverTubeRadius / tubeRadius
+      );
     })
   );
 
@@ -413,23 +451,23 @@ function getLocalPosition(position: string, parentHalfSize: number, offset: numb
   }
 }
 
-function getLinePoints(position: string, parentHalfSize: number, offset: number): BABYLON.Vector3[] {
+function getLinePoints(position: string, parentHalfSize: number, offset: number, cylinderDiameter = 0.1): BABYLON.Vector3[] {
   switch (position) {
     case "left": return [
       new BABYLON.Vector3(-parentHalfSize, 0, 0),
-      new BABYLON.Vector3(-parentHalfSize - offset + 0.1, 0, 0),
+      new BABYLON.Vector3(-parentHalfSize - offset + cylinderDiameter, 0, 0),
     ];
     case "right": return [
       new BABYLON.Vector3(parentHalfSize, 0, 0),
-      new BABYLON.Vector3(parentHalfSize + offset - 0.1, 0, 0),
+      new BABYLON.Vector3(parentHalfSize + offset - cylinderDiameter, 0, 0),
     ];
     case "top": return [
       new BABYLON.Vector3(0, parentHalfSize, 0),
-      new BABYLON.Vector3(0, parentHalfSize + offset - 0.1, 0),
+      new BABYLON.Vector3(0, parentHalfSize + offset - cylinderDiameter, 0),
     ];
     case "bottom": return [
       new BABYLON.Vector3(0, -parentHalfSize, 0),
-      new BABYLON.Vector3(0, -parentHalfSize - offset + 0.1, 0),
+      new BABYLON.Vector3(0, -parentHalfSize - offset + cylinderDiameter, 0),
     ];
     default: throw new Error("Unsupported position");
   }
@@ -505,7 +543,7 @@ function setupSmallPlaneActions(
   smallPlane.actionManager = new BABYLON.ActionManager(scene);
 
   smallPlane.actionManager.registerAction(
-    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, (evt) => {
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, () => {
       smallPlane.scaling = new BABYLON.Vector3(1.3, 1.3, 1.3);
     })
   );
@@ -620,7 +658,10 @@ function resetRotateState(scene: BABYLON.Scene): void {
 function resetDragState(scene: BABYLON.Scene): void {
   dragState.initialMousePosition = null;
   dragState.initialPlaneScaling = null;
-  dragState.activeBorder = null;
+  if (dragState.activeBorder) {
+    dragState.activeBorder.scaling = new BABYLON.Vector3(1, 1, 1);
+    dragState.activeBorder = null;
+  }
   dragState.plane = null;
   dragState.isVertical = null;
   scene.activeCamera?.attachControl(scene.getEngine().getRenderingCanvas()!, true);
@@ -639,7 +680,6 @@ function isCameraMoving(scene: BABYLON.Scene): boolean {
 
   scene.onBeforeRenderObservable.add(() => {
     if (camera.alpha !== lastAlpha || camera.beta !== lastBeta) {
-      console.log("相机正在旋转");
       lastAlpha = camera.alpha;
       lastBeta = camera.beta;
       disablePlaneDrag(scene);
@@ -649,7 +689,6 @@ function isCameraMoving(scene: BABYLON.Scene): boolean {
     }
   });
 
-  console.log("相机未检测到移动/旋转状态");
   return false;
 }
 

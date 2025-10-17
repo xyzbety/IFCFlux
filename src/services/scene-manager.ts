@@ -630,14 +630,14 @@ export class SceneManager {
       this.slicePlane.destroy();
       this.slicePlane = null;
     }
-          this.scene.meshes.forEach(mesh => {
-        mesh.isPickable = false
-      });
+    this.scene.meshes.forEach(mesh => {
+      mesh.isPickable = false
+    });
     let slicePlaneSize = 20; // 默认大小
-    // if (this.bbox) {
-    //   const boundingBoxSize = this.bbox.extendSize.scale(2);
-    //   slicePlaneSize = Math.max(boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z) * 1.5;
-    // }
+    if (this.bbox) {
+      const boundingBoxSize = this.bbox.extendSize;
+      slicePlaneSize = Math.max(boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z);
+    }
 
     this.slicePlane = new SlicePlane(this.scene, slicePlaneSize);
     console.log("剖切面尺寸:", slicePlaneSize);

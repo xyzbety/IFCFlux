@@ -1,7 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import { type ISliceShape, type IBaseSlice, type ISlicePlane, type ISliceShapeBorder, type ISliceShapeFill, type ISliceShapeStyle, DEFAULT_SHAPE_STYLE } from "./type";
 import { SceneManager } from "../../../services/scene-manager";
-import { createArrowWithLine, createSmallPlane, setupRotationAndDrag, setupScenePointerHandlers, createCornerTubes, deepMerge } from "./utils";
+import { createArrowWithLine, createSmallPlane, setupRotationAndDrag, setupScenePointerHandlers, createCornerTubes, deepMerge, createPlaneEdges } from "./utils";
 
 export class SlicePlane implements IBaseSlice {
   border!: ISliceShapeBorder;
@@ -112,10 +112,6 @@ export class SlicePlane implements IBaseSlice {
       this.updateClipPlane()
     });
     plane.addBehavior(pointerDragBehavior);
-    plane.enableEdgesRendering();
-    plane.edgesWidth = 5;
-    plane.edgesColor = BABYLON.Color4.FromHexString(style.border.color);
-
     const material = new BABYLON.StandardMaterial("planeMaterial", this.scene);
     material.diffuseColor = BABYLON.Color3.FromHexString(style.fill.color);
     material.alpha = style.fill.opacity;
@@ -125,35 +121,65 @@ export class SlicePlane implements IBaseSlice {
   }
 
   private setupPlaneControls(plane: BABYLON.Mesh) {
+    // 定义动态比例因子
+    const arrowScale = 0.07;      // 箭头大小比例
+    const smallPlaneScale = 0.05; // 小平面大小比例
+    const cornerTubeScale = 0.05; // 角边框大小比例
+
+    // 动态计算尺寸
+    const arrowSize = this.size * arrowScale;
+    const smallPlaneSize = this.size * smallPlaneScale;
+    const cornerTubeSize = this.size * cornerTubeScale;
+
+    // 创建箭头
     const arrow = createArrowWithLine(this.scene, plane, this.size, {
       position: "left",
-      arrowOffset: 1,
+      arrowOffset: arrowSize, // 动态调整箭头偏移
       arrowColor: new BABYLON.Color3(1, 0.5, 0),
       lineColor: new BABYLON.Color3(1, 0.5, 0),
+      scaleFactor: arrowSize,
     });
     arrow.renderingGroupId = 1;
+
+    // 创建右侧小平面（用于X轴旋转）
     const smallPlaneRight = createSmallPlane(this.scene, plane, this.size, {
       position: "right",
-      size: 1,
-      offset: 1,
+      size: smallPlaneSize, // 动态调整小平面大小
+      offset: smallPlaneSize, // 动态调整偏移
       rotationAxis: "x",
       iconPath: "./icons/rotate-x.svg",
     });
     smallPlaneRight.renderingGroupId = 1;
+
+    // 创建顶部小平面（用于Y轴旋转）
     const smallPlaneTop = createSmallPlane(this.scene, plane, this.size, {
       position: "top",
-      size: 1,
-      offset: 1,
+      size: smallPlaneSize, // 动态调整小平面大小
+      offset: smallPlaneSize, // 动态调整偏移
       rotationAxis: "y",
       iconPath: "./icons/rotate-y.svg",
     });
     smallPlaneTop.renderingGroupId = 1;
 
-    const lines = createCornerTubes(this.scene, plane, this.size, 2);
+    // 创建四个角边框
+    const lines = createCornerTubes(this.scene, plane, this.size, cornerTubeSize, cornerTubeSize * 0.05, new BABYLON.Color3(1, 0.5, 0), cornerTubeSize * 0.075); // 动态调整角边框大小
     lines.forEach(line => line.renderingGroupId = 1);
-    setupRotationAndDrag(this.scene, plane, { smallPlaneRight, smallPlaneTop }, () => this.updateClipPlane(), this.scene.activeCamera);
+    const edgeLines = createPlaneEdges(this.scene, plane, this.size, new BABYLON.Color3(1, 0.5, 0));
+    edgeLines.forEach(line => line.renderingGroupId = 1);
+
+    // 设置旋转和拖拽行为
+    setupRotationAndDrag(
+      this.scene,
+      plane,
+      { smallPlaneRight, smallPlaneTop },
+      () => this.updateClipPlane(),
+      this.scene.activeCamera
+    );
+
+    // 设置场景指针事件处理器
     setupScenePointerHandlers(this.scene);
   }
+
 
   async updateClipPlane() {
     if (!this.plane) return;
