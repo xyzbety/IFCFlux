@@ -162,7 +162,6 @@ export function createSmallPlane(
   // 设置材质（禁用剖切）
   smallPlane.material = createTextureMaterial(scene, "smallPlaneMaterial", options.iconPath, false);
   line.material = createStandardMaterial(scene, "lineMaterial", new BABYLON.Color3(1, 0.5, 0), true, false);
-
   return smallPlane;
 }
 
@@ -173,6 +172,7 @@ export function setupScenePointerHandlers(scene: BABYLON.Scene) {
   // 清理旧处理器
   scene.onPointerMove = undefined;
   scene.onPointerUp = undefined;
+  isCameraMoving(scene); // 持续检测相机状态
 
   // 绑定新处理器
   scene.onPointerMove = () => {
@@ -193,16 +193,14 @@ export function setupScenePointerHandlers(scene: BABYLON.Scene) {
     resetDragState(scene);
     scene.activeCamera?.attachControl(scene.getEngine().getRenderingCanvas()!, true);
   };
-  
-  scene.onPointerDown = () => {
-    const plane = scene.meshes.find(m => m.name === "slicePlane");
-    if (plane) {
-      const dragBehavior = plane.behaviors.find(b => b instanceof BABYLON.PointerDragBehavior) as BABYLON.PointerDragBehavior | undefined;
-      if (dragBehavior) {
-        dragBehavior.enabled = true; // 确保拖拽行为启用
-      }
+
+  scene.onPointerDown = (evt) => {
+    if (isCameraMoving(scene)) {
+      return; // 如果相机正在旋转，不启用拖拽
     }
-  }
+    enablePlaneDrag(scene); // 确保拖拽行为启用
+  };
+
 }
 
 
@@ -302,6 +300,7 @@ export function createCornerTubes(
       {
         path: lShapePoints,
         radius: tubeRadius,
+        cap: BABYLON.Mesh.CAP_ALL
       },
       scene
     );
@@ -625,4 +624,58 @@ function resetDragState(scene: BABYLON.Scene): void {
   dragState.plane = null;
   dragState.isVertical = null;
   scene.activeCamera?.attachControl(scene.getEngine().getRenderingCanvas()!, true);
+}
+
+
+function isCameraMoving(scene: BABYLON.Scene): boolean {
+  const camera = scene.activeCamera as BABYLON.ArcRotateCamera | undefined;
+  if (!camera) {
+    console.log("相机未检测到移动/旋转状态（无活动相机）");
+    return false;
+  }
+
+  let lastAlpha = camera.alpha;
+  let lastBeta = camera.beta;
+
+  scene.onBeforeRenderObservable.add(() => {
+    if (camera.alpha !== lastAlpha || camera.beta !== lastBeta) {
+      console.log("相机正在旋转");
+      lastAlpha = camera.alpha;
+      lastBeta = camera.beta;
+      disablePlaneDrag(scene);
+      return true
+    } else {
+      enablePlaneDrag(scene);
+    }
+  });
+
+  console.log("相机未检测到移动/旋转状态");
+  return false;
+}
+
+
+// 禁用平面拖拽行为
+function disablePlaneDrag(scene: BABYLON.Scene) {
+  const plane = scene.meshes.find(m => m.name === "slicePlane");
+  if (plane) {
+    const dragBehavior = plane.behaviors.find(
+      b => b instanceof BABYLON.PointerDragBehavior
+    ) as BABYLON.PointerDragBehavior | undefined;
+    if (dragBehavior) {
+      dragBehavior.enabled = false;
+    }
+  }
+}
+
+// 启用平面拖拽行为
+function enablePlaneDrag(scene: BABYLON.Scene) {
+  const plane = scene.meshes.find(m => m.name === "slicePlane");
+  if (plane) {
+    const dragBehavior = plane.behaviors.find(
+      b => b instanceof BABYLON.PointerDragBehavior
+    ) as BABYLON.PointerDragBehavior | undefined;
+    if (dragBehavior) {
+      dragBehavior.enabled = true;
+    }
+  }
 }
