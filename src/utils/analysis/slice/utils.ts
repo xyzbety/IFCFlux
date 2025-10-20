@@ -161,6 +161,7 @@ export function createSmallPlane(
   const linePoints = getSmallPlaneLinePoints(options.position, parentHalfSize, options.offset, options.size);
   const line = BABYLON.MeshBuilder.CreateLines(`smallPlaneConnectorLine${options.position}`, { points: linePoints }, scene);
   line.parent = parent;
+  line.renderingGroupId = 1;
 
   // 设置材质（禁用剖切）
   smallPlane.material = createTextureMaterial(scene, "smallPlaneMaterial", options.iconPath, false);
@@ -371,6 +372,12 @@ function setupTubeActions(
     })
   );
 
+  tube.actionManager.registerAction(
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOutTrigger, () => {
+      tube.scaling = new BABYLON.Vector3(1,1,1);
+    })
+  );
+
   // 按下效果：增大管道半径
   tube.actionManager.registerAction(
     new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, () => {
@@ -422,6 +429,7 @@ function createStandardMaterial(
 ): BABYLON.StandardMaterial {
   const material = new BABYLON.StandardMaterial(name, scene);
   material.diffuseColor = color;
+  material.backFaceCulling = false;
   if (emissive) material.emissiveColor = color;
   material.clipPlane = clipPlane;
   return material;
@@ -545,6 +553,17 @@ function setupSmallPlaneActions(
   smallPlane.actionManager.registerAction(
     new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOverTrigger, () => {
       smallPlane.scaling = new BABYLON.Vector3(1.3, 1.3, 1.3);
+    })
+  );
+  smallPlane.actionManager.registerAction(
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger, () => {
+      smallPlane.scaling = new BABYLON.Vector3(1.3, 1.3, 1.3);
+    })
+  );
+
+    smallPlane.actionManager.registerAction(
+    new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOutTrigger, () => {
+      smallPlane.scaling = new BABYLON.Vector3(1, 1, 1);
     })
   );
 
