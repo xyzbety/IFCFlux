@@ -646,20 +646,47 @@ export class SceneManager {
 
   /**
    * 设置爆炸效果
-   * @param type 爆炸参数
+   * @param data 爆炸参数
    */
-  public handleExplosion(type: any) {
-    console.log("爆炸类型", type);
+  public handleExplosion(data: any) {
+    console.log("爆炸类型", data);
     if (!this.scene || !this.ifcExplosion) return;
 
-    if (type === 'clear') {
+    if (data.type === 'explosion-clear') {
       this.ifcExplosion.destroy(); // 还原模型
+      const handleSliderExplosionX = document.getElementById("horizontalSliderExplosionX") as any;
+      const handleSliderExplosionY = document.getElementById("horizontalSliderExplosionY") as any;
+      const handleSliderExplosionZ = document.getElementById("horizontalSliderExplosionZ") as any;
+      if (handleSliderExplosionX) handleSliderExplosionX.val(0);
+      if (handleSliderExplosionY) handleSliderExplosionY.val(0);
+      if (handleSliderExplosionZ) handleSliderExplosionZ.val(0);
       return;
     }
+    // 获取当前爆炸参数
+    const currentX = this.ifcExplosion.currentX || 0;
+    const currentY = this.ifcExplosion.currentY || 0;
+    const currentZ = this.ifcExplosion.currentZ || 0;
 
-    if (type === 'axis') {
-      this.ifcExplosion.bom(new BABYLON.Vector3(0, 0.5, 0));
+    // 根据输入更新爆炸参数
+    let newX = currentX;
+    let newY = currentY;
+    let newZ = currentZ;
+
+    if (data.type === 'explosion-x') {
+      newX = Number(data.value);
+    } else if (data.type === 'explosion-y') {
+      newY = Number(data.value);
+    } else if (data.type === 'explosion-z') {
+      newZ = Number(data.value);
     }
+
+    // 应用新的爆炸参数
+    this.ifcExplosion.bom(new BABYLON.Vector3(newX, newY, newZ));
+
+    // 更新当前爆炸参数
+    this.ifcExplosion.currentX = newX;
+    this.ifcExplosion.currentY = newY;
+    this.ifcExplosion.currentZ = newZ;
   }
 
   /**
@@ -806,18 +833,12 @@ export class SceneManager {
     oldMeshes.forEach(mesh => mesh.dispose());
 
     // 重置爆炸滑块
-    const explosionSliderX = document.getElementById("explosionSliderX");
-    const explosionSliderY = document.getElementById("explosionSliderY");
-    const explosionSliderZ = document.getElementById("explosionSliderZ");
-    if (explosionSliderX) {
-      (explosionSliderX as any).val(0);
-    }
-    if (explosionSliderY) {
-      (explosionSliderY as any).val(0);
-    }
-    if (explosionSliderZ) {
-      (explosionSliderZ as any).val(0);
-    }
+    const handleSliderExplosionX = document.getElementById("horizontalSliderExplosionX") as any;
+    const handleSliderExplosionY = document.getElementById("horizontalSliderExplosionY") as any;
+    const handleSliderExplosionZ = document.getElementById("horizontalSliderExplosionZ") as any;
+    if (handleSliderExplosionX) handleSliderExplosionX.val(0);
+    if (handleSliderExplosionY) handleSliderExplosionY.val(0);
+    if (handleSliderExplosionZ) handleSliderExplosionZ.val(0);
   }
 
   /**

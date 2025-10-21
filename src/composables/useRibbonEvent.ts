@@ -13,11 +13,6 @@ export class RibbonEventManager {
     private singleEvents: Map<string, () => void> = new Map();
     private settingsEventHandlers = new Map<string, (event: any) => void>();
 
-    // 在内部初始化爆炸参数
-    public explosionX = ref(0);
-    public explosionY = ref(0);
-    public explosionZ = ref(0);
-
     private constructor() {
         // 私有构造函数，防止外部实例化
         this.initializeEventMap();
@@ -82,13 +77,6 @@ export class RibbonEventManager {
                 params: ["visible", "x", "y", "z", "reset"]
             },
 
-            // 爆炸图事件
-            {
-                labels: ["楼层抽屉", "轴向爆炸", "清除效果"],
-                type: "explosion-event",
-                params: ["drawer", "axis", "clear"]
-            },
-
             // 检查事件
             {
                 labels: ["基础数据", "规划报建", "施工图审查", "智慧工地监管", "竣工验收"],
@@ -120,7 +108,8 @@ export class RibbonEventManager {
         this.singleEvents.clear(); // 清空之前的事件
         this.singleEvents.set("构件树", debounce(() => this.options!.emit("build-tree")));
         this.singleEvents.set("属性表", debounce(() => this.options!.emit("properties-table")));
-        this.singleEvents.set("重置光照", debounce(() => this.options?.emit('light-settings', { type: 'reset'})));
+        this.singleEvents.set("重置光照", debounce(() => this.options?.emit('light-settings', { type: 'reset' })));
+        this.singleEvents.set("清除效果", debounce(() => this.options?.emit('explosion-event', { type: 'explosion-clear' })));
     }
     /**
      * 处理按钮点击
@@ -224,6 +213,18 @@ export class RibbonEventManager {
             this.options.emit('ribbon-tab-change', event.detail.index);
             if (event.detail.index === 3) {
                 this.handleSettingsTabSelect();
+            } else if (event.detail.index === 0) {
+                this.createEventHandler("horizontalSliderExplosionX", (event: any) => {
+                    this.options?.emit('explosion-event', { type: 'explosion-x', value: event.detail.value });
+                });
+
+                this.createEventHandler("horizontalSliderExplosionY", (event: any) => {
+                    this.options?.emit('explosion-event', { type: 'explosion-y', value: event.detail.value });
+                });
+
+                this.createEventHandler("horizontalSliderExplosionZ", (event: any) => {
+                    this.options?.emit('explosion-event', { type: 'explosion-z', value: event.detail.value });
+                });
             }
         }
     }
@@ -275,6 +276,7 @@ export class RibbonEventManager {
                 this.options?.emit('light-settings', { type: 'direction-z', value: event.detail.value });
             });
 
+
             // 绑定光照强度输入框
             this.createEventHandler("inputIndensity", (event: any) => {
                 this.options?.emit('light-settings', { type: 'indensity', value: event.detail.value });
@@ -287,17 +289,17 @@ export class RibbonEventManager {
 
             // 绑定拖动速度滑块
             this.createEventHandler("horizontalSliderSpeed", (event: any) => {
-                this.options?.emit('interaction-settings', { type:'dragSpeed', value: event.detail.value });
+                this.options?.emit('interaction-settings', { type: 'dragSpeed', value: event.detail.value });
             });
 
             // 绑定焦点模式复选框
             this.createEventHandler("focusCheckbox", (event: any) => {
-                this.options?.emit('interaction-settings', { type:'focusMode', value: event.detail.value });
+                this.options?.emit('interaction-settings', { type: 'focusMode', value: event.detail.value });
             });
 
             // 绑定网格模式复选框
             this.createEventHandler("gridCheckbox", (event: any) => {
-                this.options?.emit('scene-settings', { type:'gridMode', value: event.detail.value }); 
+                this.options?.emit('scene-settings', { type: 'gridMode', value: event.detail.value });
             });
 
             // 绑定颜色选择器
@@ -308,7 +310,7 @@ export class RibbonEventManager {
                 handleColorPicker.value = bgColor;
 
                 this.createEventHandler("colorPicker", (event: any) => {
-                    this.options?.emit('scene-settings', { type:'backgroundColor', value: event.detail.value });
+                    this.options?.emit('scene-settings', { type: 'backgroundColor', value: event.detail.value });
                 });
             }
         }

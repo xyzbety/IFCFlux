@@ -170,7 +170,7 @@ function createAppCore() {
     const handlePropertiesTable = () => togglePropertyTable();
     const toggleStructureTreeDialog = () => { if (canToggleComponents.value) toggleStructureTree(); };
     const togglePropertyTableDialog = () => { if (canToggleComponents.value) togglePropertyTable(); };
-    // const handleExplosion = (type: any) => sceneManager.handleExplosion(type);
+    const handleExplosion = (type: any) => sceneManager.handleExplosion(type);
     const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
     const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
 
@@ -394,7 +394,7 @@ function createAppCore() {
             emit: (eventName: string, ...args: any[]) => {
                 const eventMap: { [key: string]: Function } = {
                     'navigate-event': handleNavigate, 'change-view': handleView, 'visible-control': handleVisibility,
-                    'measure-event': handleMeasure, 'slice-event': handleSlice, 'build-tree': handleBuildTree,
+                    'measure-event': handleMeasure, 'slice-event': handleSlice, 'build-tree': handleBuildTree,'explosion-event': handleExplosion,
                     'properties-table': handlePropertiesTable, 'file-uploaded': handleFileUploaded,
                     'light-settings': handleLightSettings, 'inspect-click': handleInspectClick, 'scene-settings': handleChangeScene,
                     'ribbon-tab-change': handleRibbonTabChange, 'toggle-file-menu': toggleFileMenu,

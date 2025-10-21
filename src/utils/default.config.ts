@@ -258,6 +258,45 @@ export default {
       }]
     },
     {
+      label: '轴向爆炸',
+      icon: 'floor_explosion material-icons',
+      ribbonItems: [
+        {
+          type: 'group',
+          direction: 'horizontal',
+          ribbonItems: [{
+            type: 'group',
+            direction: 'vertical',
+            ribbonItems: [{
+              label: 'X',
+              itemTemplate: '<smart-slider value="0" id="horizontalSliderExplosionX" show-tooltip tooltip-position="far" orientation="horizontal" min="-3" max="3" scale-position="none"></smart-slider>',
+              cssClass: 'normal',
+              allowedSizes: ['normal']
+            },
+            {
+              label: 'Y',
+              itemTemplate: '<smart-slider value="0" id="horizontalSliderExplosionY" show-tooltip tooltip-position="far" orientation="horizontal" min="0" max="3" scale-position="none"></smart-slider>',
+              cssClass: 'normal',
+              allowedSizes: ['normal']
+            },
+            {
+              label: 'Z',
+              itemTemplate: '<smart-slider value="0" id="horizontalSliderExplosionZ" show-tooltip orientation="horizontal" min="-3" max="3"  scale-position="none"></smart-slider>',
+              cssClass: 'normal',
+              allowedSizes: ['normal']
+            }]
+          }]
+        },
+        {
+          label: '清除效果',
+          icon: 'measure_clear material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        },]
+    },
+    {
       label: '对象',
       icon: 'object material-icons',
       ribbonItems: [{
@@ -277,34 +316,6 @@ export default {
         allowedSizes: ['normal']
       }]
     },
-      // {
-      //   label: '楼层爆炸',
-      //   icon: 'floor_explosion material-icons',
-      //   ribbonItems: [{
-      //     label: '楼层抽屉',
-      //     icon: 'floor_drawer material-icons',
-      //     type: 'button',
-      //     cssClass: 'flat',
-      //     size: 'normal',
-      //     allowedSizes: ['normal']
-      //   },
-      //   {
-      //     label: '轴向爆炸',
-      //     icon: 'axis_explosion material-icons',
-      //     type: 'button',
-      //     cssClass: 'flat',
-      //     size: 'normal',
-      //     allowedSizes: ['normal']
-      //   },
-      //   {
-      //     label: '清除效果',
-      //     icon: 'measure_clear material-icons',
-      //     type: 'button',
-      //     cssClass: 'flat',
-      //     size: 'normal',
-      //     allowedSizes: ['normal']
-      //   },]
-      // },
     ]
   },
   {
