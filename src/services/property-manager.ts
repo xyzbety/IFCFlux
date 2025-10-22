@@ -1,4 +1,4 @@
-import { getIfcChineseName, getIfcChineseNumberName } from '../utils/ifc/ifcMap';
+import { IfcCategoryMap } from '../utils/ifc/ifc-category-map'
 import * as BABYLON from '@babylonjs/core';
 import { getBoundingBoxForMeshes } from '../utils';
 import { EffectManager } from './effect-manager';
@@ -252,12 +252,13 @@ export class IfcPropertyUtils {
       Object.keys(pset).map((key: string) => {
         if (showPropertyKey.indexOf(key) > -1) {
           const v = pset[key]?.value !== undefined ? pset[key]?.value : pset[key];
+          console.log(`${key}: ${v}`);
           if (v !== null && v !== '') {
             if (key === 'type') {
               value.push({
                 id,
                 name: 'IfcEntity',
-                value: typeof v === 'string' ? getIfcChineseName(v) : getIfcChineseNumberName(v)
+                value: IfcCategoryMap[v].en
               });
             } else {
               value.push({
@@ -280,7 +281,7 @@ export class IfcPropertyUtils {
         }),
       };
       property.push(specific);
-      
+
       // 获取关联属性集
       spec.forEach((p: any) => {
         if (p.type === 1451395588) {
@@ -329,17 +330,17 @@ export class IfcPropertyUtils {
       )
 
       // 获取属性集对象
-    const rawPsets = rawPsetIds.map((id: number) => propertyAll[id])
-    for (const pset of rawPsets) {
-      //@ts-ignore
-      // 解包属性集并添加到属性对象中
-      // property[pset.Name] = this.unpackPsetOrComplexProp(pset, propertyAll)
-      property.push({
-        id,
-        name: pset.Name?.value,
-        children: this.unpackPsetOrComplexProp(pset, propertyAll, id)
-      })
-    }
+      const rawPsets = rawPsetIds.map((id: number) => propertyAll[id])
+      for (const pset of rawPsets) {
+        //@ts-ignore
+        // 解包属性集并添加到属性对象中
+        // property[pset.Name] = this.unpackPsetOrComplexProp(pset, propertyAll)
+        property.push({
+          id,
+          name: pset.Name?.value,
+          children: this.unpackPsetOrComplexProp(pset, propertyAll, id)
+        })
+      }
 
 
     }
@@ -347,96 +348,96 @@ export class IfcPropertyUtils {
     return property;
   }
 
-// 解包属性集或复杂属性
-private unpackPsetOrComplexProp(pset: { HasProperties: any }, properties: any, id:any) {
-  const parsed: any = []
-  if (!pset.HasProperties || !Array.isArray(pset.HasProperties)) return parsed
-  for (const psetId of pset.HasProperties) {
-    const value = properties[psetId.value]
-    id++;
-    if (value?.type === 2542286263) {
-      parsed[value.Name] = this.unpackPsetOrComplexProp(value, properties, id) // 递归解包复杂属性
-    } else if (value?.type === 3650150729) {
-      let nominalValue = value.NominalValue;
-      if (typeof nominalValue === 'boolean') {
-        nominalValue = nominalValue ? '是' : '否';
-      }
-      else if (typeof nominalValue === 'object' && nominalValue !== null && 'value' in nominalValue) {
-        if (typeof nominalValue.value === 'boolean') {
-          nominalValue = nominalValue.value ? '是' : '否';
-        } else {
-          nominalValue = nominalValue.value;
-        }
-      }
+  // 解包属性集或复杂属性
+  private unpackPsetOrComplexProp(pset: { HasProperties: any }, properties: any, id: any) {
+    const parsed: any = []
+    if (!pset.HasProperties || !Array.isArray(pset.HasProperties)) return parsed
+    for (const psetId of pset.HasProperties) {
+      const value = properties[psetId.value]
       id++;
-      parsed.push({
-        id,
-        name: value.Name.value,
-        value: nominalValue
-      })
+      if (value?.type === 2542286263) {
+        parsed[value.Name] = this.unpackPsetOrComplexProp(value, properties, id) // 递归解包复杂属性
+      } else if (value?.type === 3650150729) {
+        let nominalValue = value.NominalValue;
+        if (typeof nominalValue === 'boolean') {
+          nominalValue = nominalValue ? '是' : '否';
+        }
+        else if (typeof nominalValue === 'object' && nominalValue !== null && 'value' in nominalValue) {
+          if (typeof nominalValue.value === 'boolean') {
+            nominalValue = nominalValue.value ? '是' : '否';
+          } else {
+            nominalValue = nominalValue.value;
+          }
+        }
+        id++;
+        parsed.push({
+          id,
+          name: value.Name.value,
+          value: nominalValue
+        })
+      }
     }
+    return parsed
   }
-  return parsed
-}
 
-public async flattenTreeToGroupedItems(treeData: any[]): Promise<{
-  items: any[];
-  groupRowMap: Map<number, string>;
-}> {
-  const result: any[] = [];
-  const groupRowMap = new Map<number, string>();
+  public async flattenTreeToGroupedItems(treeData: any[]): Promise<{
+    items: any[];
+    groupRowMap: Map<number, string>;
+  }> {
+    const result: any[] = [];
+    const groupRowMap = new Map<number, string>();
 
-  // 首先收集所有分组数据
-  const groupedData: { [key: string]: any[] } = {};
-  
-  treeData.forEach((parentNode: { children: any[]; name: any; }) => {
-    // 检查是否有子节点
-    if (parentNode.children && Array.isArray(parentNode.children)) {
-      groupedData[parentNode.name] = parentNode.children.map((child: { id: any; name: any; value: any; }) => ({
-        id: child.id,
-        name: child.name,
-        value: child.value,
-        group: parentNode.name
-      }));
-    }
-  });
+    // 首先收集所有分组数据
+    const groupedData: { [key: string]: any[] } = {};
 
-  // 确保 Element Specific 排在第一位
-  const sortedGroupNames = Object.keys(groupedData).sort((a, b) => {
-    // Element Specific 永远排在第一位
-    if (a === 'Element Specific' && b !== 'Element Specific') {
-      return -1;
-    }
-    if (b === 'Element Specific' && a !== 'Element Specific') {
-      return 1;
-    }
-    // 如果都是 Element Specific 或都不是，按首字母排序
-    return a.localeCompare(b);
-  });
-
-  let currentRow = 1; // 从第1行开始
-
-  // 按排序后的分组名处理数据
-  sortedGroupNames.forEach(groupName => {
-    // 记录行数对应的分组名
-    groupRowMap.set(currentRow, groupName);
-    
-    // 分组名占一行
-    currentRow++;
-    
-    // 添加该分组的所有子项
-    const groupItems = groupedData[groupName];
-    groupItems.forEach(item => {
-      result.push(item);
-      currentRow++;
+    treeData.forEach((parentNode: { children: any[]; name: any; }) => {
+      // 检查是否有子节点
+      if (parentNode.children && Array.isArray(parentNode.children)) {
+        groupedData[parentNode.name] = parentNode.children.map((child: { id: any; name: any; value: any; }) => ({
+          id: child.id,
+          name: child.name,
+          value: child.value,
+          group: parentNode.name
+        }));
+      }
     });
-  });
 
-  return {
-    items: result,
-    groupRowMap
-  };
-}
+    // 确保 Element Specific 排在第一位
+    const sortedGroupNames = Object.keys(groupedData).sort((a, b) => {
+      // Element Specific 永远排在第一位
+      if (a === 'Element Specific' && b !== 'Element Specific') {
+        return -1;
+      }
+      if (b === 'Element Specific' && a !== 'Element Specific') {
+        return 1;
+      }
+      // 如果都是 Element Specific 或都不是，按首字母排序
+      return a.localeCompare(b);
+    });
+
+    let currentRow = 1; // 从第1行开始
+
+    // 按排序后的分组名处理数据
+    sortedGroupNames.forEach(groupName => {
+      // 记录行数对应的分组名
+      groupRowMap.set(currentRow, groupName);
+
+      // 分组名占一行
+      currentRow++;
+
+      // 添加该分组的所有子项
+      const groupItems = groupedData[groupName];
+      groupItems.forEach(item => {
+        result.push(item);
+        currentRow++;
+      });
+    });
+
+    return {
+      items: result,
+      groupRowMap
+    };
+  }
 
   /**
    * 初始化模型数据的通用处理

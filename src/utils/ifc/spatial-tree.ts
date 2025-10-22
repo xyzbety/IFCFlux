@@ -96,8 +96,8 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         expressId: id,
         guid: guid,
         objectType: property.ObjectType,
-        type: IfcCategoryMap[property.type],
-        typeShow: IfcCategoryMap[property.type],
+        type: IfcCategoryMap[property.type].en,
+        typeShow: IfcCategoryMap[property.type].en,
       } as TreeNode
       dataMap[id] = item
       tempTreeData.push(item)
@@ -112,7 +112,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
       if (!property) {
         return
       }
-      if (!entities.includes(IfcCategoryMap[property.type]) && property.type === 'IFCSITE') {
+      if (!entities.includes(IfcCategoryMap[property.type].en) && property.type === 'IfcSite') {
         return
       }
       const guid = ifcGuidToUuid(property.GlobalId.value)
@@ -124,14 +124,14 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         expressId: expressId,
         guid: guid,
         objectType: property.ObjectType,
-        type: IfcCategoryMap[property.type],
-        typeShow: IfcCategoryMap[property.type],
+        type: IfcCategoryMap[property.type].en,
+        typeShow: IfcCategoryMap[property.type].en,
       }
       dataMap[expressId] = item
       //当时构件时，把ifc element type 相同的放在一起
       if (isc) {
         // TODO  这个层级是人为创建的,所以ExpressID是人为创建的
-        const categoryEid = `Category_${IfcCategoryMap[property.type]}_${id}`
+        const categoryEid = `Category_${IfcCategoryMap[property.type].en}_${id}`
         if (!categoryNodeCode.includes(categoryEid)) {
           tempTreeData.push({
             name: '',
@@ -143,7 +143,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
             guid: guid,
             objectType: property.ObjectType,
             type: 'category',
-            typeShow: IfcCategoryMap[property.type],
+            typeShow: IfcCategoryMap[property.type].en,
 
           })
           categoryNodeCode.push(categoryEid)

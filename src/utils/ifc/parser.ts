@@ -6,15 +6,14 @@ import { IFCPROJECT, IFCRELDEFINESBYPROPERTIES, IFCSPACE, IFCRELASSOCIATESCLASSI
 import proj4 from 'proj4'
 // 导入 Node.js 的 crypto 模块中的 webcrypto API，用于生成加密安全的随机数
 // const { webcrypto } = require('crypto');
-
+import { GeometryTypes } from '../ifc/ifc-geometry-types';
+import { IfcElements } from "./ifc-elements-map";
 // 从本地工具文件中导入辅助函数、常量和类型定义
 import {
   getHash,
-  IfcElements,
   DummyElementsSet,
   RelationElementsSet,
   PropNames,
-  GeometryTypes,
   IfcTypesMap,
 
 } from './utils'
@@ -100,8 +99,8 @@ export class IFCParser {
     }
     // 获取所有分类关联关系的行ID
     this.classficationLines = this.ifcapi.GetLineIDsWithType(
-        this.modelId as number,
-        IFCRELASSOCIATESCLASSIFICATION
+      this.modelId as number,
+      IFCRELASSOCIATESCLASSIFICATION
     )
     // 创建并保存几何体；本地只存储引用
 
@@ -231,17 +230,17 @@ export class IFCParser {
         let relating_object_id = null;
         let related_object_ids = null;
         const values = Object.values(value);
-        if(Array.isArray(values[6])){ // 判断关联对象的结构
+        if (Array.isArray(values[6])) { // 判断关联对象的结构
           relating_object_id = values[7];
           related_object_ids = values[6];
-        }else{
+        } else {
           relating_object_id = values[6];
-          related_object_ids = Array.isArray(values[7])? values[7] : [values[7]];
+          related_object_ids = Array.isArray(values[7]) ? values[7] : [values[7]];
         }
         const obj = await this.ifcapi.GetLine(this.modelId, relating_object_id);
-        const relating_object = obj? formatGuid(obj.GlobalId.value) : null;
+        const relating_object = obj ? formatGuid(obj.GlobalId.value) : null;
         let related_objects = []
-        for (const line_id of related_object_ids){
+        for (const line_id of related_object_ids) {
           const obj = await this.ifcapi.GetLine(this.modelId, line_id);
           if (!obj) continue;
           related_objects.push(formatGuid(obj.GlobalId.value));
@@ -268,7 +267,7 @@ export class IFCParser {
           this.ifcRelAggregates[relating_object] = related_objects;
         }
         entityId++;
-      }else if (IfcElements.hasOwnProperty(this.invertTypeMap[value.type])) {
+      } else if (IfcElements.hasOwnProperty(this.invertTypeMap[value.type])) {
         // 如果是物理元素, 存入 physicalElements
         const dic = {
           "id": entityId,
@@ -295,15 +294,15 @@ export class IFCParser {
     // 根据空间包含关系，更新物理和虚拟元素的楼层信息
     Object.entries(this.ifcRelContainedInSpatialStructure).forEach(([key, value]) => {
 
-      for(const phy of Object.values(this.physicalElements)){
-        if(value.includes(phy.guid)){
+      for (const phy of Object.values(this.physicalElements)) {
+        if (value.includes(phy.guid)) {
           phy.in_storey = key;
           phy.of_level = storeys[key] ?? null;
         }
       }
 
-      for(const dummy of Object.values(this.dummyElements)){
-        if(value.includes(dummy.guid)){
+      for (const dummy of Object.values(this.dummyElements)) {
+        if (value.includes(dummy.guid)) {
           dummy.in_storey = key;
           dummy.of_level = storeys[key] ?? null;
         }
@@ -313,8 +312,8 @@ export class IFCParser {
     // 根据聚合关系，更新虚拟元素（主要是IfcSpace）的楼层信息
     Object.entries(this.ifcRelAggregates).forEach(([key, value]) => {
 
-      for(const dummy of Object.values(this.dummyElements)){
-        if(dummy.of_category=='IFCSPACE' && value.includes(dummy.guid)){
+      for (const dummy of Object.values(this.dummyElements)) {
+        if (dummy.of_category == 'IFCSPACE' && value.includes(dummy.guid)) {
           dummy.in_storey = key;
           dummy.of_level = storeys[key] ?? null;
         }
@@ -594,11 +593,11 @@ export class IFCParser {
               }
             }
           }
-          if(props.type === 'IFCRELDEFINESBYTYPE' && props.RelatedObjects){
+          if (props.type === 'IFCRELDEFINESBYTYPE' && props.RelatedObjects) {
             const relatingTypeId = Number(props.RelatingType)
             const relatingType = await this.ifcapi.GetLine(this.modelId as number, relatingTypeId)
             const propertySetIds = relatingType.HasPropertySets
-            if(propertySetIds){
+            if (propertySetIds) {
               for (const relatedObjectId of props.RelatedObjects) {
                 // 将属性集ID和实体ID的关系添加到 defindsByTypePropsIdMap
                 for (const propertyDefinitionId of propertySetIds) {
@@ -767,7 +766,7 @@ export class IFCParser {
         // 获取顶点和索引数据
         const verts = [...this.ifcapi.GetVertexArray(geometry.GetVertexData(), geometry.GetVertexDataSize())]
         const indices = [...this.ifcapi.GetIndexArray(geometry.GetIndexData(), geometry.GetIndexDataSize())]
-        
+
         // 提取顶点、法线并应用变换矩阵
         const { vertices, normals } = this.extractVertexData(verts, placedGeometry.flatTransformation)
         const faces = this.extractFaces(indices)

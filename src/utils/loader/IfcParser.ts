@@ -130,7 +130,7 @@ export class IfcParser {
     this.generateModelData(model);
     this.groupByEntityType(model);
 
-    const {properties, psetLines, psetRelations, total} = await this.getModelProperties(model.modelID);
+    const { properties, psetLines, psetRelations, total } = await this.getModelProperties(model.modelID);
 
     model.properties = properties;
     this.psetRelations = psetRelations;
@@ -269,7 +269,7 @@ export class IfcParser {
         counter++;
       }
     }
-    return {properties, psetLines, psetRelations}
+    return { properties, psetLines, psetRelations }
   }
   /**
    * 保存元素ID到片段键的映射关系
@@ -446,7 +446,7 @@ export class IfcParser {
 
     for (const expressID in model.data) {
       const [, type] = model.data[expressID][1]; // 获取分类类型
-      const entityName = IfcCategoryMap[type];
+      const entityName = IfcCategoryMap[type].en;
       this.saveItemToGroup(model, "entities", entityName, expressID);
     }
   }
