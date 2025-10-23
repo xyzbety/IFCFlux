@@ -73,6 +73,8 @@ const iconPathMap = {
     'float': '/icons/浮点数.svg',
     'int': '/icons/整数.svg',
     'string': '/icons/字符串.svg',
+    'date': '/icons/时间.svg',
+    'datetime': '/icons/时间.svg',
 };
 
 const props = defineProps<{ visible: boolean; inspectType: string }>();

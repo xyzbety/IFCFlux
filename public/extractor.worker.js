@@ -25,7 +25,7 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
     let valueCount = 0
 
     const numberDataTypes = ['IFCVOLUMEMEASURE', 'IFCREAL', 'IFCTHERMALTRANSMITTANCEMEASURE', 'IFCINTEGER', 'IFCLENGTHMEASURE', 'IFCCOUNTMEASURE', 'IFCPOSITIVELENGTHMEASURE', 'IFCPLANEANGLEMEASURE', 'IFCNUMERICMEASURE', 'IFCAREAMEASURE', 'IFCQUANTITYLENGTH', 'IFCMASSMEASURE']
-    const stringDataTypes = ['IFCIDENTIFIER', 'IFCLABEL', 'IFCTEXT', 'IFCDURATION']
+    const stringDataTypes = ['IFCIDENTIFIER', 'IFCLABEL', 'IFCTEXT', 'IFCDURATION', 'IFCDATE', 'IFCDATETIME']
 
     const entitiesRegex = entities.toString().toUpperCase().replace(/,/g, '|')
 
@@ -591,11 +591,31 @@ function checkIfcType(value, ifcType, ifcTypes) {
     if (value.length === 0) {
         return 2
     }
-    // 日期时间检查
-    if (ifcType === 'IFCDATE' && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+
+    return 0
+  }
+
+  if (ifcTypes === 'datetime') {
+    if (typeof value !== 'string') {
+        return 3;
+    }
+    if (value.length === 0) {
+        return 2
+    }
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value)) {
         return 4
     }
-    if (ifcType === 'IFCDATETIME' && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value)) {
+    return 0
+  }
+
+  if (ifcTypes === 'date') {
+    if (typeof value !== 'string') {
+        return 3;
+    }
+    if (value.length === 0) {
+        return 2
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         return 4
     }
     return 0
