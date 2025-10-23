@@ -576,6 +576,11 @@ function ifcToText(encoded) {
  * @param {any} value - 需要检查的值
  * @param {string} ifcType - IFC 类型标识符
  * @returns {boolean} 如果值符合指定的 IFC 类型则返回 true，否则返回 false
+ * 0 - 合格
+ * 1 - 缺参数
+ * 2 - 值为空
+ * 3 - 值类型不对
+ * 4 - 值域不对
  */
 function checkIfcType(value, ifcType, ifcTypes) {
 
@@ -585,6 +590,13 @@ function checkIfcType(value, ifcType, ifcTypes) {
     }
     if (value.length === 0) {
         return 2
+    }
+    // 日期时间检查
+    if (ifcType === 'IFCDATE' && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return 4
+    }
+    if (ifcType === 'IFCDATETIME' && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value)) {
+        return 4
     }
     return 0
   }

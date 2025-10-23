@@ -16,4 +16,6 @@ export const IfcTypes: { [key: string]: string} = {
     IFCAREAMEASURE: "float",
     IFCQUANTITYLENGTH: "float",
     IFCMASSMEASURE: "float",
+    IFCDATE: "string",
+    IFCDATETIME: "string",
 }
