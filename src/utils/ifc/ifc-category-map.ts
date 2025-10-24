@@ -660,12 +660,12 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   3862327254: {
-    en: 'IfcBuiltsystem',
-    cn: ''
+    en: 'IfcBuiltSystem',
+    cn: '建筑系统'
   },
   1876633798: {
-    en: 'IfcBuiltelement',
-    cn: ''
+    en: 'IfcBuiltElement',
+    cn: '建筑元素'
   },
   963979645: {
     en: 'IfcBridgepart',
@@ -872,8 +872,8 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1626504194: {
-    en: 'IfcBuiltelementtype',
-    cn: ''
+    en: 'IfcBuiltElementType',
+    cn: '建筑元素类型'
   },
   3651464721: {
     en: 'IfcVehicletype',
@@ -989,167 +989,167 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   25142252: {
     en: 'IfcController',
-    cn: ''
+    cn: '控制器'
   },
   3087945054: {
     en: 'IfcAlarm',
-    cn: ''
+    cn: '报警器'
   },
   4288193352: {
     en: 'IfcActuator',
-    cn: ''
+    cn: '执行器'
   },
   630975310: {
-    en: 'IfcUnitarycontrolelement',
-    cn: ''
+    en: 'IfcUnitaryControlElement',
+    cn: '同一控制元件'
   },
   4086658281: {
     en: 'IfcSensor',
-    cn: ''
+    cn: '传感器'
   },
   2295281155: {
-    en: 'IfcProtectivedevicetrippingunit',
-    cn: ''
+    en: 'IfcProtectiveDeviceTrippingUnit',
+    cn: '保护装置跳闸单元'
   },
   182646315: {
-    en: 'IfcFlowinstrument',
-    cn: ''
+    en: 'IfcFlowInstrument',
+    cn: '流量传感器'
   },
   1426591983: {
-    en: 'IfcFiresuppressionterminal',
-    cn: ''
+    en: 'IfcFireSuppressionTerminal',
+    cn: '灭火末端设备'
   },
   819412036: {
     en: 'IfcFilter',
-    cn: ''
+    cn: '过滤器'
   },
   3415622556: {
     en: 'IfcFan',
-    cn: ''
+    cn: '风机'
   },
   1003880860: {
-    en: 'IfcElectrictimecontrol',
-    cn: ''
+    en: 'IfcElectricTimeControl',
+    cn: '电气时间控制器'
   },
   402227799: {
-    en: 'IfcElectricmotor',
-    cn: ''
+    en: 'IfcElectricMotor',
+    cn: '电动马达'
   },
   264262732: {
-    en: 'IfcElectricgenerator',
-    cn: ''
+    en: 'IfcElectricGenerator',
+    cn: '发电机'
   },
   3310460725: {
-    en: 'IfcElectricflowstoragedevice',
-    cn: ''
+    en: 'IfcElectricFlowStorageDevice',
+    cn: '电力存储装置'
   },
   862014818: {
-    en: 'IfcElectricdistributionboard',
-    cn: ''
+    en: 'IfcElectricDistributionBoard',
+    cn: '配电板'
   },
   1904799276: {
-    en: 'IfcElectricappliance',
-    cn: ''
+    en: 'IfcElectricAppliance',
+    cn: '电气设备'
   },
   1360408905: {
-    en: 'IfcDuctsilencer',
-    cn: ''
+    en: 'IfcDuctSilencer',
+    cn: '风管消声器'
   },
   3518393246: {
-    en: 'IfcDuctsegment',
-    cn: ''
+    en: 'IfcDuctSegment',
+    cn: '风管段'
   },
   342316401: {
-    en: 'IfcDuctfitting',
-    cn: ''
+    en: 'IfcDuctFitting',
+    cn: '风管配件'
   },
   562808652: {
-    en: 'IfcDistributioncircuit',
-    cn: ''
+    en: 'IfcDistributionCircuit',
+    cn: '分配电路'
   },
   4074379575: {
     en: 'IfcDamper',
-    cn: ''
+    cn: '风阀'
   },
   3640358203: {
-    en: 'IfcCoolingtower',
-    cn: ''
+    en: 'IfcCoolingTower',
+    cn: '冷却塔'
   },
   4136498852: {
-    en: 'IfcCooledbeam',
-    cn: ''
+    en: 'IfcCooledBeam',
+    cn: '冷梁'
   },
   2272882330: {
     en: 'IfcCondenser',
-    cn: ''
+    cn: '冷凝器'
   },
   3571504051: {
     en: 'IfcCompressor',
-    cn: ''
+    cn: '压缩机'
   },
   3221913625: {
-    en: 'IfcCommunicationsappliance',
-    cn: ''
+    en: 'IfcCommunicationsAppliance',
+    cn: '通信设备'
   },
   639361253: {
     en: 'IfcCoil',
-    cn: ''
+    cn: '盘管'
   },
   3902619387: {
     en: 'IfcChiller',
-    cn: ''
+    cn: '冷水机'
   },
   4217484030: {
-    en: 'IfcCablesegment',
-    cn: ''
+    en: 'IfcCableSegment',
+    cn: '电缆段'
   },
   1051757585: {
-    en: 'IfcCablefitting',
-    cn: ''
+    en: 'IfcCableFitting',
+    cn: '电缆配件'
   },
   3758799889: {
-    en: 'IfcCablecarriersegment',
-    cn: ''
+    en: 'IfcCableCarrierSegment',
+    cn: '电缆支架段'
   },
   635142910: {
-    en: 'IfcCablecarrierfitting',
-    cn: ''
+    en: 'IfcCableCarrierFitting',
+    cn: '电缆支架配件'
   },
   2938176219: {
     en: 'IfcBurner',
-    cn: ''
+    cn: '燃烧器'
   },
   32344328: {
     en: 'IfcBoiler',
-    cn: ''
+    cn: '锅炉'
   },
   2906023776: {
     en: 'IfcBeamstandardcase',
     cn: ''
   },
   277319702: {
-    en: 'IfcAudiovisualappliance',
-    cn: ''
+    en: 'IfcAudioVisualAppliance',
+    cn: '视听设备'
   },
   2056796094: {
-    en: 'IfcAirtoairheatrecovery',
-    cn: ''
+    en: 'IfcAirToAirHeatRecovery',
+    cn: '空气-空气能量回收设备'
   },
   177149247: {
-    en: 'IfcAirterminalbox',
-    cn: ''
+    en: 'IfcAirTerminalBox',
+    cn: '送风末端设备'
   },
   1634111441: {
-    en: 'IfcAirterminal',
-    cn: ''
+    en: 'IfcAirTerminal',
+    cn: '风道末端设备'
   },
   486154966: {
     en: 'IfcWindowstandardcase',
     cn: ''
   },
   4237592921: {
-    en: 'IfcWasteterminal',
-    cn: ''
+    en: 'IfcWasteTerminal',
+    cn: '排水末端设备'
   },
   4156078855: {
     en: 'IfcWallelementedcase',
@@ -1157,47 +1157,47 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   4207607924: {
     en: 'IfcValve',
-    cn: ''
+    cn: '阀门'
   },
   4292641817: {
-    en: 'IfcUnitaryequipment',
-    cn: ''
+    en: 'IfcUnitaryEquipment',
+    cn: '一体式设备'
   },
   3179687236: {
-    en: 'IfcUnitarycontrolelementtype',
-    cn: ''
+    en: 'IfcUnitaryControlElementType',
+    cn: '同一控制元件类型'
   },
   3026737570: {
-    en: 'IfcTubebundle',
-    cn: ''
+    en: 'IfcTubeBundle',
+    cn: '管束'
   },
   3825984169: {
     en: 'IfcTransformer',
-    cn: ''
+    cn: '变压器'
   },
   812556717: {
     en: 'IfcTank',
-    cn: ''
+    cn: '水箱'
   },
   1162798199: {
-    en: 'IfcSwitchingdevice',
-    cn: ''
+    en: 'IfcSwitchingDevice',
+    cn: '开关装置'
   },
   385403989: {
     en: 'IfcStructuralloadcase',
     cn: ''
   },
   1404847402: {
-    en: 'IfcStackterminal',
-    cn: ''
+    en: 'IfcStackTerminal',
+    cn: '立管末端设备'
   },
   1999602285: {
-    en: 'IfcSpaceheater',
-    cn: ''
+    en: 'IfcSpaceHeater',
+    cn: '房间加热器'
   },
   3420628829: {
-    en: 'IfcSolardevice',
-    cn: ''
+    en: 'IfcSolarDevice',
+    cn: '太阳能装置'
   },
   3027962421: {
     en: 'IfcSlabstandardcase',
@@ -1208,16 +1208,16 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1329646415: {
-    en: 'IfcShadingdevice',
-    cn: ''
+    en: 'IfcShadingDevice',
+    cn: '遮阳设施'
   },
   3053780830: {
-    en: 'IfcSanitaryterminal',
-    cn: ''
+    en: 'IfcSanitaryTerminal',
+    cn: '卫生器具'
   },
   2572171363: {
-    en: 'IfcReinforcingbartype',
-    cn: ''
+    en: 'IfcReinforcingBarType',
+    cn: '钢筋类型'
   },
   1232101972: {
     en: 'IfcRationalbsplinecurvewithknots',
@@ -1225,135 +1225,135 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   90941305: {
     en: 'IfcPump',
-    cn: ''
+    cn: '泵'
   },
   655969474: {
-    en: 'IfcProtectivedevicetrippingunittype',
-    cn: ''
+    en: 'IfcProtectiveDeviceTrippingUnitType',
+    cn: '跳闸式保护装置类型'
   },
   738039164: {
-    en: 'IfcProtectivedevice',
-    cn: ''
+    en: 'IfcProtectiveDevice',
+    cn: '保护装置'
   },
   1156407060: {
     en: 'IfcPlatestandardcase',
     cn: ''
   },
   3612865200: {
-    en: 'IfcPipesegment',
-    cn: ''
+    en: 'IfcPipeSegment',
+    cn: '水管段'
   },
   310824031: {
-    en: 'IfcPipefitting',
-    cn: ''
+    en: 'IfcPipeFitting',
+    cn: '水管配件'
   },
   3694346114: {
     en: 'IfcOutlet',
-    cn: ''
+    cn: '插座'
   },
   144952367: {
     en: 'IfcOuterboundarycurve',
     cn: ''
   },
   2474470126: {
-    en: 'IfcMotorconnection',
-    cn: ''
+    en: 'IfcMotorConnection',
+    cn: '电机连接'
   },
   1911478936: {
-    en: 'IfcMemberstandardcase',
-    cn: ''
+    en: 'IfcMemberStandardCase',
+    cn: '标准线性构件'
   },
   1437502449: {
-    en: 'IfcMedicaldevice',
-    cn: ''
+    en: 'IfcMedicalDevice',
+    cn: '医用设备'
   },
   629592764: {
-    en: 'IfcLightfixture',
-    cn: ''
+    en: 'IfcLightFixture',
+    cn: '灯具'
   },
   76236018: {
     en: 'IfcLamp',
-    cn: ''
+    cn: '光源'
   },
   2176052936: {
-    en: 'IfcJunctionbox',
-    cn: ''
+    en: 'IfcJunctionBox',
+    cn: '接线盒'
   },
   4175244083: {
     en: 'IfcInterceptor',
-    cn: ''
+    cn: '污水隔离设备'
   },
   2068733104: {
     en: 'IfcHumidifier',
-    cn: ''
+    cn: '加湿器'
   },
   3319311131: {
-    en: 'IfcHeatexchanger',
-    cn: ''
+    en: 'IfcHeatExchanger',
+    cn: '换热器'
   },
   2188021234: {
-    en: 'IfcFlowmeter',
-    cn: ''
+    en: 'IfcFlowMeter',
+    cn: '流量计'
   },
   1209101575: {
-    en: 'IfcExternalspatialelement',
-    cn: ''
+    en: 'IfcExternalSpatialElement',
+    cn: '外部空间元素'
   },
   484807127: {
     en: 'IfcEvaporator',
-    cn: ''
+    cn: '蒸发器'
   },
   3747195512: {
-    en: 'IfcEvaporativecooler',
-    cn: ''
+    en: 'IfcEvaporativeCooler',
+    cn: '蒸发冷却器'
   },
   2814081492: {
     en: 'IfcEngine',
-    cn: ''
+    cn: '发动机'
   },
   2417008758: {
-    en: 'IfcElectricdistributionboardtype',
-    cn: ''
+    en: 'IfcElectricDistributionBoardType',
+    cn: '配电板类型'
   },
   3242481149: {
     en: 'IfcDoorstandardcase',
     cn: ''
   },
   3205830791: {
-    en: 'IfcDistributionsystem',
-    cn: ''
+    en: 'IfcDistributionSystem',
+    cn: '分配系统'
   },
   400855858: {
-    en: 'IfcCommunicationsappliancetype',
-    cn: ''
+    en: 'IfcCommunicationsApplianceType',
+    cn: '通信设备类型'
   },
   905975707: {
     en: 'IfcColumnstandardcase',
     cn: ''
   },
   1677625105: {
-    en: 'IfcCivilelement',
-    cn: ''
+    en: 'IfcCivilElement',
+    cn: '土木工程元素'
   },
   3296154744: {
     en: 'IfcChimney',
-    cn: ''
+    cn: '烟囱'
   },
   2674252688: {
-    en: 'IfcCablefittingtype',
-    cn: ''
+    en: 'IfcCableFittingType',
+    cn: '电缆配件类型'
   },
   2188180465: {
-    en: 'IfcBurnertype',
-    cn: ''
+    en: 'IfcBurnerType',
+    cn: '燃烧器类型'
   },
   1177604601: {
-    en: 'IfcBuildingsystem',
-    cn: ''
+    en: 'IfcBuildingSystem',
+    cn: '建筑系统'
   },
   39481116: {
-    en: 'IfcBuildingelementparttype',
-    cn: ''
+    en: 'IfcBuildingElementPartType',
+    cn: '建筑元素部件类型'
   },
   1136057603: {
     en: 'IfcBoundarycurve',
@@ -1364,36 +1364,36 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1532957894: {
-    en: 'IfcAudiovisualappliancetype',
-    cn: ''
+    en: 'IfcAudioVisualApplianceType',
+    cn: '视听设备类型'
   },
   4088093105: {
     en: 'IfcWorkcalendar',
     cn: ''
   },
   4009809668: {
-    en: 'IfcWindowtype',
-    cn: ''
+    en: 'IfcWindowType',
+    cn: '窗类型'
   },
   926996030: {
     en: 'IfcVoidingfeature',
     cn: ''
   },
   2391383451: {
-    en: 'IfcVibrationisolator',
-    cn: ''
+    en: 'IfcVibrationIsolator',
+    cn: '隔振器'
   },
   2415094496: {
-    en: 'IfcTendontype',
-    cn: ''
+    en: 'IfcTendonType',
+    cn: '预应力筋类型'
   },
   3081323446: {
-    en: 'IfcTendonanchortype',
-    cn: ''
+    en: 'IfcTendonAnchorType',
+    cn: '预应力锚具类型'
   },
   413509423: {
-    en: 'IfcSystemfurnitureelement',
-    cn: ''
+    en: 'IfcSystemFurnitureElement',
+    cn: '系统家具元素'
   },
   3101698114: {
     en: 'IfcSurfacefeature',
@@ -1412,64 +1412,64 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   338393293: {
-    en: 'IfcStairtype',
-    cn: ''
+    en: 'IfcStairType',
+    cn: '楼梯类型'
   },
   1072016465: {
-    en: 'IfcSolardevicetype',
-    cn: ''
+    en: 'IfcSolarDeviceType',
+    cn: '太阳能装置类型'
   },
   4074543187: {
-    en: 'IfcShadingdevicetype',
-    cn: ''
+    en: 'IfcShadingDeviceType',
+    cn: '遮阳设施类型'
   },
   2157484638: {
     en: 'IfcSeamcurve',
     cn: ''
   },
   2781568857: {
-    en: 'IfcRooftype',
-    cn: ''
+    en: 'IfcRoofType',
+    cn: '屋顶类型'
   },
   2310774935: {
-    en: 'IfcReinforcingmeshtype',
-    cn: ''
+    en: 'IfcReinforcingMeshType',
+    cn: '钢筋网片类型'
   },
   964333572: {
-    en: 'IfcReinforcingelementtype',
-    cn: ''
+    en: 'IfcReinforcingElementType',
+    cn: '钢筋元素类型'
   },
   683857671: {
     en: 'IfcRationalbsplinesurfacewithknots',
     cn: ''
   },
   1469900589: {
-    en: 'IfcRamptype',
-    cn: ''
+    en: 'IfcRampType',
+    cn: '坡道类型'
   },
   2839578677: {
     en: 'IfcPolygonalfaceset',
     cn: ''
   },
   1158309216: {
-    en: 'IfcPiletype',
-    cn: ''
+    en: 'IfcPileType',
+    cn: '桩基础类型'
   },
   3079942009: {
-    en: 'IfcOpeningstandardcase',
-    cn: ''
+    en: 'IfcOpeningStandardCase',
+    cn: '标准洞口形式'
   },
   1114901282: {
-    en: 'IfcMedicaldevicetype',
-    cn: ''
+    en: 'IfcMedicalDeviceType',
+    cn: '医用设备类型'
   },
   3113134337: {
     en: 'IfcIntersectioncurve',
     cn: ''
   },
   3946677679: {
-    en: 'IfcInterceptortype',
-    cn: ''
+    en: 'IfcInterceptorType',
+    cn: '污水隔离设备类型'
   },
   2571569899: {
     en: 'IfcIndexedpolycurve',
@@ -1481,11 +1481,11 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   1509553395: {
     en: 'IfcFurniture',
-    cn: ''
+    cn: '家具'
   },
   1893162501: {
-    en: 'IfcFootingtype',
-    cn: ''
+    en: 'IfcFootingType',
+    cn: '基础类型'
   },
   2853485674: {
     en: 'IfcExternalspatialstructureelement',
@@ -1496,16 +1496,16 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   132023988: {
-    en: 'IfcEnginetype',
-    cn: ''
+    en: 'IfcEngineType',
+    cn: '发动机类型'
   },
   2397081782: {
-    en: 'IfcElementassemblytype',
-    cn: ''
+    en: 'IfcElementAssemblyType',
+    cn: '元素集合类型'
   },
   2323601079: {
-    en: 'IfcDoortype',
-    cn: ''
+    en: 'IfcDoorType',
+    cn: '门类型'
   },
   1213902940: {
     en: 'IfcCylindricalsurface',
@@ -1532,12 +1532,12 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   3893394355: {
-    en: 'IfcCivilelementtype',
-    cn: ''
+    en: 'IfcCivilElementType',
+    cn: '土木工程元素类型'
   },
   2197970202: {
-    en: 'IfcChimneytype',
-    cn: ''
+    en: 'IfcChimneyType',
+    cn: '烟囱类型'
   },
   167062518: {
     en: 'IfcBsplinesurfacewithknots',
@@ -1588,12 +1588,12 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   2481509218: {
-    en: 'IfcSpatialzonetype',
-    cn: ''
+    en: 'IfcSpatialZoneType',
+    cn: '空间区域类型'
   },
   463610769: {
-    en: 'IfcSpatialzone',
-    cn: ''
+    en: 'IfcSpatialZone',
+    cn: '空间区域'
   },
   710998568: {
     en: 'IfcSpatialelementtype',
@@ -1936,24 +1936,24 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   979691226: {
-    en: 'IfcReinforcingbar',
-    cn: ''
+    en: 'IfcReinforcingBar',
+    cn: '钢筋'
   },
   3700593921: {
     en: 'IfcElectricdistributionpoint',
     cn: ''
   },
   1062813311: {
-    en: 'IfcDistributioncontrolelement',
-    cn: ''
+    en: 'IfcDistributionControlElement',
+    cn: '分配控制元素'
   },
   1052013943: {
-    en: 'IfcDistributionchamberelement',
-    cn: ''
+    en: 'IfcDistributionChamberElement',
+    cn: '分配室'
   },
   578613899: {
-    en: 'IfcControllertype',
-    cn: ''
+    en: 'IfcControllerType',
+    cn: '控制器类型'
   },
   2454782716: {
     en: 'IfcChamferedgefeature',
@@ -1961,19 +1961,19 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   753842376: {
     en: 'IfcBeam',
-    cn: ''
+    cn: '梁'
   },
   3001207471: {
-    en: 'IfcAlarmtype',
-    cn: ''
+    en: 'IfcAlarmType',
+    cn: '报警器类型'
   },
   2874132201: {
-    en: 'IfcActuatortype',
-    cn: ''
+    en: 'IfcActuatorType',
+    cn: '执行器类型'
   },
   3304561284: {
     en: 'IfcWindow',
-    cn: ''
+    cn: '窗'
   },
   3512223829: {
     en: 'IfcWallstandardcase',
@@ -1981,39 +1981,39 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   2391406946: {
     en: 'IfcWall',
-    cn: ''
+    cn: '墙'
   },
   3313531582: {
-    en: 'IfcVibrationisolatortype',
-    cn: ''
+    en: 'IfcVibrationIsolatorType',
+    cn: '隔振器类型'
   },
   2347447852: {
-    en: 'IfcTendonanchor',
-    cn: ''
+    en: 'IfcTendonAnchor',
+    cn: '预应力锚具'
   },
   3824725483: {
     en: 'IfcTendon',
-    cn: ''
+    cn: '预应力筋'
   },
   2515109513: {
     en: 'IfcStructuralanalysismodel',
     cn: ''
   },
   4252922144: {
-    en: 'IfcStairflight',
-    cn: ''
+    en: 'IfcStairFlight',
+    cn: '楼梯段'
   },
   331165859: {
     en: 'IfcStair',
-    cn: ''
+    cn: '楼梯'
   },
   1529196076: {
     en: 'IfcSlab',
-    cn: ''
+    cn: '板'
   },
   1783015770: {
-    en: 'IfcSensortype',
-    cn: ''
+    en: 'IfcSensorType',
+    cn: '传感器类型'
   },
   1376911519: {
     en: 'IfcRoundededgefeature',
@@ -2021,95 +2021,95 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   2016517767: {
     en: 'IfcRoof',
-    cn: ''
+    cn: '屋顶'
   },
   2320036040: {
-    en: 'IfcReinforcingmesh',
-    cn: ''
+    en: 'IfcReinforcingMesh',
+    cn: '钢筋网片'
   },
   3027567501: {
-    en: 'IfcReinforcingelement',
-    cn: ''
+    en: 'IfcReinforcingElement',
+    cn: '钢筋元素'
   },
   3055160366: {
     en: 'IfcRationalbeziercurve',
     cn: ''
   },
   3283111854: {
-    en: 'IfcRampflight',
-    cn: ''
+    en: 'IfcRampFlight',
+    cn: '坡道段'
   },
   3024970846: {
     en: 'IfcRamp',
-    cn: ''
+    cn: '坡道'
   },
   2262370178: {
     en: 'IfcRailing',
-    cn: ''
+    cn: '扶栏'
   },
   3171933400: {
     en: 'IfcPlate',
-    cn: ''
+    cn: '平板'
   },
   1687234759: {
     en: 'IfcPile',
-    cn: ''
+    cn: '桩基础'
   },
   1073191201: {
     en: 'IfcMember',
-    cn: ''
+    cn: '线性构件'
   },
   900683007: {
     en: 'IfcFooting',
-    cn: ''
+    cn: '基础'
   },
   3508470533: {
-    en: 'IfcFlowtreatmentdevice',
-    cn: ''
+    en: 'IfcFlowTreatmentDevice',
+    cn: '流体处理设备'
   },
   2223149337: {
-    en: 'IfcFlowterminal',
-    cn: ''
+    en: 'IfcFlowTerminal',
+    cn: '流体末端设备'
   },
   707683696: {
-    en: 'IfcFlowstoragedevice',
-    cn: ''
+    en: 'IfcFlowStorageDevice',
+    cn: '流体存储设备'
   },
   987401354: {
-    en: 'IfcFlowsegment',
-    cn: ''
+    en: 'IfcFlowSegment',
+    cn: '流体管段'
   },
   3132237377: {
-    en: 'IfcFlowmovingdevice',
-    cn: ''
+    en: 'IfcFlowMovingDevice',
+    cn: '流体传输设备'
   },
   4037862832: {
-    en: 'IfcFlowinstrumenttype',
-    cn: ''
+    en: 'IfcFlowInstrumentType',
+    cn: '流量传感器类型'
   },
   4278956645: {
-    en: 'IfcFlowfitting',
-    cn: ''
+    en: 'IfcFlowFitting',
+    cn: '流量配件'
   },
   2058353004: {
-    en: 'IfcFlowcontroller',
-    cn: ''
+    en: 'IfcFlowController',
+    cn: '流量控制设备'
   },
   4222183408: {
-    en: 'IfcFiresuppressionterminaltype',
-    cn: ''
+    en: 'IfcFireSuppressionTerminalType',
+    cn: '灭火末端设备类型'
   },
   1810631287: {
-    en: 'IfcFiltertype',
-    cn: ''
+    en: 'IfcFilterType',
+    cn: '过滤器类型'
   },
   346874300: {
-    en: 'IfcFantype',
-    cn: ''
+    en: 'IfcFanType',
+    cn: '风机类型'
   },
   1658829314: {
-    en: 'IfcEnergyconversiondevice',
-    cn: ''
+    en: 'IfcEnergyConversionDevice',
+    cn: '能量转换设备'
   },
   857184966: {
     en: 'IfcElectricalelement',
@@ -2120,8 +2120,8 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   712377611: {
-    en: 'IfcElectrictimecontroltype',
-    cn: ''
+    en: 'IfcElectricTimeControlType',
+    cn: '电气时间控制器类型'
   },
   1217240411: {
     en: 'IfcElectricmotortype',
@@ -2132,88 +2132,88 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1534661035: {
-    en: 'IfcElectricgeneratortype',
-    cn: ''
+    en: 'IfcElectricGeneratorType',
+    cn: '发电机类型'
   },
   3277789161: {
-    en: 'IfcElectricflowstoragedevicetype',
-    cn: ''
+    en: 'IfcElectricFlowStorageDeviceType',
+    cn: '电力存储装置类型'
   },
   663422040: {
-    en: 'IfcElectricappliancetype',
-    cn: ''
+    en: 'IfcElectricApplianceType',
+    cn: '电气设备类型'
   },
   855621170: {
     en: 'IfcEdgefeature',
     cn: ''
   },
   2030761528: {
-    en: 'IfcDuctsilencertype',
-    cn: ''
+    en: 'IfcDuctSilencerType',
+    cn: '风管消声器类型'
   },
   3760055223: {
-    en: 'IfcDuctsegmenttype',
-    cn: ''
+    en: 'IfcDuctSegmentType',
+    cn: '风管段类型'
   },
   869906466: {
-    en: 'IfcDuctfittingtype',
-    cn: ''
+    en: 'IfcDuctFittingType',
+    cn: '风管配件类型'
   },
   395920057: {
     en: 'IfcDoor',
-    cn: ''
+    cn: '门'
   },
   3041715199: {
-    en: 'IfcDistributionport',
-    cn: ''
+    en: 'IfcDistributionPort',
+    cn: '分配端口'
   },
   3040386961: {
-    en: 'IfcDistributionflowelement',
-    cn: ''
+    en: 'IfcDistributionFlowElement',
+    cn: '流动分配元素'
   },
   1945004755: {
-    en: 'IfcDistributionelement',
-    cn: ''
+    en: 'IfcDistributionElement',
+    cn: '分布式元素'
   },
   2063403501: {
-    en: 'IfcDistributioncontrolelementtype',
-    cn: ''
+    en: 'IfcDistributionControlElementType',
+    cn: '分配控制元素类型'
   },
   1599208980: {
-    en: 'IfcDistributionchamberelementtype',
-    cn: ''
+    en: 'IfcDistributionChamberElementType',
+    cn: '分配室类型'
   },
   2635815018: {
-    en: 'IfcDiscreteaccessorytype',
-    cn: ''
+    en: 'IfcDiscreteAccessoryType',
+    cn: '离散附件类型'
   },
   1335981549: {
-    en: 'IfcDiscreteaccessory',
-    cn: ''
+    en: 'IfcDiscreteAccessory',
+    cn: '离散附件'
   },
   4147604152: {
     en: 'IfcDiameterdimension',
     cn: ''
   },
   3961806047: {
-    en: 'IfcDampertype',
-    cn: ''
+    en: 'IfcDamperType',
+    cn: '风阀类型'
   },
   3495092785: {
-    en: 'IfcCurtainwall',
-    cn: ''
+    en: 'IfcCurtainWall',
+    cn: '幕墙'
   },
   1973544240: {
     en: 'IfcCovering',
-    cn: ''
+    cn: '覆盖物'
   },
   2954562838: {
-    en: 'IfcCoolingtowertype',
-    cn: ''
+    en: 'IfcCoolingTowerType',
+    cn: '冷却塔类型'
   },
   335055490: {
-    en: 'IfcCooledbeamtype',
-    cn: ''
+    en: 'IfcCooledBeamType',
+    cn: '冷梁类型'
   },
   488727124: {
     en: 'IfcConstructionproductresource',
@@ -2236,72 +2236,72 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   2816379211: {
-    en: 'IfcCondensertype',
-    cn: ''
+    en: 'IfcCondenserType',
+    cn: '冷凝器类型'
   },
   3850581409: {
-    en: 'IfcCompressortype',
-    cn: ''
+    en: 'IfcCompressorType',
+    cn: '压缩机类型'
   },
   843113511: {
     en: 'IfcColumn',
-    cn: ''
+    cn: '柱'
   },
   2301859152: {
-    en: 'IfcCoiltype',
-    cn: ''
+    en: 'IfcCoilType',
+    cn: '盘管类型'
   },
   2611217952: {
     en: 'IfcCircle',
     cn: ''
   },
   2951183804: {
-    en: 'IfcChillertype',
-    cn: ''
+    en: 'IfcChillerType',
+    cn: '冷水机类型'
   },
   1285652485: {
-    en: 'IfcCablesegmenttype',
-    cn: ''
+    en: 'IfcCableSegmentType',
+    cn: '电缆段类型'
   },
   3293546465: {
-    en: 'IfcCablecarriersegmenttype',
-    cn: ''
+    en: 'IfcCableCarrierSegmentType',
+    cn: '电缆支架段类型'
   },
   395041908: {
-    en: 'IfcCablecarrierfittingtype',
-    cn: ''
+    en: 'IfcCableCarrierFittingType',
+    cn: '电缆支架配件类型'
   },
   1909888760: {
-    en: 'IfcBuildingelementproxytype',
-    cn: ''
+    en: 'IfcBuildingElementProxyType',
+    cn: '代理建筑元素类型'
   },
   1095909175: {
-    en: 'IfcBuildingelementproxy',
-    cn: ''
+    en: 'IfcBuildingElementProxy',
+    cn: '代理建筑元素'
   },
   2979338954: {
-    en: 'IfcBuildingelementpart',
-    cn: ''
+    en: 'IfcBuildingElementPart',
+    cn: '建筑元素部件'
   },
   52481810: {
     en: 'IfcBuildingelementcomponent',
     cn: ''
   },
   3299480353: {
-    en: 'IfcBuildingelement',
-    cn: ''
+    en: 'IfcBuildingElement',
+    cn: '建筑元素'
   },
   231477066: {
-    en: 'IfcBoilertype',
-    cn: ''
+    en: 'IfcBoilerType',
+    cn: '锅炉类型'
   },
   1916977116: {
     en: 'IfcBeziercurve',
     cn: ''
   },
   819618141: {
-    en: 'IfcBeamtype',
-    cn: ''
+    en: 'IfcBeamType',
+    cn: '梁类型'
   },
   1967976161: {
     en: 'IfcBsplinecurve',
@@ -2316,16 +2316,16 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1871374353: {
-    en: 'IfcAirtoairheatrecoverytype',
-    cn: ''
+    en: 'IfcAirToAirHeatRecoveryType',
+    cn: '空气-空气能量回收设备类型'
   },
   3352864051: {
-    en: 'IfcAirterminaltype',
-    cn: ''
+    en: 'IfcAirTerminalType',
+    cn: '空调出风口类型'
   },
   1411407467: {
-    en: 'IfcAirterminalboxtype',
-    cn: ''
+    en: 'IfcAirTerminalBoxType',
+    cn: '送风末端设备类型'
   },
   3821786052: {
     en: 'IfcActionrequest',
@@ -2337,7 +2337,7 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   1033361043: {
     en: 'IfcZone',
-    cn: ''
+    cn: '区域'
   },
   3342526732: {
     en: 'IfcWorkschedule',
@@ -2352,56 +2352,56 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1133259667: {
-    en: 'IfcWasteterminaltype',
-    cn: ''
+    en: 'IfcWasteTerminalType',
+    cn: '排水末端设备类型'
   },
   1898987631: {
-    en: 'IfcWalltype',
-    cn: ''
+    en: 'IfcWallType',
+    cn: '墙类型'
   },
   2769231204: {
-    en: 'IfcVirtualelement',
-    cn: ''
+    en: 'IfcVirtualElement',
+    cn: '虚拟元素'
   },
   728799441: {
-    en: 'IfcValvetype',
-    cn: ''
+    en: 'IfcValveType',
+    cn: '阀门类型'
   },
   1911125066: {
-    en: 'IfcUnitaryequipmenttype',
-    cn: ''
+    en: 'IfcUnitaryEquipmentType',
+    cn: '一体式设备类型'
   },
   1600972822: {
-    en: 'IfcTubebundletype',
-    cn: ''
+    en: 'IfcTubeBundleType',
+    cn: '管束类型'
   },
   3593883385: {
     en: 'IfcTrimmedcurve',
     cn: ''
   },
   1620046519: {
-    en: 'IfcTransportelement',
-    cn: ''
+    en: 'IfcTransportElement',
+    cn: '运输元素'
   },
   1692211062: {
-    en: 'IfcTransformertype',
-    cn: ''
+    en: 'IfcTransformerType',
+    cn: '变压器类型'
   },
   1637806684: {
     en: 'IfcTimeseriesschedule',
     cn: ''
   },
   5716631: {
-    en: 'IfcTanktype',
-    cn: ''
+    en: 'IfcTankType',
+    cn: '水箱类型'
   },
   2254336722: {
     en: 'IfcSystem',
-    cn: ''
+    cn: '系统'
   },
   2315554128: {
-    en: 'IfcSwitchingdevicetype',
-    cn: ''
+    en: 'IfcSwitchingDeviceType',
+    cn: '开关装置类型'
   },
   148013059: {
     en: 'IfcSubcontractresource',
@@ -2468,36 +2468,36 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1039846685: {
-    en: 'IfcStairflighttype',
-    cn: ''
+    en: 'IfcStairFlightType',
+    cn: '楼梯段类型'
   },
   3112655638: {
-    en: 'IfcStackterminaltype',
-    cn: ''
+    en: 'IfcStackTerminalType',
+    cn: '立管末端设备类型'
   },
   3812236995: {
-    en: 'IfcSpacetype',
-    cn: ''
+    en: 'IfcSpaceType',
+    cn: '空间类型'
   },
   652456506: {
     en: 'IfcSpaceprogram',
     cn: ''
   },
   1305183839: {
-    en: 'IfcSpaceheatertype',
-    cn: ''
+    en: 'IfcSpaceHeaterType',
+    cn: '房间加热器类型'
   },
   3856911033: {
     en: 'IfcSpace',
-    cn: ''
+    cn: '空间'
   },
   2533589738: {
-    en: 'IfcSlabtype',
-    cn: ''
+    en: 'IfcSlabType',
+    cn: '板类型'
   },
   4097777520: {
     en: 'IfcSite',
-    cn: ''
+    cn: '场地'
   },
   4105383287: {
     en: 'IfcServicelife',
@@ -2508,8 +2508,8 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1768891740: {
-    en: 'IfcSanitaryterminaltype',
-    cn: ''
+    en: 'IfcSanitaryTerminalType',
+    cn: '卫生器具类型'
   },
   2863920197: {
     en: 'IfcRelassignstasks',
@@ -2520,24 +2520,24 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   2324767716: {
-    en: 'IfcRampflighttype',
-    cn: ''
+    en: 'IfcRampFlightType',
+    cn: '坡道段类型'
   },
   2893384427: {
-    en: 'IfcRailingtype',
-    cn: ''
+    en: 'IfcRailingType',
+    cn: '扶栏类型'
   },
   3248260540: {
     en: 'IfcRadiusdimension',
     cn: ''
   },
   2250791053: {
-    en: 'IfcPumptype',
-    cn: ''
+    en: 'IfcPumpType',
+    cn: '泵类型'
   },
   1842657554: {
-    en: 'IfcProtectivedevicetype',
-    cn: ''
+    en: 'IfcProtectiveDeviceType',
+    cn: '保护装置类型'
   },
   3651124850: {
     en: 'IfcProjectionelement',
@@ -2564,16 +2564,16 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   4017108033: {
-    en: 'IfcPlatetype',
-    cn: ''
+    en: 'IfcPlateType',
+    cn: '平板类型'
   },
   4231323485: {
-    en: 'IfcPipesegmenttype',
-    cn: ''
+    en: 'IfcPipeSegmentType',
+    cn: '水管段类型'
   },
   804291784: {
-    en: 'IfcPipefittingtype',
-    cn: ''
+    en: 'IfcPipeFittingType',
+    cn: '水管配件类型'
   },
   3327091369: {
     en: 'IfcPermit',
@@ -2584,16 +2584,16 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   2837617999: {
-    en: 'IfcOutlettype',
-    cn: ''
+    en: 'IfcOutletType',
+    cn: '插座类型'
   },
   3425660407: {
     en: 'IfcOrderaction',
     cn: ''
   },
   3588315303: {
-    en: 'IfcOpeningelement',
-    cn: ''
+    en: 'IfcOpeningElement',
+    cn: '洞口元素'
   },
   4143007308: {
     en: 'IfcOccupant',
@@ -2604,52 +2604,52 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   977012517: {
-    en: 'IfcMotorconnectiontype',
-    cn: ''
+    en: 'IfcMotorConnectionType',
+    cn: '电机连接类型'
   },
   3181161470: {
-    en: 'IfcMembertype',
-    cn: ''
+    en: 'IfcMemberType',
+    cn: '线性构件类型'
   },
   2108223431: {
-    en: 'IfcMechanicalfastenertype',
-    cn: ''
+    en: 'IfcMechanicalFastenerType',
+    cn: '机械紧固件类型'
   },
   377706215: {
-    en: 'IfcMechanicalfastener',
-    cn: ''
+    en: 'IfcMechanicalFastener',
+    cn: '机械紧固件'
   },
   2506943328: {
     en: 'IfcLineardimension',
     cn: ''
   },
   1161773419: {
-    en: 'IfcLightfixturetype',
-    cn: ''
+    en: 'IfcLightFixtureType',
+    cn: '灯具类型'
   },
   1051575348: {
-    en: 'IfcLamptype',
-    cn: ''
+    en: 'IfcLampType',
+    cn: '光源类型'
   },
   3827777499: {
     en: 'IfcLaborresource',
     cn: ''
   },
   4288270099: {
-    en: 'IfcJunctionboxtype',
-    cn: ''
+    en: 'IfcJunctionBoxType',
+    cn: '接线盒类型'
   },
   2391368822: {
     en: 'IfcInventory',
     cn: ''
   },
   1806887404: {
-    en: 'IfcHumidifiertype',
-    cn: ''
+    en: 'IfcHumidifierType',
+    cn: '加湿器类型'
   },
   1251058090: {
-    en: 'IfcHeatexchangertype',
-    cn: ''
+    en: 'IfcHeatExchangerType',
+    cn: '换热器类型'
   },
   2706460486: {
     en: 'IfcGroup',
@@ -2657,7 +2657,7 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   3009204131: {
     en: 'IfcGrid',
-    cn: ''
+    cn: '轴网'
   },
   200128114: {
     en: 'IfcGasterminaltype',
@@ -2668,40 +2668,40 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   263784265: {
-    en: 'IfcFurnishingelement',
-    cn: ''
+    en: 'IfcFurnishingElement',
+    cn: '家装元素'
   },
   3009222698: {
-    en: 'IfcFlowtreatmentdevicetype',
-    cn: ''
+    en: 'IfcFlowTreatmentDeviceType',
+    cn: '流体处理设备类型'
   },
   2297155007: {
-    en: 'IfcFlowterminaltype',
-    cn: ''
+    en: 'IfcFlowTerminalType',
+    cn: '流体末端设备类型'
   },
   1339347760: {
-    en: 'IfcFlowstoragedevicetype',
-    cn: ''
+    en: 'IfcFlowStorageDeviceType',
+    cn: '流体存储设备类型'
   },
   1834744321: {
-    en: 'IfcFlowsegmenttype',
-    cn: ''
+    en: 'IfcFlowSegmentType',
+    cn: '流体管段类型'
   },
   1482959167: {
-    en: 'IfcFlowmovingdevicetype',
-    cn: ''
+    en: 'IfcFlowMovingDeviceType',
+    cn: '流体传输设备类型'
   },
   3815607619: {
-    en: 'IfcFlowmetertype',
-    cn: ''
+    en: 'IfcFlowMeterType',
+    cn: '流量计类型'
   },
   3198132628: {
-    en: 'IfcFlowfittingtype',
-    cn: ''
+    en: 'IfcFlowFittingType',
+    cn: '流量配件类型'
   },
   3907093117: {
-    en: 'IfcFlowcontrollertype',
-    cn: ''
+    en: 'IfcFlowControllerType',
+    cn: '流量控制设备类型'
   },
   1287392070: {
     en: 'IfcFeatureelementsubtraction',
@@ -2716,12 +2716,12 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   2489546625: {
-    en: 'IfcFastenertype',
-    cn: ''
+    en: 'IfcFastenerType',
+    cn: '紧固件类型'
   },
   647756555: {
     en: 'IfcFastener',
-    cn: ''
+    cn: '紧固件'
   },
   3737207727: {
     en: 'IfcFacetedbrepwithvoids',
@@ -2732,12 +2732,12 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   3390157468: {
-    en: 'IfcEvaporatortype',
-    cn: ''
+    en: 'IfcEvaporatorType',
+    cn: '蒸发器类型'
   },
   3174744832: {
-    en: 'IfcEvaporativecoolertype',
-    cn: ''
+    en: 'IfcEvaporativeCoolerType',
+    cn: '蒸发冷却器类型'
   },
   3272907226: {
     en: 'IfcEquipmentstandard',
@@ -2748,8 +2748,8 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   2107101300: {
-    en: 'IfcEnergyconversiondevicetype',
-    cn: ''
+    en: 'IfcEnergyConversionDeviceType',
+    cn: '能量转换设备类型'
   },
   1704287377: {
     en: 'IfcEllipse',
@@ -2764,8 +2764,8 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   4123344466: {
-    en: 'IfcElementassembly',
-    cn: ''
+    en: 'IfcElementAssembly',
+    cn: '元素集合'
   },
   1758889154: {
     en: 'IfcElement',
@@ -2776,28 +2776,28 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   3849074793: {
-    en: 'IfcDistributionflowelementtype',
-    cn: ''
+    en: 'IfcDistributionFlowElementType',
+    cn: '流动分配元素类型'
   },
   3256556792: {
-    en: 'IfcDistributionelementtype',
-    cn: ''
+    en: 'IfcDistributionElementType',
+    cn: '分布式元素类型'
   },
   681481545: {
     en: 'IfcDimensioncurvedirectedcallout',
     cn: ''
   },
   1457835157: {
-    en: 'IfcCurtainwalltype',
-    cn: ''
+    en: 'IfcCurtainWallType',
+    cn: '幕墙类型'
   },
   3295246426: {
     en: 'IfcCrewresource',
     cn: ''
   },
   1916426348: {
-    en: 'IfcCoveringtype',
-    cn: ''
+    en: 'IfcCoveringType',
+    cn: '覆盖物类型'
   },
   1419761937: {
     en: 'IfcCostschedule',
@@ -2824,24 +2824,24 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   300633059: {
-    en: 'IfcColumntype',
-    cn: ''
+    en: 'IfcColumnType',
+    cn: '柱类型'
   },
   2937912522: {
     en: 'IfcCirclehollowprofiledef',
     cn: ''
   },
   3124254112: {
-    en: 'IfcBuildingstorey',
-    cn: ''
+    en: 'IfcBuildingStorey',
+    cn: '建筑楼层'
   },
   1950629157: {
-    en: 'IfcBuildingelementtype',
-    cn: ''
+    en: 'IfcBuildingElementType',
+    cn: '建筑元素类型'
   },
   4031249490: {
     en: 'IfcBuilding',
-    cn: ''
+    cn: '建筑'
   },
   1260505505: {
     en: 'IfcBoundedcurve',
@@ -2868,8 +2868,8 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   2097647324: {
-    en: 'IfcTransportelementtype',
-    cn: ''
+    en: 'IfcTransportElementType',
+    cn: '运输元素类型'
   },
   3473067441: {
     en: 'IfcTask',
@@ -3161,7 +3161,7 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   103090709: {
     en: 'IfcProject',
-    cn: ''
+    cn: '项目'
   },
   4208778838: {
     en: 'IfcProduct',
@@ -3180,8 +3180,8 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   3566463478: {
-    en: 'IfcPermeablecoveringproperties',
-    cn: ''
+    en: 'IfcPermeableCoveringProperties',
+    cn: '透气性覆盖物属性'
   },
   3505215534: {
     en: 'IfcOffsetcurve3d',
@@ -3216,12 +3216,12 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1268542332: {
-    en: 'IfcFurnituretype',
-    cn: ''
+    en: 'IfcFurnitureType',
+    cn: '家具元素类型'
   },
   4238390223: {
-    en: 'IfcFurnishingelementtype',
-    cn: ''
+    en: 'IfcFurnishingElementType',
+    cn: '家装元素类型'
   },
   3455213021: {
     en: 'IfcFluidflowproperties',
@@ -3284,16 +3284,16 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   526551008: {
-    en: 'IfcDoorstyle',
-    cn: ''
+    en: 'IfcDoorStyle',
+    cn: '门类型'
   },
   1714330368: {
-    en: 'IfcDoorpanelproperties',
-    cn: ''
+    en: 'IfcDoorPanelProperties',
+    cn: '门板属性'
   },
   2963535650: {
-    en: 'IfcDoorliningproperties',
-    cn: ''
+    en: 'IfcDoorLiningProperties',
+    cn: '门框属性'
   },
   32440307: {
     en: 'IfcDirection',
@@ -3424,16 +3424,16 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
     cn: ''
   },
   1299126871: {
-    en: 'IfcWindowstyle',
-    cn: ''
+    en: 'IfcWindowStyle',
+    cn: '窗类型'
   },
   512836454: {
-    en: 'IfcWindowpanelproperties',
-    cn: ''
+    en: 'IfcWindowPanelProperties',
+    cn: '窗扇属性'
   },
   336235671: {
-    en: 'IfcWindowliningproperties',
-    cn: ''
+    en: 'IfcWindowLiningProperties',
+    cn: '窗框属性'
   },
   2759199220: {
     en: 'IfcVertexloop',
