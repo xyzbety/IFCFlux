@@ -40,8 +40,8 @@
             </div>
             <div class="table-area">
                 <t-table :data="tableData" :columns="tableColumns" size="small" style="height: 100%;"
-                :scroll="{ type: 'virtual', rowHeight: 48, bufferSize: 10 }"
-                    @row-click="handleRowClick" :max-height="'100%'" :row-class-name="getRowClassName" rowKey="guid" />
+                    :scroll="{ type: 'virtual', rowHeight: 48, bufferSize: 10 }" @row-click="handleRowClick"
+                    :max-height="'100%'" :row-class-name="getRowClassName" rowKey="guid" />
             </div>
         </div>
         <!-- 弹框 -->
@@ -66,6 +66,7 @@ import { IfcPropertyUtils } from '../../services/property-manager';
 import { eventManager } from '../../services/event-manager';
 import { examineResultConfig } from '../../utils/config';
 import { useSelectedStore } from '../../store';
+import { IfcCategoryMap } from '../../utils/ifc/ifc-category-map.ts'
 
 const iconPathMap = {
     'array': '/icons/枚举.svg',
@@ -166,9 +167,9 @@ const handleFocus = async (event: any) => {
 
 }
 const tableColumns = [
-    { colKey: 'guid', title: 'GUID', width: 250, ellipsis: true },
-    { colKey: 'name', title: 'Name', width: 150, ellipsis: true },
-    { colKey: 'tag', title: 'Tag', width: 50, ellipsis: true },
+    { colKey: 'guid', title: 'GUID', width: 300, ellipsis: true },
+    { colKey: 'name', title: 'Name', width: 50, ellipsis: true },
+    { colKey: 'tag', title: 'Tag', width: 100,ellipsis: true },
     {
         colKey: 'op',
         title: '',
@@ -359,6 +360,9 @@ const dialogTableColumns = [
         ellipsis: true,
     }
 ];
+const categoryMapDict = Object.fromEntries(
+    Object.entries(IfcCategoryMap).map(([_, value]) => [value.en, value.cn])
+);
 watch(
     () => modelStore.modelInspectData,
     (val) => {
@@ -366,7 +370,13 @@ watch(
             const data = modelStore.modelInspectData?.data;
             console.log("模型检查数据为", data);
             if (data && typeof data === 'object') {
-                descriptions.value = Object.entries(data).map(([key]) => key);
+                // 将英文键替换为中文
+                const translatedData: { [key: string]: any } = {};
+                for (const [key, value] of Object.entries(data)) {
+                    translatedData[categoryMapDict[key] || key] = value;
+                }
+                // 更新 descriptions
+                descriptions.value = Object.keys(translatedData);
                 if (descriptions.value.length > 0) {
                     loading.value = false;
                     handleListClick(descriptions.value[0]);
@@ -413,8 +423,11 @@ function getAllExpandedKeys(data: any[], childrenKey = 'children') {
 }
 
 function handleListClick(key: string) {
+    const englishKey = Object.entries(IfcCategoryMap).find(
+        ([_, value]) => value.cn === key
+    )?.[1]?.en || key;
     selectedKey.value = key;
-    const dataObj = modelStore.modelInspectData?.data?.[key];
+    const dataObj = modelStore.modelInspectData?.data?.[englishKey];
     currentDataObj.value = dataObj; // 保存当前dataObj
     // 判断属性集所有子项的第一个元素是否全为0
     function isAllGreen(obj: any) {
@@ -437,14 +450,14 @@ function handleListClick(key: string) {
     if (Array.isArray(dataObj)) {
         tableData.value = dataObj.map(item => ({
             guid: item.Guid || '',
-            name: item.Name || item.Entity || '',
+            name: item.Name || '',
             tag: item.Tag || '',
             allGreen: isAllGreen(item)
         }));
     } else if (dataObj && typeof dataObj === 'object') {
         tableData.value = [{
             guid: dataObj.Guid || '',
-            name: dataObj.Name || dataObj.Entity || '',
+            name: dataObj.Name || '',
             tag: dataObj.Tag || '',
             allGreen: isAllGreen(dataObj)
         }];

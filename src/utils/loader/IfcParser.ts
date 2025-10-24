@@ -446,7 +446,7 @@ export class IfcParser {
 
     for (const expressID in model.data) {
       const [, type] = model.data[expressID][1]; // 获取分类类型
-      const entityName = IfcCategoryMap[type].en;
+      const entityName = IfcCategoryMap[type].cn;
       this.saveItemToGroup(model, "entities", entityName, expressID);
     }
   }

@@ -97,7 +97,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         guid: guid,
         objectType: property.ObjectType,
         type: IfcCategoryMap[property.type].en,
-        typeShow: IfcCategoryMap[property.type].en,
+        typeShow: IfcCategoryMap[property.type].cn,
       } as TreeNode
       dataMap[id] = item
       tempTreeData.push(item)
@@ -125,7 +125,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         guid: guid,
         objectType: property.ObjectType,
         type: IfcCategoryMap[property.type].en,
-        typeShow: IfcCategoryMap[property.type].en,
+        typeShow: IfcCategoryMap[property.type].cn || IfcCategoryMap[property.type].en,
       }
       dataMap[expressId] = item
       //当时构件时，把ifc element type 相同的放在一起
@@ -143,7 +143,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
             guid: guid,
             objectType: property.ObjectType,
             type: 'category',
-            typeShow: IfcCategoryMap[property.type].en,
+            typeShow: IfcCategoryMap[property.type].cn,
 
           })
           categoryNodeCode.push(categoryEid)
