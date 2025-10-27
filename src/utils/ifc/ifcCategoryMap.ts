@@ -1477,7 +1477,7 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   3493046030: {
     en: 'IfcGeographicelement',
-    cn: ''
+    cn: '地理元素'
   },
   1509553395: {
     en: 'IfcFurniture',
@@ -1977,7 +1977,7 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   3512223829: {
     en: 'IfcWallstandardcase',
-    cn: ''
+    cn: '标准墙'
   },
   2391406946: {
     en: 'IfcWall',
@@ -2861,7 +2861,7 @@ export const IfcCategoryMap: { [key: number]: { en: string; cn: string } } = {
   },
   1674181508: {
     en: 'IfcAnnotation',
-    cn: ''
+    cn: '注释'
   },
   2296667514: {
     en: 'IfcActor',

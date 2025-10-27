@@ -1,6 +1,6 @@
 import XeUtils from 'xe-utils'
-import { IfcCategoryMap } from './ifc-category-map'
-import { ifcGuidToUuid } from './ifc-guid'
+import { IfcCategoryMap } from './ifcCategoryMap'
+import { ifcGuidToUuid } from './ifcGuidConverter'
 
 
 // const XeUtils = require('xe-utils')

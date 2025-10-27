@@ -62,11 +62,11 @@ import { useModelStore } from '../../store';
 import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
 import { Tooltip as TTooltip } from 'tdesign-vue-next';
 import { SceneManager } from '../../services/scene-manager';
-import { IfcPropertyUtils } from '../../services/property-manager';
-import { eventManager } from '../../services/event-manager';
+import { IfcPropertyUtils } from '../../services/model-property.ts';
+import { eventManager } from '../../services/scene-event.ts';
 import { examineResultConfig } from '../../utils/config';
 import { useSelectedStore } from '../../store';
-import { IfcCategoryMap } from '../../utils/ifc/ifc-category-map.ts'
+import { IfcCategoryMap } from '../../utils/ifc/ifcCategoryMap.ts'
 
 const iconPathMap = {
     'array': '/icons/枚举.svg',

@@ -1,8 +1,5 @@
 import * as BABYLON from '@babylonjs/core'
 
-
-type IfcAxis = 'x' | 'y' | 'z'
-
 export class IfcExplosion {
 
   public scene: BABYLON.Scene;

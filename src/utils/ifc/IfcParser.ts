@@ -6,8 +6,8 @@ import { IFCPROJECT, IFCRELDEFINESBYPROPERTIES, IFCSPACE, IFCRELASSOCIATESCLASSI
 import proj4 from 'proj4'
 // 导入 Node.js 的 crypto 模块中的 webcrypto API，用于生成加密安全的随机数
 // const { webcrypto } = require('crypto');
-import { GeometryTypes } from '../ifc/ifc-geometry-types';
-import { IfcElements } from "./ifc-elements-map";
+import { GeometryTypes } from './ifcGeometryTypes';
+import { IfcElements } from "./ifcElementsMap";
 // 从本地工具文件中导入辅助函数、常量和类型定义
 import {
   getHash,
@@ -16,7 +16,7 @@ import {
   PropNames,
   IfcTypesMap,
 
-} from './utils'
+} from './ifcUtils'
 import {
   IFCParserProps,
   IExportMesh,
@@ -26,7 +26,7 @@ import {
   INode,
   IGeometryReferences,
   IChunk
-} from './types'
+} from './ifcTypes'
 
 // 定义 IFC 解析器类
 export class IFCParser {

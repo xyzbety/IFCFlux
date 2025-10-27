@@ -3,7 +3,7 @@ import hifc2 from './rules/HIFC规划报建.json';
 import hifc3 from './rules/HIFC施工图审查.json';
 import hifc4 from './rules/HIFC智慧工地监管.json';
 import hifc5 from './rules/HIFC竣工验收.json';
-import { IfcTypes } from './ifc-types-map'
+import { IfcTypes } from './ifcTypeMap'
 
 /**
  * IFC 规则映射类型定义
@@ -41,7 +41,6 @@ const ifcPset2: Record<number, IfcMapping> = {
 };
 
 /**
- * IfcInspect
  * - 接收本地文件或网络 URL
  * - 调用 Web Worker 完成 IFC 提取与规则校验
  * - 完成后让出一帧以便 UI 有机会渲染，再更新 ifcData

@@ -7,16 +7,16 @@ import { useSettingsStore } from '../store/settings';
 import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
 import { updateTempLineLabel } from '../utils/index';
-import { IfcExplosion } from '../utils/ifc/IfcExplosion';
+import { IfcExplosion } from '../utils/analysis/explosion';
 import { useLayoutManager } from './useLayoutManager';
 import { ModelManager } from "../services/model-manager";
 import { useDragResize } from './useDragResize';
-import { IfcPropertyUtils } from '../services/property-manager';
+import { IfcPropertyUtils } from '../services/model-property';
 import { SceneManager } from '../services/scene-manager';
 import { RibbonEventManager } from './useRibbonEvent';
-import { eventManager } from '../services/event-manager';
+import { eventManager } from '../services/scene-event';
 import { IfcLoader } from '../utils/loader/IfcLoader';
-import { saveAsGLB, saveAsDB, saveAsJSON } from '../utils/ifc/ifcExporter';
+import { saveAsGLB, saveAsDB, saveAsJSON } from '../services/model-export';
 
 
 // 单例实例存储

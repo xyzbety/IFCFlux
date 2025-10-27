@@ -21,7 +21,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   1674181508: {
     en: 'IfcAnnotation',
-    cn: ''
+    cn: '注释'
   },
   25142252: {
     en: 'IfcController',
@@ -93,7 +93,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   486154966: {
     en: 'IfcWindowstandardcase',
-    cn: ''
+    cn: '标准墙'
   },
   629592764: {
     en: 'IfcLightFixture',
@@ -149,11 +149,11 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   905975707: {
     en: 'IfcColumnstandardcase',
-    cn: ''
+    cn: '标准柱'
   },
   926996030: {
     en: 'IfcVoidingfeature',
-    cn: ''
+    cn: '开洞特征'
   },
   979691226: {
     en: 'IfcReinforcingBar',
@@ -189,7 +189,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   1156407060: {
     en: 'IfcPlatestandardcase',
-    cn: ''
+    cn: '标准板'
   },
   1162798199: {
     en: 'IfcSwitchingDevice',
@@ -337,7 +337,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   2906023776: {
     en: 'IfcBeamstandardcase',
-    cn: ''
+    cn: '标准梁'
   },
   2938176219: {
     en: 'IfcBurner',
@@ -357,7 +357,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   3027962421: {
     en: 'IfcSlabstandardcase',
-    cn: ''
+    cn: '标准板'
   },
   3040386961: {
     en: 'IfcDistributionFlowElement',
@@ -377,11 +377,11 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   3101698114: {
     en: 'IfcSurfacefeature',
-    cn: ''
+    cn: '表面特征'
   },
   3127900445: {
     en: 'IfcSlabelementedcase',
-    cn: ''
+    cn: '组合楼板'
   },
   3132237377: {
     en: 'IfcFlowMovingDevice',
@@ -397,7 +397,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   3242481149: {
     en: 'IfcDoorstandardcase',
-    cn: ''
+    cn: '标准门'
   },
   3283111854: {
     en: 'IfcRampFlight',
@@ -429,7 +429,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   3493046030: {
     en: 'IfcGeographicelement',
-    cn: ''
+    cn: '地理元素'
   },
   3495092785: {
     en: 'IfcCurtainWall',
@@ -441,7 +441,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   3512223829: {
     en: 'IfcWallstandardcase',
-    cn: ''
+    cn: '标准墙'
   },
   3518393246: {
     en: 'IfcDuctSegment',
@@ -465,7 +465,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   3651124850: {
     en: 'IfcProjectionelement',
-    cn: ''
+    cn: '凸出元素'
   },
   3694346114: {
     en: 'IfcOutlet',
@@ -509,7 +509,7 @@ export const IfcElements: { [key: number]: { en: string; cn: string } } = {
   },
   4156078855: {
     en: 'IfcWallelementedcase',
-    cn: ''
+    cn: '组合墙'
   },
   4175244083: {
     en: 'IfcInterceptor',

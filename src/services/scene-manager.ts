@@ -2,13 +2,13 @@ import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
 import { MessagePlugin } from 'tdesign-vue-next';
 import { setupCameraByBoundingBox, createGround } from '../utils';
-import { IfcExplosion } from '../utils/ifc/IfcExplosion';
+import { IfcExplosion } from '../utils/analysis/explosion';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { Measure } from '../utils/analysis/measure';
-import { CubeView } from '../services/cube-manager'
-import { CameraHistoryManager } from './history-manager';
+import { CubeView } from './scene-cube'
+import { CameraHistoryManager } from './scene-history';
 import { useModelStore, useSceneStore } from '../store';
-import { exportGLB, exportDB, exportJSON } from '../utils/ifc/ifcExporter';
+import { exportGLB, exportDB, exportJSON } from './model-export';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;

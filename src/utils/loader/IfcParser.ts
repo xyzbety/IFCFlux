@@ -1,8 +1,8 @@
-import { IfcCategoryMap } from '../ifc/ifc-category-map';
-import { IfcElements } from "../ifc/ifc-elements-map";
-import { GeometryTypes } from '../ifc/ifc-geometry-types';
+import { IfcCategoryMap } from '../ifc/ifcCategoryMap';
+import { IfcElements } from "../ifc/ifcElementsMap";
+import { GeometryTypes } from '../ifc/ifcGeometryTypes';
 import * as WEBIFC from "web-ifc";
-import { getSpatialTree } from '../ifc/spatial-tree';
+import { getSpatialTree } from '../ifc/ifcStructureCreator';
 
 
 export interface IfcItemsCategories {

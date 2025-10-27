@@ -82,7 +82,7 @@ import BabylonViewer from './components/BabylonViewer.vue';
 import cubeView from './components/view/cubeView.vue'
 import { useAppCore } from './composables/useAppCore';
 import { useModelStore } from './store';
-import { eventManager } from './services/event-manager';
+import { eventManager } from './services/scene-event';
 
 const {
   isMaximized, isSidebarVisible, layoutState, structureTreeRef, 

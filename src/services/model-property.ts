@@ -1,11 +1,7 @@
-import { IfcCategoryMap } from '../utils/ifc/ifc-category-map'
+import { IfcCategoryMap } from '../utils/ifc/ifcCategoryMap'
 import * as BABYLON from '@babylonjs/core';
 import { getBoundingBoxForMeshes } from '../utils';
-import { EffectManager } from './effect-manager';
-
-/**
- * IFC属性处理工具函数
- */
+import { EffectManager } from './scene-effect';
 
 export interface MeshHighlightConfig {
   scene: BABYLON.Scene;
@@ -14,7 +10,6 @@ export interface MeshHighlightConfig {
   isHighlight: boolean;
   isFocus: boolean;
 }
-
 
 export class IfcPropertyUtils {
   private static instance: IfcPropertyUtils | null = null;

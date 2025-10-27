@@ -3,7 +3,7 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import * as BABYLON from '@babylonjs/core';
 import { GLTF2Export } from "@babylonjs/serializers";
-import { IFCParser2DB } from './ifcparse2db';
+import { IFCParser2DB } from '../utils/ifc/IfcParserToDb';
 
 export async function exportGLB(scene: any, fileNameWithoutExtension: string, isTauriEnv: boolean, saveDialogConfig: any) {
     let savePath: string | null = '';
@@ -80,7 +80,7 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
             const keys = Object.keys(exportDataScene);
             let isFirstField = true;
 
-            exportFile += '{\n';
+            exportFile += '{' + '\n';
             for (const key of keys) {
                 const value = exportDataScene[key];
                 if (value === undefined) continue;
@@ -88,7 +88,7 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
                 try {
                     const valueString = JSON.stringify(value, replacer, 2);
                     const fieldLine = `  "${key}": ${valueString}`;
-                    exportFile += isFirstField ? fieldLine : `,\n${fieldLine}`;
+                    exportFile += isFirstField ? fieldLine : `,${'\n'}${fieldLine}`;
                     isFirstField = false;
                 } catch (error) {
                     console.error(`字段 ${key} 序列化失败:`, error);

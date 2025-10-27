@@ -1,5 +1,5 @@
-import { IFCParser, formatGuid } from './parser'
-import { RelationElementInfo } from './utils'
+import { IFCParser, formatGuid } from './IfcParser'
+import { RelationElementInfo } from './ifcUtils'
 import * as duckdb from '@duckdb/duckdb-wasm';
 
 let graphicMaxId = 0;

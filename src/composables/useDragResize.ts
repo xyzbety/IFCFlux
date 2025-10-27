@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue';
-import { eventManager } from '../services/event-manager';
+import { eventManager } from '../services/scene-event';
 
 export interface DragConfig {
   minWidth: number;

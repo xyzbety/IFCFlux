@@ -129,7 +129,7 @@ import type { Theme } from '../store/settings';
 import { ModelManager } from '../../services/model-manager';
 import { useSettingsStore } from '../../store/settings';
 import { useModelStore } from "../../store/index.ts";
-import { getFileHistory } from '../../utils/indexedDB';
+import { getFileHistory } from '../../services/file-history';
 import { RibbonEventManager } from "../../composables/useRibbonEvent.ts";
 import { themeColors } from '../../utils/themeColors';
 import ProgressBar from "../ProgressBar.vue";

@@ -2,8 +2,8 @@ import * as WEBIFC from "web-ifc";
 import * as BABYLON from "@babylonjs/core";
 import { cacheDB } from './CacheDB';
 import { IfcParser } from "./IfcParser";
-import { GeometryTypes } from "../ifc/ifc-geometry-types";
-import { ifcGuidToUuid } from '../ifc/ifc-guid'
+import { GeometryTypes } from "../ifc/ifcGeometryTypes";
+import { ifcGuidToUuid } from '../ifc/ifcGuidConverter'
 
 
 // 定义进度回调函数类型

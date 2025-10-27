@@ -258,7 +258,7 @@ export default {
       }]
     },
     {
-      label: '轴向爆炸',
+      label: '爆炸',
       icon: 'floor_explosion material-icons',
       ribbonItems: [
         {
@@ -288,7 +288,7 @@ export default {
           }]
         },
         {
-          label: '清除效果',
+          label: '爆炸还原',
           icon: 'measure_clear material-icons',
           type: 'button',
           cssClass: 'flat',

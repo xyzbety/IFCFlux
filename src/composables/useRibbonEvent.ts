@@ -109,7 +109,7 @@ export class RibbonEventManager {
         this.singleEvents.set("构件树", debounce(() => this.options!.emit("build-tree")));
         this.singleEvents.set("属性表", debounce(() => this.options!.emit("properties-table")));
         this.singleEvents.set("重置光照", debounce(() => this.options?.emit('light-settings', { type: 'reset' })));
-        this.singleEvents.set("清除效果", debounce(() => this.options?.emit('explosion-event', { type: 'explosion-clear' })));
+        this.singleEvents.set("爆炸还原", debounce(() => this.options?.emit('explosion-event', { type: 'explosion-clear' })));
     }
     /**
      * 处理按钮点击

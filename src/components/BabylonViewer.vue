@@ -7,7 +7,7 @@ import { onMounted, ref } from 'vue';
 import * as BABYLON from '@babylonjs/core';
 import { SceneManager } from '../services/scene-manager';
 import { ModelManager } from '../services/model-manager';
-import { eventManager } from '../services/event-manager';
+import { eventManager } from '../services/scene-event';
 
 const bjsCanvas = ref<HTMLCanvasElement | null>(null);
 

@@ -1,10 +1,10 @@
 import { ref, Ref, markRaw } from 'vue';
 import * as BABYLON from '@babylonjs/core/index.js';
 import { IfcLoader } from '../utils/loader/IfcLoader';
-import { addFileHistory } from '../utils/indexedDB.ts';
+import { addFileHistory } from './file-history';
 import { useModelStore } from '../store/index.ts';
 import { useLayoutManager } from '../composables/useLayoutManager.ts';
-import { IfcInspect } from '../utils/ifc/IfcInspect.js';
+import { IfcInspect } from '../utils/inspect/IfcInspect.js';
 
 const { switchToMode, LayoutMode: LM } = useLayoutManager();
 
