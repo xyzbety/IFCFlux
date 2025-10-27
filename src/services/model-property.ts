@@ -208,7 +208,7 @@ export class IfcPropertyUtils {
     psetRelations: any[],
     psetLines: any,
   ): Promise<any[]> {
-    const showPropertyKey = ['GlobalId', 'Name', 'LongName', 'ObjectType', 'Tag', 'Phase', 'type'];
+    const showPropertyKey = ['type', 'GlobalId', 'Name', 'PredefinedType', 'ObjectType', 'Tag'];
     const property = [];
     const extractNumbers = (str: string): string => {
       const match = str.match(/\d+/);
@@ -244,27 +244,30 @@ export class IfcPropertyUtils {
       const value = [] as any[];
       let id = 1;
 
-      Object.keys(pset).map((key: string) => {
-        if (showPropertyKey.indexOf(key) > -1) {
-          const v = pset[key]?.value !== undefined ? pset[key]?.value : pset[key];
-          console.log(`${key}: ${v}`);
-          if (v !== null && v !== '') {
-            if (key === 'type') {
-              value.push({
-                id,
-                name: 'IfcEntity',
-                value: IfcCategoryMap[v].en
-              });
-            } else {
-              value.push({
-                id,
-                name: key,
-                value: v
-              });
-            }
-            id++;
+      showPropertyKey.forEach((key: string) => {
+        let v = '';
+        if (key === 'type') {
+          // 特殊处理 type 属性
+          if (pset[key] !== undefined) {
+            v = IfcCategoryMap[pset[key]]?.en || '';
           }
+          value.push({
+            id,
+            name: 'IfcEntity',
+            value: v
+          });
+        } else {
+          // 处理其他属性
+          if (pset[key] !== undefined) {
+            v = pset[key]?.value !== undefined ? pset[key]?.value : pset[key];
+          }
+          value.push({
+            id,
+            name: key,
+            value: v
+          });
         }
+        id++;
       });
 
       const specific = {
