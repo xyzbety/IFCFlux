@@ -7,8 +7,6 @@ import { watch, ref, reactive, computed } from 'vue'
 import { useModelStore } from '../../store';
 import { onMounted } from 'vue';
 import { SearchComponent } from '@visactor/vtable-search';
-import { MessagePlugin } from 'tdesign-vue-next';
-import { debounce } from '../../utils/index';
 const emit = defineEmits(['table-cell-click', 'table-checkbox-click']);
 const rootStyles = getComputedStyle(document.documentElement);
 const themeColor = ref(rootStyles.getPropertyValue('--theme-color'));
@@ -54,8 +52,7 @@ let treeData = ref([])
 let search: any;
 let eventIds = {
     click: 0,
-    mouseMove: 0,
-    mouseLeave: 0
+    mouseMove: 0
 }
 const options = reactive({
     records: treeData,
@@ -106,34 +103,12 @@ const options = reactive({
         },
         displayMode: 'basedOnContainer' as const
     },
-    customCellStyle: [
-        {
-            id: 'text_style',
-            style: {
-                color: "#185abd",
-                underline: true,
-                underlineDash: [2],
-                underlineOffset: 2,
-
-            }
-        }
-    ],
     virtualization: {
         vertical: true, // 启用垂直虚拟滚动
         horizontal: false, // 根据需要决定是否启用水平虚拟滚动
         overscroll: true, // 允许超滚动
     },
 })
-const copyToClipboard = async (text: string) => {
-    try {
-        await navigator.clipboard.writeText(text);
-        MessagePlugin.success({ content: '复制成功', duration: 500 });
-    } catch (error) {
-        console.error('复制到剪贴板失败:', error);
-        MessagePlugin.error({ content: '复制失败', duration: 500 });
-    }
-}
-const debouncedCopyToClipboard = debounce(copyToClipboard, 500);
 
 const handleClick = () => {
     if (!treeInstance) return;
@@ -141,9 +116,6 @@ const handleClick = () => {
         if (treeInstance) {
             const cellValue = treeInstance.getCellValue(args[0].col, args[0].row);
             console.log('click_cell', args, cellValue);
-            if (args[0].col !== 0) {
-                debouncedCopyToClipboard(cellValue);
-            }
             if (args[0].cellType === 'checkbox' && args[0].cellLocation === 'columnHeader') {
                 let headerSelectState = treeInstance.getCheckboxState('check')[0];
                 emit('table-checkbox-click', { args, selectState: headerSelectState })
@@ -162,26 +134,8 @@ const handleClick = () => {
 const handleMouse = () => {
     if (!treeInstance) return;
     eventIds.mouseMove = treeInstance.on('mouseenter_cell', args => {
-        if (treeInstance) {
-            // 获取表格的行列范围
-            const rowCount = treeInstance.rowCount;
-            const colCount = treeInstance.colCount;
-
-            // 遍历所有单元格，清除自定义样式
-            for (let row = 0; row < rowCount; row++) {
-                for (let col = 0; col < colCount; col++) {
-                    const cellPosition = { col, row };
-                    treeInstance.arrangeCustomCellStyle(cellPosition, '');
-                }
-            }
-        }
         const { col, row } = args;
         if (row === 0) return;
-        const cellPosition = {
-            col: col,
-            row: row,
-        }
-        treeInstance?.arrangeCustomCellStyle(cellPosition, 'text_style')
         if (treeInstance) {
             const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
             if (treeInstance.getCellValue(col, row)) {
@@ -199,14 +153,6 @@ const handleMouse = () => {
             }
         }
     });
-    eventIds.mouseLeave = treeInstance.on('mouseleave_cell', args => {
-        const { col, row } = args;
-        const cellPosition = {
-            col: col,
-            row: row,
-        }
-        treeInstance?.arrangeCustomCellStyle(cellPosition, '')
-    });
 }
 const clearAllEvents = () => {
     try {
@@ -223,8 +169,7 @@ const clearAllEvents = () => {
     // 重置事件ID
     eventIds = {
         click: 0,
-        mouseMove: 0,
-        mouseLeave: 0
+        mouseMove: 0
     }
 }
 
