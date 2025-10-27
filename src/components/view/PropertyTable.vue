@@ -118,9 +118,16 @@ const handleMouse = () => {
     // 鼠标移入事件
     eventIds.mouseMove = treeInstance.on('mouseenter_cell', (args: any) => {
         const { col, row } = args;
-        console.log('鼠标进入事件', args);
         if (row === 0) return;
         if (treeInstance) {
+            const rowCount = treeInstance.rowCount;
+            const colCount = treeInstance.colCount;
+            for (let row = 0; row < rowCount; row++) {
+                for (let col = 0; col < colCount; col++) {
+                    const cellPosition = { col, row };
+                    treeInstance.arrangeCustomCellStyle(cellPosition, '');
+                }
+            }
             const rect = treeInstance.getVisibleCellRangeRelativeRect({ col, row });
             const group = groupMapData.value.get(row);
             const cellPositionSingle = { col, row }
@@ -148,7 +155,6 @@ const handleMouse = () => {
     // 鼠标移出事件
     eventIds.mouseLeave = treeInstance.on('mouseleave_cell', args => {
         const { col, row } = args;
-        console.log('mouseleave_cell', args);
         const group = groupMapData.value.get(row);
         const cellPositionSingle = { col, row }
         const cellPositionRange = { range: { start: { row, col: 0 }, end: { row, col: 1 } } }

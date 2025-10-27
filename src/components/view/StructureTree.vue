@@ -162,7 +162,19 @@ const handleClick = () => {
 const handleMouse = () => {
     if (!treeInstance) return;
     eventIds.mouseMove = treeInstance.on('mouseenter_cell', args => {
-        console.log('mousemove_cell', args);
+        if (treeInstance) {
+            // 获取表格的行列范围
+            const rowCount = treeInstance.rowCount;
+            const colCount = treeInstance.colCount;
+
+            // 遍历所有单元格，清除自定义样式
+            for (let row = 0; row < rowCount; row++) {
+                for (let col = 0; col < colCount; col++) {
+                    const cellPosition = { col, row };
+                    treeInstance.arrangeCustomCellStyle(cellPosition, '');
+                }
+            }
+        }
         const { col, row } = args;
         if (row === 0) return;
         const cellPosition = {
@@ -189,7 +201,6 @@ const handleMouse = () => {
     });
     eventIds.mouseLeave = treeInstance.on('mouseleave_cell', args => {
         const { col, row } = args;
-        console.log('mouseleave_cell', args);
         const cellPosition = {
             col: col,
             row: row,
