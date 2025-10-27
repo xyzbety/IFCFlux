@@ -167,9 +167,9 @@ const handleFocus = async (event: any) => {
 
 }
 const tableColumns = [
-    { colKey: 'guid', title: 'GUID', width: 300, ellipsis: true },
-    { colKey: 'name', title: 'Name', width: 50, ellipsis: true },
-    { colKey: 'tag', title: 'Tag', width: 100,ellipsis: true },
+    { colKey: 'guid', title: 'GUID', width: 250, ellipsis: true },
+    { colKey: 'name', title: 'Name', width: 170, ellipsis: true },
+    { colKey: 'tag', title: 'Tag', width: 80,ellipsis: true },
     {
         colKey: 'op',
         title: '',

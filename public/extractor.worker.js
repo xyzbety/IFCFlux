@@ -35,9 +35,9 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
 
     const regexRel = new RegExp(/=[\s]?IFCRELDEFINESBYPROPERTIES/)
 
-     
-      
-      
+
+
+
     const regexRelCapture = new RegExp(/IFCRELDEFINESBYPROPERTIES[^;]*\((.*)\),(.*)\)/)
 
     const regexPset = new RegExp(/=[\s]?(IFCPROPERTYSET|IFCELEMENTQUANTITY)/)
@@ -70,11 +70,11 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
                     entityMap.set(match[1], {
                         Entity: match[2],
                         Guid: match[3],
-                        Name: match[4].replace(/\'/g, ""),
+                        Name: match[4] == '$' ? null : match[4].replace(/\'/g, ""),
                         Description: match[5] == '$' ? null : match[5].replace(/\'/g, ""),
                         ObjectType: match[6] == '$' ? null : match[6].replace(/\'/g, ""),
                         Tag: match[7] == '$' ? null : match[7].replace(/\'/g, ""),
-                        PredefinedType: match[8] ? match[8].replace(/\./g, "") : null
+                        PredefinedType: match[8] == null || match[8] == '$' ? null : String(match[8]).replace(/\./g, "")
                     })
                 } else {
                     const exceptionString = `IFCBUILDINGSYSTEM`
@@ -286,7 +286,7 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
         const nweItem = {
             Entity: item.Entity,
             Guid: ifcGuidToUuid(item.Guid),
-            Name: typeof item.name == 'string' ? ifcToText(item.name) : item.name,
+            Name: typeof item.Name == 'string' ? ifcToText(item.Name) : item.Name,
             PredefinedType: typeof item.PredefinedType == 'string' ? ifcToText(item.PredefinedType) : item.PredefinedType,
             ObjectType: typeof item.ObjectType == 'string' ? ifcToText(item.ObjectType) : item.ObjectType,
             Tag: typeof item.Tag == 'string' ? ifcToText(item.Tag) : item.Tag,
@@ -309,14 +309,14 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
                         value[k] = [2, p_item, v_type]
                     }
                 }
-                
+
             } else {
                 for (const [k, v] of Object.entries(value)) {
                     const v_type = ifcTypes[v.toUpperCase()] || v
                     value[k] = [1, null, v_type]
                 }
             }
-            
+
             nweItem[pset] = value
         }
 
@@ -584,85 +584,85 @@ function ifcToText(encoded) {
  */
 function checkIfcType(value, ifcType, ifcTypes) {
 
-  if (ifcTypes === 'string') {
-    if (typeof value !== 'string') {
-        return 3;
-    }
-    if (value.length === 0) {
-        return 2
+    if (ifcTypes === 'string') {
+        if (typeof value !== 'string') {
+            return 3;
+        }
+        if (value.length === 0) {
+            return 2
+        }
+
+        return 0
     }
 
-    return 0
-  }
+    if (ifcTypes === 'datetime') {
+        if (typeof value !== 'string') {
+            return 3;
+        }
+        if (value.length === 0) {
+            return 2
+        }
+        if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value)) {
+            return 4
+        }
+        return 0
+    }
 
-  if (ifcTypes === 'datetime') {
-    if (typeof value !== 'string') {
-        return 3;
+    if (ifcTypes === 'date') {
+        if (typeof value !== 'string') {
+            return 3;
+        }
+        if (value.length === 0) {
+            return 2
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return 4
+        }
+        return 0
     }
-    if (value.length === 0) {
-        return 2
-    }
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value)) {
-        return 4
-    }
-    return 0
-  }
 
-  if (ifcTypes === 'date') {
-    if (typeof value !== 'string') {
-        return 3;
+    if (ifcTypes === 'array') {
+        if (typeof value !== 'string') {
+            return 3;
+        }
+        if (value.length === 0) {
+            return 2
+        }
+        // 值域检查
+        // const rawValue = ifcToText(value)
+        // console.log('rawValue.slice(1,-1)', rawValue.slice(1,-1))
+        // if (!Array.isArray(rawValue.slice(1,-1))) {
+        //     return 4;
+        // }
+        return 0
     }
-    if (value.length === 0) {
-        return 2
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return 4
-    }
-    return 0
-  }
 
-  if (ifcTypes === 'array') {
-    if (typeof value !== 'string') {
-        return 3;
+    if (ifcTypes === 'boolean') {
+        if (typeof value !== 'boolean') {
+            return 3
+        }
+        return 0
     }
-    if (value.length === 0) {
-        return 2
-    }
-    // 值域检查
-    // const rawValue = ifcToText(value)
-    // console.log('rawValue.slice(1,-1)', rawValue.slice(1,-1))
-    // if (!Array.isArray(rawValue.slice(1,-1))) {
-    //     return 4;
-    // }
-    return 0
-  }
 
-  if (ifcTypes === 'boolean') {
-    if (typeof value !== 'boolean') {
-        return 3
+    if (ifcTypes === 'int') {
+        if (!Number.isInteger(value)) {
+            return 3
+        }
+        return 0
     }
-    return 0
-  }
 
-  if (ifcTypes === 'int') {
-    if (!Number.isInteger(value)) {
-        return 3
+    if (ifcTypes === 'float') {
+        if (typeof value !== 'number' || isNaN(value)) {
+            return 3
+        }
+        if (ifcType === 'IFCPOSITIVELENGTHMEASURE' && value <= 0) {
+            return 3
+        }
+        return 0
     }
-    return 0
-  }
 
-  if (ifcTypes === 'float') {
-    if (typeof value !== 'number' || isNaN(value)) {
-        return 3
-    }
-    if (ifcType === 'IFCPOSITIVELENGTHMEASURE' && value <= 0) {
-        return 3
-    }
-    return 0
-  }
-  
-  // 如果传入未定义的 IFC 类型，返回 false
-  return 3;
+    // 如果传入未定义的 IFC 类型，返回 false
+    return 3;
 }
 
 const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
@@ -670,7 +670,7 @@ const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$"
 // const ifcGuidRegex = new RegExp(/^[0-3][\dA-Za-z_$]{21}$/);
 
 // function fromIfcGuidArray(ifcGuid){
-    
+
 //   if (typeof ifcGuid !== "string")
 //     throw new TypeError("Invalid IFC-GUID type");
 //   if (ifcGuid.length !== 22)
@@ -695,20 +695,20 @@ const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$"
 //   return result;
 // }
 
-function u64(v){
-  return Array.from(v).reduce((a, b) => a * 64 + chars.indexOf(b), 0);
+function u64(v) {
+    return Array.from(v).reduce((a, b) => a * 64 + chars.indexOf(b), 0);
 }
 
-function ifcGuidToUuid(ifcGuid){
-  const bs = [u64(ifcGuid.substring(0, 2))];
-  for (let i = 0; i < 5; i++) {
-    const d = u64(ifcGuid.substring(2 + 4 * i, 6 + 4 * i));
-    for (let j = 0; j < 3; j++) {
-      bs.push((d >> (8 * (2 - j))) % 256);
+function ifcGuidToUuid(ifcGuid) {
+    const bs = [u64(ifcGuid.substring(0, 2))];
+    for (let i = 0; i < 5; i++) {
+        const d = u64(ifcGuid.substring(2 + 4 * i, 6 + 4 * i));
+        for (let j = 0; j < 3; j++) {
+            bs.push((d >> (8 * (2 - j))) % 256);
+        }
     }
-  }
-  const bsf = bs.map(b => b.toString(16).padStart(2, '0')).join("");
-  return `${bsf.slice(0, 8)}-${bsf.slice(8, 12)}-${bsf.slice(12, 16)}-${bsf.slice(16, 20)}-${bsf.slice(20)}`
+    const bsf = bs.map(b => b.toString(16).padStart(2, '0')).join("");
+    return `${bsf.slice(0, 8)}-${bsf.slice(8, 12)}-${bsf.slice(12, 16)}-${bsf.slice(16, 20)}-${bsf.slice(20)}`
 }
 
 
