@@ -313,6 +313,20 @@ export class RibbonEventManager {
                     this.options?.emit('scene-settings', { type: 'backgroundColor', value: event.detail.value });
                 });
             }
+            this.createEventHandler("highlightCheckbox", (event: any) => {
+                this.options?.emit('scene-settings', { type: 'highlightMode', value: event.detail.value });
+            });
+
+            this.createEventHandler("highlightColorPicker", (event: any) => {
+                this.options?.emit('scene-settings', { type: 'highlightColor', value: event.detail.value });
+            });
+            this.createEventHandler("edgeCheckbox", (event: any) => {
+                this.options?.emit('scene-settings', { type: 'edgeMode', value: event.detail.value });
+            });
+
+            this.createEventHandler("edgeColorPicker", (event: any) => {
+                this.options?.emit('scene-settings', { type: 'edgeColor', value: event.detail.value });
+            });
         }
         catch (error) {
             console.log("error", error)

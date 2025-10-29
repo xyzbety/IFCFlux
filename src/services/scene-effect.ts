@@ -1,9 +1,12 @@
 import * as BABYLON from '@babylonjs/core';
 
 export class EffectManager {
+  public highlightColor = new BABYLON.Color4(0.5, 1.0, 1.0, 1.0);
+  public isHighlightRender = true;
+  public isEdegeRender = false;
+  public edgeColor = new BABYLON.Color4(0.6, 1, 1, 1);
+  public edgeWidth = 10.0;
   private static instance: EffectManager | null = null;
-  private highlightMaterial: BABYLON.StandardMaterial | null = null;
-  private highlightAnimation: BABYLON.Animatable | null = null;
   private highlightLayer: BABYLON.HighlightLayer | null = null;
 
   private constructor(private scene: BABYLON.Scene) {
@@ -23,52 +26,17 @@ export class EffectManager {
     // 创建高亮层（只创建一次）
     if (!this.highlightLayer) {
       this.highlightLayer = new BABYLON.HighlightLayer("highlightLayer", this.scene, {
-        mainTextureFixedSize: 4096,  // 增加纹理分辨率
-        blurHorizontalSize: 1,       // 减小水平模糊
-        blurVerticalSize: 1,         // 减小垂直模糊
-        alphaBlendingMode: BABYLON.Engine.ALPHA_COMBINE
+        mainTextureRatio: 3,
+        // mainTextureFixedSize: 4096,  // 增加纹理分辨率
+        isStroke: true,
+        // blurHorizontalSize: 1.2,
+        // blurVerticalSize: 1.2
       });
 
       this.highlightLayer.outerGlow = true;
       this.highlightLayer.innerGlow = true;
       console.log("创建高亮层", this.highlightLayer);
     }
-    // 创建一个共享的高亮材质（如果还不存在）
-    if (!this.highlightMaterial) {
-      const highlightMaterial = new BABYLON.StandardMaterial("highlightMat", this.scene);
-      highlightMaterial.alpha = 0.5; // 半透明
-      highlightMaterial.disableLighting = true; // 不受灯光影响，保持纯色
-      highlightMaterial.backFaceCulling = false; // 渲染背面，避免部分面不显示
-      this.highlightMaterial = highlightMaterial;
-
-      // 创建呼吸效果动画
-      const frameRate = 30;
-      const animationDurationInSeconds = 3;
-      const totalFrames = frameRate * animationDurationInSeconds;
-
-      const breathingAnimation = new BABYLON.Animation(
-        "breathingAnimation",
-        "emissiveColor",
-        frameRate,
-        BABYLON.Animation.ANIMATIONTYPE_COLOR3,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
-      );
-
-      const keys = [];
-      keys.push({ frame: 0, value: new BABYLON.Color3(0.0, 0.6, 0.6) });
-      keys.push({ frame: totalFrames / 2, value: new BABYLON.Color3(0.0, 0.8, 0.8) });
-      keys.push({ frame: totalFrames, value: new BABYLON.Color3(0.0, 0.6, 0.6) });
-
-      breathingAnimation.setKeys(keys);
-      if (!this.highlightMaterial.animations) {
-        this.highlightMaterial.animations = [];
-      }
-      this.highlightMaterial.animations.push(breathingAnimation);
-    }
-
-    // 启动呼吸动画
-    const totalFrames = 30 * 3;
-    this.highlightAnimation = this.scene.beginAnimation(this.highlightMaterial, 0, totalFrames, true);
 
     meshes.forEach(mesh => {
       if (!mesh.metadata) mesh.metadata = {};
@@ -84,35 +52,31 @@ export class EffectManager {
       mesh.metadata.originalMaterial = mesh.material;
       mesh.metadata.originalVisibility = mesh.isVisible;
 
-      // 应用高亮效果
-      mesh.material = this.highlightMaterial;
-      mesh.isVisible = true;
-      mesh.renderingGroupId = 1;
-      this.highlightLayer!.addMesh(mesh as BABYLON.Mesh, new BABYLON.Color3(0.0, 1.0, 1.0)); // 浅蓝色高亮
-      // mesh.renderOutline = true;
-      // mesh.outlineWidth = 0.25;
-      // mesh.outlineColor = new BABYLON.Color4(0, 0, 1, 1);
+      if (this.isHighlightRender) {
+        mesh.renderOverlay = true;
+        mesh.overlayAlpha = 0.25;
+        mesh.overlayColor = new BABYLON.Color3(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b);
+        mesh.isVisible = true;
+        mesh.renderingGroupId = 1;
+        //  高亮实现边框渲染
+        // this.highlightLayer!.addMesh(mesh as BABYLON.Mesh, this.highlightColor);
+        // 直接使用边框渲染
+        mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
+        mesh.edgesWidth = this.edgeWidth;
+        mesh.edgesColor = this.highlightColor;
+        mesh.edgesRenderer.lineShader.options.useClipPlane = true; // 允许边缘渲染使用裁剪平面
+      }
 
-      // // 启用边缘渲染
-      // mesh.enableEdgesRendering();
-      // mesh.edgesWidth = 5.0;
-      // mesh.edgesRenderer?.render()
-      // console.log("启用边缘渲染", mesh.edgesRenderer?.isReady(),mesh.edgesRenderer?.isEnabled);
-      // mesh.edgesShareWithInstances = true;
-      // mesh.edgesRenderer.lineShader.options.useClipPlane = true;
-      // mesh.edgesColor = new BABYLON.Color4(0, 1, 1, 1);
+
     });
   }
 
   public clearAll(): void {
     if (this.highlightLayer) {
+      console.log("清除高亮层", this.highlightLayer);
       this.highlightLayer.removeAllMeshes();
       this.highlightLayer.dispose();
       this.highlightLayer = null;
-    }
-    if (this.highlightAnimation) {
-      this.highlightAnimation.stop();
-      this.highlightAnimation = null;
     }
 
     this.scene.meshes.forEach(mesh => {
@@ -120,14 +84,37 @@ export class EffectManager {
         mesh.material = mesh.metadata.originalMaterial;
         mesh.isVisible = mesh.metadata.originalVisibility !== false;
         mesh.renderingGroupId = 0;
-        // mesh.disableEdgesRendering();
-        // mesh.renderOutline = false;
-        // mesh.outlineWidth = 0;
-        // mesh.outlineColor = new BABYLON.Color4(0, 0, 0, 0);
-
+        mesh.renderOverlay = false;
+        mesh.disableEdgesRendering();
         delete mesh.metadata.originalMaterial;
         delete mesh.metadata.originalVisibility;
       }
+    });
+  }
+  public edgeRender(expressID?: string) {
+    this.clearEdgeRender();
+    if (this.isEdegeRender) {
+      this.scene.meshes.forEach(mesh => {
+        // 启用边缘渲染
+        mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
+        mesh.edgesWidth = this.edgeWidth;
+        mesh.edgesColor = this.edgeColor;
+      });
+
+    } else if (expressID) {
+      this.scene.meshes.forEach(mesh => {
+        if (mesh.id === expressID) {
+          mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
+          mesh.edgesWidth = this.edgeWidth;
+          mesh.edgesColor = this.edgeColor;
+        }
+      })
+    }
+  }
+  private clearEdgeRender() {
+    this.scene.meshes.forEach(mesh => {
+      // 禁用边缘渲染
+      mesh.disableEdgesRendering();
     });
   }
 }

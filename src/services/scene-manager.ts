@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
 import { MessagePlugin } from 'tdesign-vue-next';
-import { setupCameraByBoundingBox, createGround } from '../utils';
+import { setupCameraByBoundingBox, createGround, rgbToHex, calculateEdgeWidthByBoundingBox } from '../utils';
 import { IfcExplosion } from '../utils/analysis/explosion';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { Measure } from '../utils/analysis/measure';
@@ -9,6 +9,8 @@ import { CubeView } from './scene-cube'
 import { CameraHistoryManager } from './scene-history';
 import { useModelStore, useSceneStore } from '../store';
 import { exportGLB, exportDB, exportJSON } from './model-export';
+import { EffectManager } from './scene-effect';
+import { IfcPropertyUtils } from './model-property';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -32,6 +34,9 @@ export class SceneManager {
   private transparentMeshIds: Set<string> = new Set(); // 存储已半透明的mesh ID
   private sceneStore = useSceneStore();
   private modelStore = useModelStore();
+  private ifcPropertyUtils = IfcPropertyUtils.getInstance();
+  private effectManager: EffectManager | null = null;
+  public selectedMeshId: string | '' = '';
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -107,6 +112,7 @@ export class SceneManager {
             }
             parent = parent.parent;
           }
+          this.selectedMeshId = pointerInfo.pickInfo.pickedMesh.id;
           window.dispatchEvent(new CustomEvent('mesh-clicked', {
             detail: {
               expressID: pointerInfo.pickInfo.pickedMesh.id,
@@ -118,6 +124,7 @@ export class SceneManager {
           window.dispatchEvent(new CustomEvent('mesh-clicked', {
             detail: { expressID: '', mesh: '', point: '' }
           }));
+          this.selectedMeshId = '';
         }
       }
 
@@ -237,10 +244,19 @@ export class SceneManager {
    */
   public setupCameraAndLight() {
     if (!this.scene) return;
+    if (!this.effectManager) {
+      this.effectManager = EffectManager.getInstance(this.scene);
+    }
 
     // 计算模型包围盒
     const { min, max } = this.scene.meshes[0].getHierarchyBoundingVectors();
-    this.bbox = new BABYLON.BoundingBox(min, max)
+    const bboxSize = max.subtract(min);
+    const diagonalLength = bboxSize.length();
+    this.bbox = new BABYLON.BoundingBox(min, max);
+
+    // 基于实测数据优化的动态边框宽度计算
+    this.effectManager.edgeWidth = calculateEdgeWidthByBoundingBox(diagonalLength);
+    console.log("边缘宽度调整为", this.effectManager.edgeWidth);
 
     if (this.camera) {
       setupCameraByBoundingBox(this.camera, this.bbox);
@@ -347,7 +363,6 @@ export class SceneManager {
   public handleVisibility(
     mode: 'showAll' | 'hideSelected' | 'isolateSelected' | 'transparentSelected',
     selectedMeshIds: Set<string>,
-    selectedMeshId: string | null,
     originalMaterialProperties: Map<string, { alpha: number }>,
     isClickVisibleRef: { value: boolean }
   ) {
@@ -404,9 +419,9 @@ export class SceneManager {
         selectedMeshIds.forEach(id => {
           targetSet.add(id);
         });
-      } else if (selectedMeshId) {
+      } else if (this.selectedMeshId) {
         // 保持原有的单个元素处理逻辑
-        targetSet.add(selectedMeshId);
+        targetSet.add(this.selectedMeshId);
       }
 
       console.log(`已${mode === 'hideSelected' ? '隐藏' : mode === 'isolateSelected' ? '隔离' : '半透明'}的mesh IDs:`, Array.from(targetSet));
@@ -730,9 +745,9 @@ export class SceneManager {
    * 设置场景背景
    * @param data 场景设置数据
    */
-  public setSceneSettings(data: any) {
+  public async setSceneSettings(data: any) {
     if (!this.scene) return;
-
+    const meshConfig = { scene: this.scene, selectedMeshId: this.selectedMeshId, globalId: this.selectedMeshId, isFocus: false };
     const viewer = document.getElementById("viewer-canvas") as HTMLDivElement;
     if (data.type === 'backgroundColor' && viewer) {
       viewer.style.backgroundColor = data.value;
@@ -746,6 +761,23 @@ export class SceneManager {
       } else {
         ground.setEnabled(data.value);
       }
+    }
+    if (data.type === 'highlightMode') {
+      this.effectManager!.isHighlightRender = data.value;
+      console.log("this.effectManager.isHighlightRender", this.selectedMeshId, this.scene);
+      await this.ifcPropertyUtils.handleComponentClick(this.selectedMeshId, meshConfig, this.modelStore.modelData.tree);
+    }
+    if (data.type === 'highlightColor') {
+      this.effectManager!.highlightColor = BABYLON.Color4.FromHexString(rgbToHex(data.value));
+      await this.ifcPropertyUtils.handleComponentClick(this.selectedMeshId, meshConfig, this.modelStore.modelData.tree);
+    }
+    if (data.type === 'edgeMode') {
+      this.effectManager!.isEdegeRender = data.value;
+      this.effectManager!.edgeRender(this.selectedMeshId);
+    }
+    if (data.type === 'edgeColor') {
+      this.effectManager!.edgeColor = BABYLON.Color4.FromHexString(rgbToHex(data.value));
+      this.effectManager!.edgeRender();
     }
   }
 
@@ -803,6 +835,30 @@ export class SceneManager {
     }
   }
 
+  public setDefaultScene() {
+    const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
+    if (handleGridCheckbox.checked) {
+      this.setupGround(handleGridCheckbox.checked);
+    }
+    const handleHighlightCheckbox = document.getElementById("highlightCheckbox") as HTMLInputElement;
+    if (handleHighlightCheckbox.checked) {
+      this.effectManager!.isHighlightRender = handleHighlightCheckbox.checked;
+    }
+    const handleEdgeCheckbox = document.getElementById("edgeCheckbox") as HTMLInputElement;
+    if (handleEdgeCheckbox.checked) {
+      this.effectManager!.isEdegeRender = handleEdgeCheckbox.checked;
+      this.effectManager!.edgeRender();
+    }
+    const handleHighlightColor = document.getElementById("highlightColorPicker") as HTMLInputElement;
+    if (handleHighlightColor.value) {
+      this.effectManager!.highlightColor = BABYLON.Color4.FromHexString(rgbToHex(handleHighlightColor.value));
+    }
+    const handleEdgeColor = document.getElementById("edgeColorPicker") as HTMLInputElement;
+    if (handleEdgeColor.value) {
+      this.effectManager!.edgeColor = BABYLON.Color4.FromHexString(rgbToHex(handleEdgeColor.value));
+      this.effectManager!.edgeRender();
+    }
+  }
   /**
    * 清除场景资源
    */
@@ -814,6 +870,11 @@ export class SceneManager {
     // 清空相机历史记录
     this.cameraHistoryManager.clear();
     if (!this.scene) return;
+    if (this.scene._edgeRenderLineShader) {
+      this.scene._edgeRenderLineShader.dispose();
+      this.scene._edgeRenderLineShader = null;
+    }
+    this.selectedMeshId = '';
 
     // 清理UI纹理
     const existingUI = this.scene.textures.filter(t => t.name === "myUI");

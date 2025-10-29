@@ -74,7 +74,7 @@ export function setupCameraByBoundingBox(camera: BABYLON.ArcRotateCamera, bbox: 
     camera.beta = Math.PI / 3; // 设置初始仰角
 
     // 设置相机距离（radius），让模型完整显示
-    camera.radius = maxSize * 1.8;
+    camera.radius = maxSize * 1.5;
 
     // 根据距离动态调整相机平移惯性和灵敏度
     const minRadius = 10;
@@ -116,6 +116,47 @@ export function hexToRgb(hex: string): { r: number, g: number, b: number } {
     return { r, g, b }
 }
 
+/**
+ * 根据模型包围盒对角线长度计算合适的边框宽度
+ * @param diagonalLength 模型包围盒对角线长度
+ * @returns 计算出的边框宽度
+ */
+export function calculateEdgeWidthByBoundingBox(diagonalLength: number): number {
+    // 实测数据映射表 [对角线长度, 期望边框宽度]
+    const sizeMapping = [
+        [20, 5],
+        [66, 20],
+        [123, 30],
+        [265, 50],
+        [314, 65]
+    ];
+    
+    // 如果小于最小值，使用最小比例
+    if (diagonalLength <= sizeMapping[0][0]) {
+        return sizeMapping[0][1] * (diagonalLength / sizeMapping[0][0]);
+    }
+    
+    // 如果在最大值之外，使用最大比例
+    if (diagonalLength >= sizeMapping[sizeMapping.length - 1][0]) {
+        const last = sizeMapping[sizeMapping.length - 1];
+        return last[1] * (diagonalLength / last[0]);
+    }
+    
+    // 在已知数据点之间进行线性插值
+    for (let i = 0; i < sizeMapping.length - 1; i++) {
+        const [currentSize, currentWidth] = sizeMapping[i];
+        const [nextSize, nextWidth] = sizeMapping[i + 1];
+        
+        if (diagonalLength >= currentSize && diagonalLength <= nextSize) {
+            // 线性插值公式
+            const ratio = (diagonalLength - currentSize) / (nextSize - currentSize);
+            return currentWidth + ratio * (nextWidth - currentWidth);
+        }
+    }
+    
+    // 默认回退方案（基于对数缩放）
+    return 10 * Math.log1p(diagonalLength) / 3;
+}
 
 export function updateTempLineLabel(tempLine: BABYLON.AbstractMesh, anchor: BABYLON.Mesh) {
     if (!tempLine) return;

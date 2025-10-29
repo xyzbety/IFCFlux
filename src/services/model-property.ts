@@ -7,7 +7,6 @@ export interface MeshHighlightConfig {
   scene: BABYLON.Scene;
   selectedMeshId: string;
   globalId: string;
-  isHighlight: boolean;
   isFocus: boolean;
 }
 
@@ -503,7 +502,7 @@ export class IfcPropertyUtils {
     meshConfig: MeshHighlightConfig,
     treeData?: any[]
   ): Promise<boolean> {
-    const { scene, selectedMeshId, globalId, isHighlight, isFocus } = meshConfig;
+    const { scene, selectedMeshId, globalId, isFocus } = meshConfig;
 
     // 查找当前节点及其所有子节点的expressID
     const allExpressIds = treeData ?
@@ -533,7 +532,7 @@ export class IfcPropertyUtils {
     });
 
     // 高亮mesh
-    if (isHighlight && isVisibleMeshHighlight && exactMatches.length > 0) {
+    if ( isVisibleMeshHighlight && exactMatches.length > 0) {
       if (!this.effectManager) {
         this.effectManager = EffectManager.getInstance(scene);
       }

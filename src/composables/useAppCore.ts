@@ -1,4 +1,4 @@
-import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
+import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted, h } from 'vue';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -28,10 +28,7 @@ function createAppCore() {
     const isTauriEnv = isTauri();
     let isMaximized = ref(true);
     let isSidebarVisible = ref(false);
-    let selectedMeshId: any;
-    let isHightlight = true;
     let isFocus = false;
-    let isGrid = false;
     let measure: Measure | null;
     let CoordinateTemp = {
         point: null as { x: number, y: number, z: number } | null
@@ -153,17 +150,14 @@ function createAppCore() {
     const handleNavigate = (action: any) => sceneManager.handleNavigate(action);
     const handleView = (view: any) => sceneManager.handleView(view);
     const handleSlice = (action: any) => {
-        isHightlight = action === 'reset';
-        console.log('handleSlice', action, isHightlight);
+        console.log('handleSlice', action);
         sceneManager.handleSlice(action);
     };
     const handleVisibility = (mode: any) => {
-        isHightlight = true;
-        sceneManager.handleVisibility(mode, selectedMeshIds, selectedMeshId, originalMaterialProperties, isClickVisible);
+        sceneManager.handleVisibility(mode, selectedMeshIds, originalMaterialProperties, isClickVisible);
     };
     const handleMeasure = (type: any) => {
         clear();
-        isHightlight = type === 'clear';
         measure = sceneManager.handleMeasure(type, measure, CoordinateTemp, updateTempLineLabel);
     };
     const handleBuildTree = () => toggleStructureTree();
@@ -171,8 +165,8 @@ function createAppCore() {
     const toggleStructureTreeDialog = () => { if (canToggleComponents.value) toggleStructureTree(); };
     const togglePropertyTableDialog = () => { if (canToggleComponents.value) togglePropertyTable(); };
     const handleExplosion = (type: any) => sceneManager.handleExplosion(type);
-    const handleLightSettings = (data: any) => { isHightlight = true; sceneManager.setLightSettings(data); };
-    const handleChangeScene = (data: any) => { isHightlight = true; sceneManager.setSceneSettings(data); };
+    const handleLightSettings = (data: any) => { sceneManager.setLightSettings(data); };
+    const handleChangeScene = (data: any) => { sceneManager.setSceneSettings(data); };
 
     const handleExportSetting = async (type: 'glb' | 'db' | 'json') => {
         console.log('handleExportSetting', type);
@@ -192,9 +186,6 @@ function createAppCore() {
         originalMaterialProperties.clear();
         isClickVisible.value = true;
         lastClickedMeshId = null;
-        selectedMeshId = null;
-        isHightlight = true;
-        isGrid = false;
         measure = null;
         CoordinateTemp.point = null;
         sceneManager.clear();
@@ -224,11 +215,7 @@ function createAppCore() {
                     sceneManager.setIfcExplosion(new IfcExplosion(scene));
                     switchToMode(LM.VIEW);
                     sceneManager.setupCameraAndLight();
-                    const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
-                    if (handleGridCheckbox.checked) {
-                        isGrid = true;
-                        sceneManager.setupGround(isGrid);
-                    }
+                    sceneManager.setDefaultScene()
                     await sceneManager.setupShadows();
                     await sceneManager.saveOriginalMaterialProperties(originalMaterialProperties);
                 }
@@ -259,6 +246,10 @@ function createAppCore() {
         selectedStore.updateSelectedRowKey(null);
         const handleColorPicker = document.getElementById("colorPicker") as any;
         handleColorPicker.opened = false;
+        const highlightColorPicker = document.getElementById("highlightColorPicker") as any;
+        highlightColorPicker.opened = false;
+        const edgeColorPicker = document.getElementById("edgeColorPicker") as any;
+        edgeColorPicker.opened = false;
         if (!sceneManager.scene || !modelStore.modelData) return;
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
@@ -284,11 +275,9 @@ function createAppCore() {
         } else {
             return;
         }
-
+        if (expressID === 'slicePlane') return
         if (!isClickVisible.value) expressID = lastClickedMeshId;
-
         if (!expressID) {
-            selectedMeshId = null;
             lastClickedMeshId = null;
             selectedMeshIds.clear();
             pageState.property = [];
@@ -297,12 +286,11 @@ function createAppCore() {
             return;
         }
 
-        selectedMeshId = expressID;
         let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds, pageState.psetRelations, modelStore.psetLines);
         const { items, groupRowMap } = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
         pageState.property = items;
         pageState.groupMap = groupRowMap;
-        const meshConfig = { scene, selectedMeshId, globalId: globalId || expressID, isHighlight: isHightlight, isFocus };
+        const meshConfig = { scene, selectedMeshId: sceneManager.selectedMeshId, globalId: globalId || expressID, isFocus };
         await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, pageState.treeData);
     };
 
@@ -316,9 +304,9 @@ function createAppCore() {
         if (data.type === 'dragSpeed' && sceneManager.camera) {
             sceneManager.camera.panningSensibility = 20 - data.value;
         }
-        if( data.type === 'focusMode') {
+        if (data.type === 'focusMode') {
             isFocus = data.value
-        }   
+        }
     }
     const handleHisBefore = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
     const handleHisAfter = (event: any) => sceneManager.getCameraHistoryManager().recordState(event);
@@ -394,7 +382,7 @@ function createAppCore() {
             emit: (eventName: string, ...args: any[]) => {
                 const eventMap: { [key: string]: Function } = {
                     'navigate-event': handleNavigate, 'change-view': handleView, 'visible-control': handleVisibility,
-                    'measure-event': handleMeasure, 'slice-event': handleSlice, 'build-tree': handleBuildTree,'explosion-event': handleExplosion,
+                    'measure-event': handleMeasure, 'slice-event': handleSlice, 'build-tree': handleBuildTree, 'explosion-event': handleExplosion,
                     'properties-table': handlePropertiesTable, 'file-uploaded': handleFileUploaded,
                     'light-settings': handleLightSettings, 'inspect-click': handleInspectClick, 'scene-settings': handleChangeScene,
                     'ribbon-tab-change': handleRibbonTabChange, 'toggle-file-menu': toggleFileMenu,

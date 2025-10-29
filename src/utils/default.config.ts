@@ -492,31 +492,105 @@ export default {
     {
       label: '场景设置',
       icon: 'scene_setting material-icons',
-      type: 'group',
-      direction: 'vertical',
-      cssClass: 'sceneSetting',
       ribbonItems: [
         {
           type: 'group',
-          direction: 'vertical',
-          ribbonItems: [
-            {
-              label: '',
-              itemTemplate: '<smart-check-box id="gridCheckbox" right-to-left>地面网格</smart-check-box>'
-            },
-            {
-              label: '',
-              tooltip: '背景颜色',
-              itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="colorPicker" ></smart-color-picker>',
-              settings: {
-                valueDisplayMode: 'colorBox',
-                dropDownAppendTo: 'body',
-              },
-            },
+          direction: 'horizontal',
+          ribbonItems: [{
+            type: 'group',
+            direction: 'vertical',
+            ribbonItems: [
+              {
+                type: 'group',
+                direction: 'vertical',
+                ribbonItems: [
+                  {
+                    label: '',
+                    itemTemplate: '<smart-check-box id="gridCheckbox" right-to-left>地面网格</smart-check-box>'
+                  },
+                  {
+                    label: '',
+                    tooltip: '背景颜色',
+                    itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="colorPicker" ></smart-color-picker>',
+                    settings: {
+                      valueDisplayMode: 'colorBox',
+                      dropDownAppendTo: 'body',
+                    },
+                  },
 
-          ]
-        }
-      ]
+                ]
+              }
+            ]
+          }]
+        },
+        {
+          type: 'separator'
+        },
+        {
+          type: 'group',
+          direction: 'horizontal',
+          ribbonItems: [{
+            type: 'group',
+            direction: 'vertical',
+            ribbonItems: [
+              {
+                type: 'group',
+                direction: 'vertical',
+                ribbonItems: [
+                  {
+                    label: '',
+                    itemTemplate: '<smart-check-box id="highlightCheckbox" right-to-left checked>选中高亮</smart-check-box>'
+                  },
+                  {
+                    label: '',
+                    tooltip: '高亮颜色',
+                    itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="highlightColorPicker" ></smart-color-picker>',
+                    settings: {
+                      value: '#99ffffff',
+                      valueDisplayMode: 'colorBox',
+                      dropDownAppendTo: 'body',
+                    },
+                  },
+
+                ]
+              }
+            ]
+          }]
+        },
+        {
+          type: 'separator'
+        },
+        {
+          type: 'group',
+          direction: 'horizontal',
+          ribbonItems: [{
+            type: 'group',
+            direction: 'vertical',
+            ribbonItems: [
+              {
+                type: 'group',
+                direction: 'vertical',
+                ribbonItems: [
+                  {
+                    label: '',
+                    itemTemplate: '<smart-check-box id="edgeCheckbox" right-to-left >模型轮廓</smart-check-box>'
+                  },
+                  {
+                    label: '',
+                    tooltip: '轮廓颜色',
+                    itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="edgeColorPicker" ></smart-color-picker>',
+                    settings: {
+                      value: '#80ffffff',
+                      valueDisplayMode: 'colorBox',
+                      dropDownAppendTo: 'body',
+                    },
+                  },
+
+                ]
+              }
+            ]
+          }]
+        },]
     },
 
     ]
