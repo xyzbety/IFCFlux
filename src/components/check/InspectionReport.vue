@@ -5,10 +5,7 @@
         <div class="header-bar">
             <span class="header-title">{{ props.inspectType }}检查结果</span>
             <span class="header-close" @click="handleClose">
-                <svg width="18" height="18" viewBox="0 0 1024 1024" fill="#888" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                        d="M512 460.8l256-256a36.57 36.57 0 1 1 51.73 51.73l-256 256 256 256a36.57 36.57 0 1 1-51.73 51.73l-256-256-256 256a36.57 36.57 0 1 1-51.73-51.73l256-256-256-256A36.57 36.57 0 1 1 256 204.8l256 256z" />
-                </svg>
+                <img src="/icons/close.svg" />
             </span>
         </div>
         <!-- 搜索区域 -->
@@ -18,11 +15,7 @@
                 <template #suffix>
                     <t-button @click="handleSearch" class="search-btn" size="small" theme="default"
                         style="background: transparent; border: none; box-shadow: none; margin-right: -5px; padding: 0 4px;">
-                        <svg width="16" height="16" viewBox="0 0 1024 1024" fill="#888"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M768 704l192 192-64 64-192-192v-32l-16-16A352 352 0 1 1 704 704l16 16h32zM448 736a288 288 0 1 0 0-576 288 288 0 0 0 0 576z" />
-                        </svg>
+                        <img src="/icons/search.svg" />
                     </t-button>
                 </template>
             </t-input>
@@ -45,47 +38,23 @@
             </div>
         </div>
         <!-- 弹框 -->
-        <t-dialog v-model:visible="dialogVisible" header="属性赋值详情" width="400px" :footer="null" ref="dialogRef">
-            <div class="dialog-content">
-                <t-enhanced-table :data="dialogTableData" :columns="dialogTableColumns" rowKey="key" bordered
-                    size="small" :tree="{ childrenKey: 'children', indent: 0 }"
-                    :tree-expand-and-fold-icon="treeExpandAndFoldIcon" :showHeader="false"
-                    :expandedTreeNodes="expandedKeys" @expanded-tree-nodes-change="onExpandedTreeNodesChange" />
-            </div>
-        </t-dialog>
+        <InspectionDialog :dialogVisible="dialogVisible" :dialog-table-data="dialogTableData" />
     </div>
 </template>
 
 <script lang="ts" setup>
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { useModelStore } from '../../store';
-import { ChevronRightIcon, ChevronDownIcon } from 'tdesign-icons-vue-next'
-import { Tooltip as TTooltip } from 'tdesign-vue-next';
+import { useModelStore, useSelectedStore } from '../../store';
 import { SceneManager } from '../../services/scene-manager';
-import { IfcPropertyUtils } from '../../services/model-property.ts';
+import { IfcPropertyUtils, convertToTreeData } from '../../services/model-property.ts';
 import { eventManager } from '../../services/scene-event.ts';
-import { examineResultConfig } from '../../utils/config';
-import { useSelectedStore } from '../../store';
 import { IfcCategoryMap } from '../../utils/ifc/ifcCategoryMap.ts'
-
-const iconPathMap = {
-    'array': '/icons/枚举.svg',
-    'boolean': '/icons/布尔.svg',
-    'float': '/icons/浮点数.svg',
-    'int': '/icons/整数.svg',
-    'string': '/icons/字符串.svg',
-    'date': '/icons/日期.svg',
-    'datetime': '/icons/时间.svg',
-};
+import InspectionDialog from './InspectionDialog.vue';
 
 const props = defineProps<{ visible: boolean; inspectType: string }>();
 
 const emit = defineEmits(['update:visible']);
-const treeExpandAndFoldIcon = (h: any, { type }: { type: string }) => {
-    return type === 'expand'
-        ? h(ChevronRightIcon)
-        : h(ChevronDownIcon);
-};
+
 let loading = ref(false);
 const loadingText = computed(() => `正在进行${props.inspectType}检查，请稍候...`);
 const searchText = ref('');
@@ -98,78 +67,18 @@ const descriptions = ref<string[]>([]);
 const selectedKey = ref<string | null>(null);
 const tableData = ref<any[]>([]);
 const currentDataObj = ref<any>(null);
-const expandedKeys = ref<string[]>([]);
 // 弹框控制和数据
 const dialogVisible = ref(false);
 const dialogTableData = ref<any[]>([]);
-const dialogRef = ref<any>(null);
-const handleGlobalClick = (event: any) => {
-    console.log("全局点击", event, props.visible, event.srcElement.tagName);
-    if (!event.target) return;
-    if (!event._vts && event.srcElement.tagName !== 'CANVAS' && props.visible) {
-        selectedStore.updateSelectedRowKey(null);
-        if (sceneManager.scene) {
-            ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
-        }
-    }
-    dialogVisible.value = false;
-};
-const handleRowClick = async (event: any) => {
-    console.log('表格行点击', event, event.e.target)
-    selectedStore.updateSelectedRowKey(event.row.guid);
-    const modelData = modelStore.modelData
-    console.log("modelData", modelData);
-    let expressID = ifcPropertyUtils.findExpressIdByGuid(modelData.tree, event.row.guid);
-    console.log("对应的expressID", expressID);
-    if (sceneManager.scene) {
-        ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
-        if (expressID) {
-            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
-            const meshConfig = {
-                scene: sceneManager.scene,
-                selectedMeshId: expressID,
-                globalId: expressID,
-                isHighlight: true,
-                isFocus: false
-            };
-            // 调用统一的处理方法
-            await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
-            console.log("点击高亮了构件", event.row.guid);
-        } else {
-            console.log("未找到对应构件");
-            return;
-        }
-    }
-}
-const handleFocus = async (event: any) => {
-    console.log('焦点图标点击', event);
-    selectedStore.updateSelectedRowKey(event.guid);
-    const modelData = modelStore.modelData
-    let expressID = ifcPropertyUtils.findExpressIdByGuid(modelData.tree, event.guid);
-    if (sceneManager.scene) {
-        ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
-        if (expressID) {
-            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
-            const meshConfig = {
-                scene: sceneManager.scene,
-                selectedMeshId: expressID,
-                globalId: expressID,
-                isHighlight: true,
-                isFocus: true
-            };
-            // 调用统一的处理方法
-            await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
-        } else {
-            console.log("未找到对应构件");
-            return;
-        }
-    }
 
-}
+const categoryMapDict = Object.fromEntries(
+    Object.entries(IfcCategoryMap).map(([_, value]) => [value.en, value.cn])
+);
+
 const tableColumns = [
     { colKey: 'guid', title: 'GUID', width: 250, ellipsis: true },
     { colKey: 'name', title: 'Name', width: 170, ellipsis: true },
-    { colKey: 'tag', title: 'Tag', width: 80,ellipsis: true },
+    { colKey: 'tag', title: 'Tag', width: 80, ellipsis: true },
     {
         colKey: 'op',
         title: '',
@@ -180,189 +89,38 @@ const tableColumns = [
             }, [
                 // 第一个图标 - 查看
                 h('a', {
-                    style: 'color: #0052d9; cursor: pointer; display: flex; align-items: center; justify-content: center;',
+                    style: 'cursor: pointer; display: flex; align-items: center; justify-content: center;',
                     onClick: (event: Event) => {
                         event.stopPropagation();
                         event.preventDefault();
                         handleView(row);
                     }
                 }, [
-                    h('svg', {
+                    h('img', {
+                        src: '/icons/view.svg',
                         width: '16',
-                        height: '16',
-                        viewBox: '0 0 1024 1024',
-                        xmlns: 'http://www.w3.org/2000/svg'
-                    }, [
-                        h('path', {
-                            d: 'M160 25.6h704A102.4 102.4 0 0 1 966.4 128v768a102.4 102.4 0 0 1-102.4 102.4H160A102.4 102.4 0 0 1 57.6 896V128A102.4 102.4 0 0 1 160 25.6z m0 76.8a25.6 25.6 0 0 0-25.6 25.6v768c0 14.08 11.52 25.6 25.6 25.6h704a25.6 25.6 0 0 0 25.6-25.6V128a25.6 25.6 0 0 0-25.6-25.6H160z',
-                            fill: '#8a8a8a'
-                        }),
-                        h('path', {
-                            d: 'M608 800a160 160 0 1 0 0-320 160 160 0 0 0 0 320z m0-64a96 96 0 1 1 0-192 96 96 0 0 1 0 192z',
-                            fill: '#8a8a8a'
-                        }),
-                        h('path', {
-                            d: 'M681.344 758.656l64 64a32 32 0 0 0 45.312-45.312l-64-64a32 32 0 0 0-45.312 45.312zM256 287.488H608a32 32 0 1 0 0-64H256a32 32 0 0 0 0 64zM256 479.488h160.128a32 32 0 0 0 0-64H256a32 32 0 0 0 0 64zM256 671.488h80a32 32 0 1 0 0-64H256a32 32 0 1 0 0 64z',
-                            fill: '#8a8a8a'
-                        })
-                    ])
+                        height: '16'
+                    })
                 ]),
                 // 第二个图标 - 焦点图标
                 h('a', {
-                    style: 'color: #52c41a; cursor: pointer; display: flex; align-items: center; justify-content: center;',
+                    style: 'cursor: pointer; display: flex; align-items: center; justify-content: center;',
                     onClick: (event: Event) => {
                         event.stopPropagation();
                         event.preventDefault();
                         handleFocus(row);
                     }
                 }, [
-                    h('svg', {
+                    h('img', {
+                        src: '/icons/focus.svg',
                         width: '16',
-                        height: '16',
-                        viewBox: '0 0 24 24',
-                        fill: 'none',
-                        xmlns: 'http://www.w3.org/2000/svg'
-                    }, [
-                        h('g', { id: 'bgqfocus' }, [
-                            h('path', {
-                                id: 'fill1',
-                                d: 'M19 12C19 15.866 15.866 19 12 19C8.13401 19 5 15.866 5 12C5 8.13401 8.13401 5 12 5C15.866 5 19 8.13401 19 12Z',
-                                fill: 'transparent'
-                            }),
-                            h('path', {
-                                id: 'stroke1',
-                                d: 'M19 12C19 15.866 15.866 19 12 19M19 12C19 8.13401 15.866 5 12 5M19 12H22M12 19C8.13401 19 5 15.866 5 12M12 19V22M5 12C5 8.13401 8.13401 5 12 5M5 12H2M12 5V2',
-                                'stroke-linecap': 'square',
-                                'stroke-width': '2',
-                                stroke: '#8a8a8a'
-                            }),
-                            h('path', {
-                                id: 'stroke2',
-                                d: 'M13 12C13 12.5523 12.5523 13 12 13C11.4477 13 11 12.5523 11 12C11 11.4477 11.4477 11 12 11C12.5523 11 13 11.4477 13 12Z',
-                                'stroke-linecap': 'square',
-                                'stroke-width': '2',
-                                stroke: '#8a8a8a'
-                            })
-                        ])
-                    ])
+                        height: '16'
+                    })
                 ])
             ])
     }
 ];
 
-const dialogTableColumns = [
-    {
-        colKey: 'name',
-        title: '名称',
-        ellipsis: true,
-        cell: (h: any, params: any) => {
-            const children = [];
-            // 判断是否有图标
-            const hasIcon = params.row._parentName && params.row._parentName !== 'Element Specific';
-
-            if (hasIcon) {
-                const iconPath = iconPathMap[params.row.dataType as keyof typeof iconPathMap] || '/icons/字符串.svg';
-
-                children.push(
-                    h('span', {
-                        style: `
-                            display: inline-flex;
-                            align-items: center;
-                            margin-right: 8px;
-                            flex-shrink: 0;
-                        `
-                    }, [
-                        h('img', {
-                            src: iconPath,
-                            alt: params.row.dataType,
-                            style: {
-                                width: '16px',
-                                height: '16px'
-                            }
-                        })
-                    ])
-                );
-            }
-
-            // 根据是否有图标设置不同的最大宽度
-            const maxWidth = hasIcon ? '110px' : '135px';
-
-            // 用 TDesign 的 Tooltip 包裹文字
-            children.push(
-                h(TTooltip, { content: params.row.name, placement: 'top', overlayClassName: 'ellipsis-tooltip', showArrow: false }, {
-                    default: () => h('span', {
-                        style: `
-                        display: inline-block;
-                        max-width: ${maxWidth};
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                        vertical-align: middle;
-                        flex: 1;`
-                    }, params.row.name)
-                })
-            );
-
-            // 状态方框（属性集子项才有）
-            if (hasIcon) {
-                const colorMap = {
-                    0: '#52c41a',    // 绿色
-                    1: '#d9001b',    // 深红色
-                    2: '#ff7875',    // 浅红色
-                    3: '#faad14',    // 深黄色
-                    4: '#ffe58f'     // 浅黄色
-                };
-                const color = colorMap[params.row.state as keyof typeof colorMap] || '#d9d9d9';
-                const configItem = examineResultConfig[params.row.state as keyof typeof colorMap];
-
-                children.push(
-                    h(TTooltip, {
-                        content: configItem ? configItem : '未知状态',
-                        placement: 'top',
-                        overlayClassName: 'state-tooltip',
-                        showArrow: false
-                    }, {
-                        default: () => h('span', {
-                            style: `
-                                display: inline-block;
-                                width: 10px;
-                                height: 10px;
-                                border-radius: 3px;
-                                background: ${color};
-                                position: absolute;
-                                right: 10px;
-                                flex-shrink: 0;
-                                cursor: pointer;`
-                        })
-                    })
-                );
-            }
-            // 展开/折叠图标（树节点才有）
-            if (params.treeNodeCol && params.treeNodeRender) {
-                children.push(
-                    h('span', { style: 'margin-left: 8px; flex-shrink: 0;' }, [params.treeNodeRender()])
-                );
-            }
-
-            return h('div', {
-                style: `
-                display: flex; 
-                align-items: center; 
-                position: relative;
-                width: 100%;
-            `
-            }, children);
-        }
-    },
-    {
-        colKey: 'value',
-        title: '值',
-        ellipsis: true,
-    }
-];
-const categoryMapDict = Object.fromEntries(
-    Object.entries(IfcCategoryMap).map(([_, value]) => [value.en, value.cn])
-);
 watch(
     () => modelStore.modelInspectData,
     (val) => {
@@ -382,21 +140,16 @@ watch(
                     handleListClick(descriptions.value[0]);
                 }
             } else {
-                searchText.value = '';
                 descriptions.value = [];
                 tableData.value = [];
                 selectedKey.value = null;
             }
+            searchText.value = '';
             console.log("数据已更新");
         }
     },
     { immediate: true, deep: true }
 );
-
-
-watch(dialogTableData, (val) => {
-    expandedKeys.value = getAllExpandedKeys(val);
-}, { immediate: true });
 
 watch(() => props.inspectType, (val) => {
     console.log("检查规则已加载", val);
@@ -407,45 +160,62 @@ watch(() => props.inspectType, (val) => {
     loading.value = true;
 }, { immediate: true });
 
-
-function getAllExpandedKeys(data: any[], childrenKey = 'children') {
-    const keys: string[] = [];
-    function traverse(list: any[]) {
-        list.forEach(item => {
-            if (item[childrenKey] && item[childrenKey].length) {
-                keys.push(item.key);
-                traverse(item[childrenKey]);
-            }
-        });
+const handleSearch = () => {
+    if (!searchText.value) return;
+    const keyword = searchText.value.trim().toLowerCase();
+    const dataObj = modelStore.modelInspectData?.data;
+    if (!dataObj || typeof dataObj !== 'object') {
+        console.log("handleSearch", "dataObj is not an object");
+        return;
     }
-    traverse(data);
-    return keys;
-}
+    let foundKey: string | null = null;
+    let event = { row: { guid: '' } }; // 模拟一个行对象
 
-function handleListClick(key: string) {
+    for (const [key, value] of Object.entries(dataObj)) {
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                if (
+                    (item.Guid && String(item.Guid).toLowerCase().includes(keyword)) ||
+                    (item.Tag && String(item.Tag).toLowerCase().includes(keyword))
+                ) {
+                    foundKey = key;
+                    selectedStore.updateSelectedRowKey(item.Guid);
+                    event.row = { guid: item.Guid };
+                    handleRowClick(event);
+                    break;
+                }
+            }
+        } else if (typeof value === 'object' && value !== null) {
+            const item = value as { Guid?: string; Tag?: string };
+            if (
+                (item.Guid && String(item.Guid).toLowerCase().includes(keyword)) ||
+                (item.Tag && String(item.Tag).toLowerCase().includes(keyword))
+            ) {
+                foundKey = key;
+                selectedStore.updateSelectedRowKey(item.Guid ?? null);
+                event.row = { guid: item.Guid ?? '' };
+                handleRowClick(event);
+                break;
+            }
+        }
+        if (foundKey) break;
+    }
+
+    if (foundKey) {
+        selectedKey.value = categoryMapDict[foundKey];
+        handleListClick(foundKey);
+    } else {
+        selectedKey.value = null;
+        tableData.value = [];
+    }
+}
+const handleListClick = (key: string) => {
     const englishKey = Object.entries(IfcCategoryMap).find(
         ([_, value]) => value.cn === key
     )?.[1]?.en || key;
-    selectedKey.value = key;
+    selectedKey.value = categoryMapDict[englishKey];
     const dataObj = modelStore.modelInspectData?.data?.[englishKey];
     currentDataObj.value = dataObj; // 保存当前dataObj
-    // 判断属性集所有子项的第一个元素是否全为0
-    function isAllGreen(obj: any) {
-        // 找出所有属性集（key以Pset_开头且为对象）
-        const psets = Object.entries(obj)
-            .filter(([k, v]) => k.startsWith('Pset_') && typeof v === 'object' && v !== null);
-        for (const [__, psetObj] of psets) {
-
-            const psetObjTyped = psetObj as Record<string, unknown>;
-            for (const val of Object.values(psetObjTyped)) {
-                if (!Array.isArray(val) || val[0] !== 0) {
-                    return false;
-                }
-
-            }
-        }
-        return true;
-    }
 
     if (Array.isArray(dataObj)) {
         tableData.value = dataObj.map(item => ({
@@ -465,9 +235,48 @@ function handleListClick(key: string) {
         tableData.value = [];
     }
 }
+const handleRowClick = async (event: any) => {
+    selectedStore.updateSelectedRowKey(event.row.guid);
+    const modelData = modelStore.modelData
+    console.log("modelData", modelData);
+    let expressID = ifcPropertyUtils.findExpressIdByGuid(modelData.tree, event.row.guid);
+    console.log("对应的expressID", expressID);
+    if (sceneManager.scene) {
+        ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
+        if (expressID) {
+            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
+            const meshConfig = {
+                scene: sceneManager.scene,
+                selectedMeshId: expressID,
+                globalId: expressID,
+                isHighlight: true,
+                isFocus: false
+            };
+            // 调用统一的处理方法
+            await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
+            let node = ifcPropertyUtils.findNodeByExpressId(modelData.tree, expressID);
+            eventManager.emit('scroll-to-node', node);
+            console.log("点击高亮了构件", event.row.guid);
+        } else {
+            console.log("未找到对应构件");
+            return;
+        }
+    }
+}
+const handleGlobalClick = (event: any) => {
+    console.log("全局点击", event, props.visible, event.srcElement.tagName);
+    if (!event.target) return;
+    if (!event._vts && event.srcElement.tagName !== 'CANVAS' && props.visible) {
+        selectedStore.updateSelectedRowKey(null);
+        if (sceneManager.scene) {
+            ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
+        }
+    }
+    dialogVisible.value = false;
+};
 
 // 查看操作
-function handleView(row: any) {
+const handleView = (row: any) => {
     // 假设 row 是你要展示的对象，将其属性转为 [{key, value}] 数组
     // 通过 guid 查找完整数据
     let detail = null;
@@ -499,103 +308,36 @@ function handleView(row: any) {
         dialogVisible.value = true;
     }
 }
-function convertToTreeData(obj: any) {
-    let idCounter = 1;
-    const result = [];
-
-    // 基础属性
-    const baseChildren = [];
-    for (const [key, value] of Object.entries(obj)) {
-        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-            baseChildren.push({
-                id: idCounter++,
-                key: `base-${idCounter}`,
-                name: key === 'Entity' ? 'IfcEntity' : (key === 'Guid' ? 'GlobalId' : key),
-                value: value,
-                _parentName: 'Element Specific'
-            });
+const handleFocus = async (event: any) => {
+    console.log('焦点图标点击', event);
+    selectedStore.updateSelectedRowKey(event.guid);
+    const modelData = modelStore.modelData
+    let expressID = ifcPropertyUtils.findExpressIdByGuid(modelData.tree, event.guid);
+    if (sceneManager.scene) {
+        ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
+        if (expressID) {
+            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
+            const meshConfig = {
+                scene: sceneManager.scene,
+                selectedMeshId: expressID,
+                globalId: expressID,
+                isHighlight: true,
+                isFocus: true
+            };
+            // 调用统一的处理方法
+            await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, data);
+        } else {
+            console.log("未找到对应构件");
+            return;
         }
     }
-    if (baseChildren.length) {
-        result.push({
-            id: idCounter++,
-            key: `element-specific-${idCounter}`,
-            name: 'Element Specific',
-            value: '',
-            children: baseChildren
-        });
-    }
 
-    // 属性集
-    for (const [key, value] of Object.entries(obj)) {
-        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            const children = Object.entries(value).map(([subKey, subVal]) => ({
-                id: idCounter++,
-                key: `child-${idCounter}`,
-                name: subKey,
-                state: Array.isArray(subVal) ? subVal[0] : subVal,
-                value: Array.isArray(subVal) ? (typeof subVal[1] === 'boolean' ? (subVal[1] ? '是' : '否') : subVal[1]) : subVal,
-                dataType: Array.isArray(subVal) ? subVal[2] : subVal,
-                _parentName: key
-            }));
-            result.push({
-                id: idCounter++,
-                key: `parent-${idCounter}`,
-                name: key,
-                value: '',
-                children
-            });
-        }
-    }
-    return result;
 }
-function handleSearch() {
-    if (!searchText.value) return;
-    const keyword = searchText.value.trim().toLowerCase();
-    const dataObj = modelStore.modelInspectData?.data;
-    if (!dataObj || typeof dataObj !== 'object') {
-        console.log("handleSearch", "dataObj is not an object");
-        return;
-    }
-    let foundKey: string | null = null;
 
-    for (const [key, value] of Object.entries(dataObj)) {
-        if (Array.isArray(value)) {
-            for (const item of value) {
-                if (
-                    (item.Guid && String(item.Guid).toLowerCase().includes(keyword)) ||
-                    (item.Tag && String(item.Tag).toLowerCase().includes(keyword))
-                ) {
-                    foundKey = key;
-                    break;
-                }
-            }
-        } else if (typeof value === 'object' && value !== null) {
-            const item = value as { Guid?: string; Tag?: string };
-            if (
-                (item.Guid && String(item.Guid).toLowerCase().includes(keyword)) ||
-                (item.Tag && String(item.Tag).toLowerCase().includes(keyword))
-            ) {
-                foundKey = key;
-            }
-        }
-        if (foundKey) break;
-    }
-
-    if (foundKey) {
-        selectedKey.value = foundKey;
-        handleListClick(foundKey);
-    } else {
-        selectedKey.value = null;
-        tableData.value = [];
-    }
-}
 function handleClose() {
     emit('update:visible', false); // 通知父组件隐藏Inspect
 }
-function onExpandedTreeNodesChange(keys: string[]) {
-    expandedKeys.value = keys;
-}
+
 function getRowClassName({ row }: { row: { allGreen: boolean, guid: string } }) {
     if (!row) return '';
     if (!tableData.value || tableData.value.length === 0) return '';
@@ -607,6 +349,23 @@ function getRowClassName({ row }: { row: { allGreen: boolean, guid: string } }) 
         baseClass = baseClass + ' selected-item';
     }
     return baseClass;
+}
+// 判断属性集所有子项的第一个元素是否全为0
+function isAllGreen(obj: any) {
+    // 找出所有属性集（key以Pset_开头且为对象）
+    const psets = Object.entries(obj)
+        .filter(([k, v]) => k.startsWith('Pset_') && typeof v === 'object' && v !== null);
+    for (const [__, psetObj] of psets) {
+
+        const psetObjTyped = psetObj as Record<string, unknown>;
+        for (const val of Object.values(psetObjTyped)) {
+            if (!Array.isArray(val) || val[0] !== 0) {
+                return false;
+            }
+
+        }
+    }
+    return true;
 }
 // 组件挂载时添加全局点击监听
 onMounted(() => {
@@ -816,51 +575,5 @@ onUnmounted(() => {
 
 .check-root .table-area .t-table__body tr.green-border {
     border-left: 2px solid #52c41a !important;
-}
-
-.t-dialog {
-    border-radius: 0px !important;
-    position: absolute !important;
-    top: 270px !important;
-    left: 350px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)
-}
-
-.t-dialog__ctx .t-dialog__mask {
-    background-color: rgba(0, 0, 0, 0.015) !important;
-}
-
-.t-dialog--default {
-    padding: 15px !important;
-}
-
-.t-table--bordered .t-table__content {
-    border-radius: 0px !important;
-}
-
-.t-dialog__header {
-    font-weight: 400 !important;
-    font-size: 15px !important;
-}
-
-.t-dialog__close {
-    padding-right: 0px !important;
-}
-
-.t-table th,
-.t-table td {
-    font-size: 12px;
-}
-
-.dialog-content {
-    max-height: 55vh;
-    overflow: auto;
-}
-
-@media (min-height: 900px) {
-    .dialog-content {
-        max-height: 68vh;
-        overflow: auto;
-    }
 }
 </style>
