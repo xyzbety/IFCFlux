@@ -1,6 +1,5 @@
 import XeUtils from 'xe-utils'
 import { IfcCategoryMap } from './ifcCategoryMap'
-import { ifcGuidToUuid } from './ifcGuidConverter'
 
 
 // const XeUtils = require('xe-utils')
@@ -85,7 +84,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
 
   Object.keys(relations).forEach((id: string) => {
     const property = properties[id]
-    const guid = ifcGuidToUuid(property.GlobalId.value)
+    const guid = property.GlobalId.value
     //  ifc project  顶级节点
     if (property.type === 103090709) {
       const item = {
@@ -115,7 +114,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
       if (!entities.includes(IfcCategoryMap[property.type].en) && property.type === 'IfcSite') {
         return
       }
-      const guid = ifcGuidToUuid(property.GlobalId.value)
+      const guid = property.GlobalId.value
       const item = {
         name: property.Name?.value,
         typeZH: '',

@@ -3,7 +3,7 @@ import { IfcElements } from "../ifc/ifcElementsMap";
 import { GeometryTypes } from '../ifc/ifcGeometryTypes';
 import * as WEBIFC from "web-ifc";
 import { getSpatialTree } from '../ifc/ifcStructureCreator';
-
+import { ifcGuidToUuid } from '../ifc/ifcGuidConverter';
 
 export interface IfcItemsCategories {
   [itemID: number]: number;
@@ -257,6 +257,9 @@ export class IfcParser {
           console.log(`Properties of the element ${id} could not be processed`);
         }
         if (props) {
+          if(props.GlobalId){
+            props.GlobalId.value = ifcGuidToUuid(props.GlobalId.value);
+          }
           if (props.type === 4186316022 && props.RelatedObjects) {
             psetRelations.push(props.RelatedObjects.map((item) => {
               if (item && item.value) return item.value
