@@ -777,7 +777,7 @@ export class SceneManager {
     }
     if (data.type === 'edgeColor') {
       this.effectManager!.edgeColor = BABYLON.Color4.FromHexString(rgbToHex(data.value));
-      this.effectManager!.edgeRender();
+      this.effectManager!.edgeRender(this.selectedMeshId);
     }
   }
 

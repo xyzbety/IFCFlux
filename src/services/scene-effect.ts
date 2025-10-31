@@ -26,7 +26,7 @@ export class EffectManager {
     // 创建高亮层（只创建一次）
     if (!this.highlightLayer) {
       this.highlightLayer = new BABYLON.HighlightLayer("highlightLayer", this.scene, {
-        mainTextureRatio: 3,
+        mainTextureRatio: 2,
         // mainTextureFixedSize: 4096,  // 增加纹理分辨率
         isStroke: true,
         // blurHorizontalSize: 1.2,
@@ -59,12 +59,12 @@ export class EffectManager {
         mesh.isVisible = true;
         mesh.renderingGroupId = 1;
         //  高亮实现边框渲染
-        // this.highlightLayer!.addMesh(mesh as BABYLON.Mesh, this.highlightColor);
+        this.highlightLayer!.addMesh(mesh as BABYLON.Mesh, new BABYLON.Color3(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b));
         // 直接使用边框渲染
-        mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
-        mesh.edgesWidth = this.edgeWidth;
-        mesh.edgesColor = this.highlightColor;
-        mesh.edgesRenderer.lineShader.options.useClipPlane = true; // 允许边缘渲染使用裁剪平面
+        // mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
+        // mesh.edgesWidth = this.edgeWidth;
+        // mesh.edgesColor = this.highlightColor;
+        // mesh.edgesRenderer.lineShader.options.useClipPlane = true; // 允许边缘渲染使用裁剪平面
       }
 
 
@@ -85,31 +85,38 @@ export class EffectManager {
         mesh.isVisible = mesh.metadata.originalVisibility !== false;
         mesh.renderingGroupId = 0;
         mesh.renderOverlay = false;
-        mesh.disableEdgesRendering();
+        // mesh.disableEdgesRendering();
         delete mesh.metadata.originalMaterial;
         delete mesh.metadata.originalVisibility;
+        // this.edgeRender()
       }
     });
   }
   public edgeRender(expressID?: string) {
+    console.log("edgeRender", expressID, this.isEdegeRender, this.isHighlightRender);
     this.clearEdgeRender();
     if (this.isEdegeRender) {
       this.scene.meshes.forEach(mesh => {
         // 启用边缘渲染
         mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
         mesh.edgesWidth = this.edgeWidth;
-        mesh.edgesColor = this.edgeColor;
-      });
-
-    } else if (expressID) {
-      this.scene.meshes.forEach(mesh => {
-        if (mesh.id === expressID) {
-          mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
-          mesh.edgesWidth = this.edgeWidth;
+        mesh.edgesRenderer.lineShader.options.useClipPlane = true;
+        // if (this.isHighlightRender)
+        //   mesh.edgesColor = mesh.id === expressID ? this.highlightColor : this.edgeColor;
+        // else
           mesh.edgesColor = this.edgeColor;
-        }
-      })
-    }
+      });
+    } 
+    // else if (expressID && this.isHighlightRender) {
+    //   this.scene.meshes.forEach(mesh => {
+    //     if (mesh.id === expressID) {
+    //       mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
+    //       mesh.edgesWidth = this.edgeWidth;
+    //       mesh.edgesColor = this.highlightColor;
+    //       mesh.edgesRenderer.lineShader.options.useClipPlane = true;
+    //     }
+    //   })
+    // }
   }
   private clearEdgeRender() {
     this.scene.meshes.forEach(mesh => {

@@ -285,7 +285,7 @@ function createAppCore() {
             ifcPropertyUtils.clearAllHighlights(scene);
             return;
         }
-
+        sceneManager.selectedMeshId = expressID;
         let property = await ifcPropertyUtils.getProperty(expressID, pageState.propertyAll, pageState.ifcExpressIds, pageState.psetRelations, modelStore.psetLines);
         const { items, groupRowMap } = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
         pageState.property = items;

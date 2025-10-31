@@ -580,7 +580,7 @@ export default {
                     tooltip: '轮廓颜色',
                     itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="edgeColorPicker" ></smart-color-picker>',
                     settings: {
-                      value: '#80ffffff',
+                      value: '#000000ff',
                       valueDisplayMode: 'colorBox',
                       dropDownAppendTo: 'body',
                     },
