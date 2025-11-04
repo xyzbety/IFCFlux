@@ -8,9 +8,11 @@ export class EffectManager {
   public edgeWidth = 10.0;
   private static instance: EffectManager | null = null;
   private highlightLayer: BABYLON.HighlightLayer | null = null;
+  private materialmask: BABYLON.StandardMaterial | null = null;
+  public simpleTarget: BABYLON.RenderTargetTexture | null = null;
+  private maskTarget: BABYLON.RenderTargetTexture | null = null;
 
   private constructor(private scene: BABYLON.Scene) {
-    // 私有构造函数
   }
 
   public static getInstance(scene: BABYLON.Scene): EffectManager {
@@ -26,7 +28,7 @@ export class EffectManager {
     // 创建高亮层（只创建一次）
     if (!this.highlightLayer) {
       this.highlightLayer = new BABYLON.HighlightLayer("highlightLayer", this.scene, {
-        mainTextureRatio: 2,
+        // mainTextureRatio: 2,
         // mainTextureFixedSize: 4096,  // 增加纹理分辨率
         isStroke: true,
         // blurHorizontalSize: 1.2,
@@ -37,6 +39,8 @@ export class EffectManager {
       this.highlightLayer.innerGlow = true;
       console.log("创建高亮层", this.highlightLayer);
     }
+
+
 
     meshes.forEach(mesh => {
       if (!mesh.metadata) mesh.metadata = {};
@@ -59,14 +63,16 @@ export class EffectManager {
         mesh.isVisible = true;
         mesh.renderingGroupId = 1;
         //  高亮实现边框渲染
-        this.highlightLayer!.addMesh(mesh as BABYLON.Mesh, new BABYLON.Color3(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b));
+        // this.highlightLayer!.addMesh(mesh as BABYLON.Mesh, new BABYLON.Color3(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b));
         // 直接使用边框渲染
         // mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
         // mesh.edgesWidth = this.edgeWidth;
         // mesh.edgesColor = this.highlightColor;
         // mesh.edgesRenderer.lineShader.options.useClipPlane = true; // 允许边缘渲染使用裁剪平面
+        // // 使用自定义后处理实现边框渲染
+        this.maskTarget.renderList.push(mesh);
+        this.maskTarget.setMaterialForRendering(mesh, this.materialmask);
       }
-
 
     });
   }
@@ -77,6 +83,9 @@ export class EffectManager {
       this.highlightLayer.removeAllMeshes();
       this.highlightLayer.dispose();
       this.highlightLayer = null;
+    }
+    if (this.maskTarget?.renderList) {
+      this.maskTarget.renderList = [];
     }
 
     this.scene.meshes.forEach(mesh => {
@@ -95,18 +104,20 @@ export class EffectManager {
   public edgeRender(expressID?: string) {
     console.log("edgeRender", expressID, this.isEdegeRender, this.isHighlightRender);
     this.clearEdgeRender();
+
     if (this.isEdegeRender) {
       this.scene.meshes.forEach(mesh => {
         // 启用边缘渲染
         mesh.enableEdgesRendering(0.999, true, { useAlternateEdgeFinder: false, applyTessellation: false, useFastVertexMerger: false });
         mesh.edgesWidth = this.edgeWidth;
         mesh.edgesRenderer.lineShader.options.useClipPlane = true;
+
         // if (this.isHighlightRender)
         //   mesh.edgesColor = mesh.id === expressID ? this.highlightColor : this.edgeColor;
         // else
-          mesh.edgesColor = this.edgeColor;
+        mesh.edgesColor = this.edgeColor;
       });
-    } 
+    }
     // else if (expressID && this.isHighlightRender) {
     //   this.scene.meshes.forEach(mesh => {
     //     if (mesh.id === expressID) {
@@ -118,10 +129,146 @@ export class EffectManager {
     //   })
     // }
   }
+
+  public resetResources(): void {
+    console.log("重置资源");
+    // 释放现有资源
+    this.disposeResources();
+
+    // 重新初始化资源
+    this.createMaterials();
+    this.createRenderTargetTextures();
+    this.createObjectOutlinePasses();
+  }
+
   private clearEdgeRender() {
     this.scene.meshes.forEach(mesh => {
       // 禁用边缘渲染
       mesh.disableEdgesRendering();
     });
   }
+  /**
+ * 清空所有线框模型
+ */
+
+
+  private createMaterials() {
+    if (!this._materialmask) {
+      this.materialmask = new BABYLON.ShaderMaterial(
+        "shaderMask",
+        this.scene,
+        "MASK",
+        {
+          attributes: ["position"],
+          uniforms: ["worldViewProjection"],
+        },
+      );
+    }
+  }
+
+  private createRenderTargetTextures() {
+    this.simpleTarget = new BABYLON.RenderTargetTexture("simpleTarget", { width: this.scene.getEngine().getRenderWidth(), height: this.scene.getEngine().getRenderHeight() }, this.scene);
+
+    this.simpleTarget.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+    this.simpleTarget.activeCamera = this.scene.activeCamera;
+    this.simpleTarget.samples = 4;
+    this.scene.customRenderTargets.push(this.simpleTarget);
+
+    this.maskTarget = new BABYLON.RenderTargetTexture("maskTarget", { width: this.scene.getEngine().getRenderWidth(), height: this.scene.getEngine().getRenderHeight() }, this.scene);
+
+    this.maskTarget.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+    this.maskTarget.activeCamera = this.scene.activeCamera;;
+    this.maskTarget.samples = 4;
+    this.scene.customRenderTargets.push(this.maskTarget);
+
+  }
+
+  private createObjectOutlinePasses() {
+    var horizontalBlurrPass = new BABYLON.PostProcess(
+      'Blurr Shader',
+      'BLURR_MASK',  // shader
+      ['HorizontalBlurr', 'VerticalBlurr','blurRadius'], // attributes
+      ['textureMaskSampler'], // textures
+      1.0,  // options
+      this.scene.activeCamera, // camera
+      BABYLON.Texture.BILINEAR_SAMPLINGMODE, // sampling
+      this.scene.getEngine() // engine
+    );
+
+    horizontalBlurrPass.onApply = (effect) => {
+      // update the caustic texture with what we just rendered.
+      effect.setTexture('textureMaskSampler', this.maskTarget);
+      effect.setInt('HorizontalBlurr', 0);
+      effect.setInt('VerticalBlurr', 1);
+      effect.setFloat('blurRadius', 1.0); // 动态调整模糊半径
+    };
+
+    var postProcessCopyHorizontal = new BABYLON.PassPostProcess("HorizontalBlurr copy", 1.0, this.scene.activeCamera);
+
+    var verticalBlurrPass = new BABYLON.PostProcess(
+      'Blurr Shader',
+      'BLURR_MASK',  // shader
+      ['HorizontalBlurr', 'VerticalBlurr','blurRadius'], // attributes
+      ['textureMaskSampler'], // textures
+      1.0,  // options
+      this.scene.activeCamera, // camera
+      BABYLON.Texture.BILINEAR_SAMPLINGMODE, // sampling
+      this.scene.getEngine() // engine
+    );
+
+    verticalBlurrPass.onApply = (effect) => {
+      effect.setTextureFromPostProcess('textureMaskSampler', postProcessCopyHorizontal);
+      effect.setInt('HorizontalBlurr', 1);
+      effect.setInt('VerticalBlurr', 0);
+      effect.setFloat('blurRadius', 1.0); // 动态调整模糊半径
+    };
+
+    var postProcessCopyVertical = new BABYLON.PassPostProcess("VerticalBlurr copy", 1.0, this.scene.activeCamera);
+
+    var outlinePass = new BABYLON.PostProcess(
+      'Outline Shader',
+      'OUTLINE',  // shader
+      ['outline_pixel_width', 'outline_color', 'screenSizeX', 'screenSizeY'], // attributes
+      ['textureMaskSampler', 'textureSimpleSampler'], // textures
+      1.0,  // options
+      this.scene.activeCamera, // camera
+      BABYLON.Texture.BILINEAR_SAMPLINGMODE, // sampling
+      this.scene.getEngine() // engine
+    );
+
+    outlinePass.onApply = (effect) => {
+      effect.setTextureFromPostProcess('textureMaskSampler', postProcessCopyVertical);
+      effect.setTexture('textureSimpleSampler', this.simpleTarget);
+      effect.setInt('outline_pixel_width', 1);
+      effect.setVector4("outline_color", new BABYLON.Vector4(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b, 1.0));
+      effect.setFloat("screenSizeX", this.scene.getEngine().getRenderWidth());
+      effect.setFloat("screenSizeY", this.scene.getEngine().getRenderHeight());
+    };
+  }
+
+  /**
+ * 释放现有资源
+ */
+  private disposeResources(): void {
+    // 释放 materialmask
+    if (this.materialmask) {
+      this.materialmask.dispose();
+      this.materialmask = null;
+    }
+
+    // 释放 simpleTarget
+    if (this.simpleTarget) {
+      this.simpleTarget.dispose();
+      this.scene.customRenderTargets = this.scene.customRenderTargets.filter(rt => rt !== this.simpleTarget);
+      this.simpleTarget = null;
+    }
+
+    // 释放 maskTarget
+    if (this.maskTarget) {
+      this.maskTarget.dispose();
+      this.scene.customRenderTargets = this.scene.customRenderTargets.filter(rt => rt !== this.maskTarget);
+      this.maskTarget = null;
+    }
+  }
+
 }

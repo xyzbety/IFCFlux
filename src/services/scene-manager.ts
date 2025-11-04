@@ -227,6 +227,11 @@ export class SceneManager {
 
       for (let i = 0; i < this.scene.meshes.length; i++) {
         const mesh = this.scene.meshes[i];
+        if (!this.effectManager?.simpleTarget.renderList) {
+          this.effectManager.simpleTarget.renderList = [];
+        }
+        this.effectManager.simpleTarget.renderList.push(mesh);
+        this.effectManager?.simpleTarget.setMaterialForRendering(mesh, mesh.material);
         if (mesh !== grid) {
           shadowGenerator.addShadowCaster(mesh); // 仅模型投射阴影
           mesh.receiveShadows = true;
@@ -247,6 +252,7 @@ export class SceneManager {
     if (!this.effectManager) {
       this.effectManager = EffectManager.getInstance(this.scene);
     }
+    this.effectManager.resetResources()
 
     // 计算模型包围盒
     const { min, max } = this.scene.meshes[0].getHierarchyBoundingVectors();
