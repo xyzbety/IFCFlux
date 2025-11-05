@@ -25,20 +25,20 @@ export class EffectManager {
   public applyHighlight(meshes: BABYLON.AbstractMesh[]): void {
     this.clearAll();
 
-    // 创建高亮层（只创建一次）
-    if (!this.highlightLayer) {
-      this.highlightLayer = new BABYLON.HighlightLayer("highlightLayer", this.scene, {
-        // mainTextureRatio: 2,
-        // mainTextureFixedSize: 4096,  // 增加纹理分辨率
-        isStroke: true,
-        // blurHorizontalSize: 1.2,
-        // blurVerticalSize: 1.2
-      });
+    // // 创建高亮层（只创建一次）
+    // if (!this.highlightLayer) {
+    //   this.highlightLayer = new BABYLON.HighlightLayer("highlightLayer", this.scene, {
+    //     // mainTextureRatio: 2,
+    //     // mainTextureFixedSize: 4096,  // 增加纹理分辨率
+    //     isStroke: true,
+    //     // blurHorizontalSize: 1.2,
+    //     // blurVerticalSize: 1.2
+    //   });
 
-      this.highlightLayer.outerGlow = true;
-      this.highlightLayer.innerGlow = true;
-      console.log("创建高亮层", this.highlightLayer);
-    }
+    //   this.highlightLayer.outerGlow = true;
+    //   this.highlightLayer.innerGlow = true;
+    //   console.log("创建高亮层", this.highlightLayer);
+    // }
 
 
 
@@ -57,9 +57,9 @@ export class EffectManager {
       mesh.metadata.originalVisibility = mesh.isVisible;
 
       if (this.isHighlightRender) {
-        mesh.renderOverlay = true;
-        mesh.overlayAlpha = 0.25;
-        mesh.overlayColor = new BABYLON.Color3(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b);
+        // mesh.renderOverlay = true;
+        // mesh.overlayAlpha = 0.25;
+        // mesh.overlayColor = new BABYLON.Color3(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b);
         mesh.isVisible = true;
         mesh.renderingGroupId = 1;
         //  高亮实现边框渲染
@@ -93,7 +93,7 @@ export class EffectManager {
         mesh.material = mesh.metadata.originalMaterial;
         mesh.isVisible = mesh.metadata.originalVisibility !== false;
         mesh.renderingGroupId = 0;
-        mesh.renderOverlay = false;
+        // mesh.renderOverlay = false;
         // mesh.disableEdgesRendering();
         delete mesh.metadata.originalMaterial;
         delete mesh.metadata.originalVisibility;
@@ -157,7 +157,7 @@ export class EffectManager {
       this.materialmask = new BABYLON.ShaderMaterial(
         "shaderMask",
         this.scene,
-        "MASK",
+        "./shaders/MASK",
         {
           attributes: ["position"],
           uniforms: ["worldViewProjection"],
@@ -167,6 +167,8 @@ export class EffectManager {
   }
 
   private createRenderTargetTextures() {
+    const samplesWhenStopped = this.scene.getEngine().getCaps().maxMSAASamples;
+    this.scene.getEngine().setHardwareScalingLevel(0.5)  // 场景在下采样之前将以两倍的分辨率渲染,实现抗锯齿
     this.simpleTarget = new BABYLON.RenderTargetTexture("simpleTarget", { width: this.scene.getEngine().getRenderWidth(), height: this.scene.getEngine().getRenderHeight() }, this.scene);
 
     this.simpleTarget.clearColor = new BABYLON.Color4(0, 0, 0, 0);
@@ -186,48 +188,54 @@ export class EffectManager {
   private createObjectOutlinePasses() {
     var horizontalBlurrPass = new BABYLON.PostProcess(
       'Blurr Shader',
-      'BLURR_MASK',  // shader
-      ['HorizontalBlurr', 'VerticalBlurr','blurRadius'], // attributes
+      './shaders/BLURR_MASK',  // shader
+      ['HorizontalBlurr', 'VerticalBlurr', 'screenSizeX', 'screenSizeY'], // attributes
       ['textureMaskSampler'], // textures
       1.0,  // options
       this.scene.activeCamera, // camera
       BABYLON.Texture.BILINEAR_SAMPLINGMODE, // sampling
       this.scene.getEngine() // engine
     );
+    horizontalBlurrPass.samples = 8;
 
     horizontalBlurrPass.onApply = (effect) => {
-      // update the caustic texture with what we just rendered.
+      // update the caustic texture with what we just rendered. 
       effect.setTexture('textureMaskSampler', this.maskTarget);
       effect.setInt('HorizontalBlurr', 0);
       effect.setInt('VerticalBlurr', 1);
-      effect.setFloat('blurRadius', 1.0); // 动态调整模糊半径
+      effect.setFloat("screenSizeX", this.scene.getEngine().getRenderWidth());
+      effect.setFloat("screenSizeY", this.scene.getEngine().getRenderHeight());
     };
 
     var postProcessCopyHorizontal = new BABYLON.PassPostProcess("HorizontalBlurr copy", 1.0, this.scene.activeCamera);
+    postProcessCopyHorizontal.samples = 8;
 
     var verticalBlurrPass = new BABYLON.PostProcess(
       'Blurr Shader',
-      'BLURR_MASK',  // shader
-      ['HorizontalBlurr', 'VerticalBlurr','blurRadius'], // attributes
+      './shaders/BLURR_MASK',  // shader
+      ['HorizontalBlurr', 'VerticalBlurr', 'screenSizeX', 'screenSizeY'], // attributes
       ['textureMaskSampler'], // textures
       1.0,  // options
       this.scene.activeCamera, // camera
       BABYLON.Texture.BILINEAR_SAMPLINGMODE, // sampling
       this.scene.getEngine() // engine
     );
+    verticalBlurrPass.samples = 8;
 
     verticalBlurrPass.onApply = (effect) => {
       effect.setTextureFromPostProcess('textureMaskSampler', postProcessCopyHorizontal);
       effect.setInt('HorizontalBlurr', 1);
       effect.setInt('VerticalBlurr', 0);
-      effect.setFloat('blurRadius', 1.0); // 动态调整模糊半径
+      effect.setFloat("screenSizeX", this.scene.getEngine().getRenderWidth());
+      effect.setFloat("screenSizeY", this.scene.getEngine().getRenderHeight());
     };
 
     var postProcessCopyVertical = new BABYLON.PassPostProcess("VerticalBlurr copy", 1.0, this.scene.activeCamera);
+    postProcessCopyVertical.samples = 8;
 
     var outlinePass = new BABYLON.PostProcess(
       'Outline Shader',
-      'OUTLINE',  // shader
+      './shaders/OUTLINE',  // shader
       ['outline_pixel_width', 'outline_color', 'screenSizeX', 'screenSizeY'], // attributes
       ['textureMaskSampler', 'textureSimpleSampler'], // textures
       1.0,  // options
@@ -235,11 +243,12 @@ export class EffectManager {
       BABYLON.Texture.BILINEAR_SAMPLINGMODE, // sampling
       this.scene.getEngine() // engine
     );
+    outlinePass.samples = 8;
 
     outlinePass.onApply = (effect) => {
       effect.setTextureFromPostProcess('textureMaskSampler', postProcessCopyVertical);
       effect.setTexture('textureSimpleSampler', this.simpleTarget);
-      effect.setInt('outline_pixel_width', 1);
+      effect.setInt('outline_pixel_width', 10);
       effect.setVector4("outline_color", new BABYLON.Vector4(this.highlightColor.r, this.highlightColor.g, this.highlightColor.b, 1.0));
       effect.setFloat("screenSizeX", this.scene.getEngine().getRenderWidth());
       effect.setFloat("screenSizeY", this.scene.getEngine().getRenderHeight());
