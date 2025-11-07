@@ -37,6 +37,7 @@ export class SceneManager {
   private ifcPropertyUtils = IfcPropertyUtils.getInstance();
   private effectManager: EffectManager | null = null;
   public selectedMeshId: string | '' = '';
+  private utilityLayer: BABYLON.UtilityLayerRenderer | null = null;
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -209,8 +210,10 @@ export class SceneManager {
    * @param isGrid 是否显示网格
    */
   public setupGround(isGrid: boolean) {
-    if (!this.scene) return;
-    createGround(this.scene, this.bbox, isGrid);
+    if (!this.scene || !this.effectManager?.simpleTarget) return;
+    const grid = createGround(this.scene, this.bbox, isGrid);
+    this.effectManager.simpleTarget.renderList.push(grid);
+    this.effectManager.simpleTarget.setMaterialForRendering(grid, grid.material);
   }
 
   /**
@@ -524,10 +527,13 @@ export class SceneManager {
     CoordinateTemp: { point: { x: number, y: number, z: number } | null },
     updateTempLineLabel: (tempLine: BABYLON.AbstractMesh, anchor: BABYLON.Mesh) => void
   ): Measure | null {
+    this.effectManager.isHighlightRender = false;
     if (!this.scene || !this.camera) return measure;
+    if (!this.utilityLayer)
+      this.utilityLayer = new BABYLON.UtilityLayerRenderer(this.scene);
 
     // 清除现有的UI元素
-    const existingUI = this.scene.textures.filter(t => t.name === "myUI");
+    const existingUI = this.utilityLayer.utilityLayerScene.textures.filter(t => t.name === "myUI");
     if (existingUI) {
       existingUI.forEach(t => t.dispose());
     }
@@ -543,6 +549,7 @@ export class SceneManager {
     oldMeshes.forEach(mesh => mesh.dispose());
 
     if (type === 'clear') {
+      this.effectManager.isHighlightRender = true;
       if (measure) {
         measure.destroy();
         measure = null;
@@ -553,11 +560,10 @@ export class SceneManager {
     let markSize = 1;
     markSize = 0.1 + (this.camera.radius / 100) * 0.5;
     markSize = Math.max(0.1, Math.min(markSize, 5));
-
-    const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI", true, this.scene);
+    const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI", true, this.utilityLayer.utilityLayerScene);
     const container = new GUI.Rectangle();
-    container.width = "200px";
-    container.height = "100px";
+    container.width = "500px";
+    container.height = "300px";
     container.background = "transparent";
     container.thickness = 0;
     container.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
@@ -566,7 +572,7 @@ export class SceneManager {
 
     const distanceLabel = new GUI.TextBlock();
     distanceLabel.color = "Red";
-    distanceLabel.fontSize = 24;
+    distanceLabel.fontSize = 50;
     distanceLabel.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
     container.addControl(distanceLabel);
     const anchor = BABYLON.MeshBuilder.CreateSphere("anchor", { diameter: 0.01 }, this.scene);
@@ -594,6 +600,10 @@ export class SceneManager {
             `z: ${CoordinateTemp.point.z.toFixed(2)}`;
         }
       });
+      this.effectManager.simpleTarget.renderList.push(sphere);
+      this.effectManager?.simpleTarget.setMaterialForRendering(sphere, sphere.material);
+
+
       return measure;
     }
 
@@ -614,6 +624,7 @@ export class SceneManager {
       } else if (type === 'area') {
         distanceLabel.text = measure?.area ? `${measure.area.toFixed(2)} m²` : '';
       } else if (type === 'angle') {
+
         distanceLabel.text = measure?.angle ? `${measure.angle.toFixed(2)} °` : '';
       }
     });
@@ -770,7 +781,7 @@ export class SceneManager {
     }
     if (data.type === 'highlightMode') {
       this.effectManager!.isHighlightRender = data.value;
-      console.log("this.effectManager.isHighlightRender", this.selectedMeshId, this.scene);
+      console.log("this.effectManager.isHighlightRender", this.effectManager!.isHighlightRender,this.selectedMeshId);
       await this.ifcPropertyUtils.handleComponentClick(this.selectedMeshId, meshConfig, this.modelStore.modelData.tree);
     }
     if (data.type === 'highlightColor') {
@@ -883,7 +894,7 @@ export class SceneManager {
     this.selectedMeshId = '';
 
     // 清理UI纹理
-    const existingUI = this.scene.textures.filter(t => t.name === "myUI");
+    const existingUI = this.utilityLayer?.utilityLayerScene.textures.filter(t => t.name === "myUI");
     if (existingUI) {
       existingUI.forEach(t => t.dispose());
     }
