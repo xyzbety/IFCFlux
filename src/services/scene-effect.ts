@@ -53,10 +53,17 @@ export class EffectManager {
       // 保存原始状态以便后续恢复
       mesh.metadata.originalMaterial = mesh.material;
       mesh.metadata.originalVisibility = mesh.isVisible;
+      if (mesh.material) {
+        const hightMaterial = mesh.material.clone(mesh.material.name + 'hightMaterial');
+        hightMaterial.alpha = 0.5;
+        this.simpleTarget?.setMaterialForRendering(mesh, hightMaterial);
+        mesh.metadata.hightMaterial = hightMaterial;
+      }
 
       if (this.isHighlightRender && this.maskTarget && this.materialmask) {
         mesh.isVisible = true;
         mesh.renderingGroupId = 1;
+
         // 使用自定义后处理实现边框渲染
         this.maskTarget.renderList?.push(mesh);
         this.maskTarget.setMaterialForRendering(mesh, this.materialmask);
@@ -83,13 +90,19 @@ export class EffectManager {
     if (this.maskTarget?.renderList) {
       this.maskTarget.renderList = [];
     }
-
-    // 恢复所有网格的原始状态
+    // 恢复所有网格的原始状态并销毁克隆材质
     this.scene.meshes.forEach(mesh => {
       if (mesh.metadata?.originalMaterial !== undefined) {
+        // 销毁克隆的高亮材质
+        if (mesh.metadata.hightMaterial) {
+          mesh.metadata.hightMaterial.dispose();
+          delete mesh.metadata.hightMaterial;
+        }
+        
         mesh.material = mesh.metadata.originalMaterial;
         mesh.isVisible = mesh.metadata.originalVisibility !== false;
         mesh.renderingGroupId = 0;
+        this.simpleTarget?.setMaterialForRendering(mesh, mesh.metadata.originalMaterial);
         delete mesh.metadata.originalMaterial;
         delete mesh.metadata.originalVisibility;
       }
@@ -161,7 +174,7 @@ export class EffectManager {
       );
 
       // 启用剖切面支持
-      this.materialmask.setDefine("CLIPPLANE",true);
+      this.materialmask.setDefine("CLIPPLANE", true);
 
       // 设置剖切面参数更新回调
       this.materialmask.onBindObservable.add(() => {
@@ -294,7 +307,7 @@ export class EffectManager {
     // 轮廓检测通道（使用自定义的剖切面感知轮廓后处理）
     const outlinePass = new BABYLON.PostProcess(
       'Outline Shader',
-      "./shaders/OUTLINE", 
+      "./shaders/OUTLINE",
       ['outline_pixel_width', 'outline_color', 'screenSizeX', 'screenSizeY', 'viewProjection'], // 属性
       ['textureMaskSampler', 'textureSimpleSampler'], // 纹理采样器
       1.0,  // 选项
