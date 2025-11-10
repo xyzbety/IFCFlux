@@ -247,7 +247,7 @@ export class EffectManager {
   private createObjectOutlinePasses() {
     // 水平模糊通道
     const horizontalBlurrPass = new BABYLON.PostProcess(
-      'Blurr Shader',
+      'horizontalBlurrPass',
       './shaders/BLURR_MASK',  // 模糊着色器
       ['HorizontalBlurr', 'VerticalBlurr', 'screenSizeX', 'screenSizeY'], // 属性
       ['textureMaskSampler'], // 纹理采样器
@@ -256,7 +256,6 @@ export class EffectManager {
       BABYLON.Texture.BILINEAR_SAMPLINGMODE, // 采样模式
       this.scene.getEngine() // 引擎
     );
-    horizontalBlurrPass.samples = 8;
 
     // 水平模糊应用回调
     horizontalBlurrPass.onApply = (effect) => {
@@ -269,11 +268,9 @@ export class EffectManager {
 
     // 水平模糊副本
     const postProcessCopyHorizontal = new BABYLON.PassPostProcess("HorizontalBlurr copy", 1.0, this.scene.activeCamera);
-    postProcessCopyHorizontal.samples = 8;
-
     // 垂直模糊通道
     const verticalBlurrPass = new BABYLON.PostProcess(
-      'Blurr Shader',
+      'verticalBlurrPass',
       './shaders/BLURR_MASK',  // 模糊着色器
       ['HorizontalBlurr', 'VerticalBlurr', 'screenSizeX', 'screenSizeY'], // 属性
       ['textureMaskSampler'], // 纹理采样器
@@ -282,8 +279,6 @@ export class EffectManager {
       BABYLON.Texture.BILINEAR_SAMPLINGMODE, // 采样模式
       this.scene.getEngine(),// 引擎
     );
-    verticalBlurrPass.samples = 8;
-
     // 垂直模糊应用回调
     verticalBlurrPass.onApply = (effect) => {
       effect.setTextureFromPostProcess('textureMaskSampler', postProcessCopyHorizontal);
@@ -295,7 +290,6 @@ export class EffectManager {
 
     // 垂直模糊副本
     const postProcessCopyVertical = new BABYLON.PassPostProcess("VerticalBlurr copy", 1.0, this.scene.activeCamera);
-    postProcessCopyVertical.samples = 8;
 
     // 轮廓检测通道（使用自定义的剖切面感知轮廓后处理）
     const outlinePass = new BABYLON.PostProcess(
@@ -308,7 +302,6 @@ export class EffectManager {
       BABYLON.Texture.BILINEAR_SAMPLINGMODE, // 采样模式
       this.scene.getEngine() // 引擎
     );
-    outlinePass.samples = 8;
 
     // 轮廓检测应用回调
     outlinePass.onApply = (effect) => {

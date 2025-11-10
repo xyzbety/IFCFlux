@@ -395,6 +395,7 @@ export class SceneManager {
         mesh.isVisible = true;
         // 还原透明度到原始值
         if (mesh.material) {
+          this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
           const originalProps = originalMaterialProperties.get(mesh.id);
           if (originalProps) {
             if (mesh.material.name === 'highlightMat') {
@@ -471,9 +472,11 @@ export class SceneManager {
               newMat.alpha = 0.5;
               (newMat as any)._isClonedForTransparent = true;
               mesh.material = newMat;
+              this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, newMat);
             }
           } else {
             mesh.material.alpha = 0.5;
+            this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
           }
         } else if (mesh.material) {
           const newMat = mesh.material.clone(mesh.material.name + "_transparent");
@@ -481,11 +484,13 @@ export class SceneManager {
             newMat.alpha = 0.5;
             (newMat as any)._isClonedForTransparent = true;
             mesh.material = newMat;
+            this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, newMat);
           }
         }
       } else {
         // 还原非半透明mesh的透明度到原始值
         if (mesh.material) {
+          this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
           const originalProps = originalMaterialProperties.get(mesh.id);
           if (originalProps) {
             mesh.material.alpha = originalProps.alpha;
