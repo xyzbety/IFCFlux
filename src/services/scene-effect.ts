@@ -53,14 +53,14 @@ export class EffectManager {
       // 保存原始状态以便后续恢复
       mesh.metadata.originalMaterial = mesh.material;
       mesh.metadata.originalVisibility = mesh.isVisible;
-      if (mesh.material) {
-        const hightMaterial = mesh.material.clone(mesh.material.name + 'hightMaterial');
-        hightMaterial.alpha = 0.5;
-        this.simpleTarget?.setMaterialForRendering(mesh, hightMaterial);
-        mesh.metadata.hightMaterial = hightMaterial;
-      }
 
       if (this.isHighlightRender && this.maskTarget && this.materialmask) {
+        if (mesh.material) {
+          const hightMaterial = mesh.material.clone(mesh.material.name + 'hightMaterial');
+          hightMaterial.alpha = 0.5;
+          this.simpleTarget?.setMaterialForRendering(mesh, hightMaterial);
+          mesh.metadata.hightMaterial = hightMaterial;
+        }
         mesh.isVisible = true;
         mesh.renderingGroupId = 1;
 
@@ -98,7 +98,7 @@ export class EffectManager {
           mesh.metadata.hightMaterial.dispose();
           delete mesh.metadata.hightMaterial;
         }
-        
+
         mesh.material = mesh.metadata.originalMaterial;
         mesh.isVisible = mesh.metadata.originalVisibility !== false;
         mesh.renderingGroupId = 0;

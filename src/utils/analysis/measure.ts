@@ -1,31 +1,42 @@
 import * as BABYLON from "@babylonjs/core";
 import { EffectManager } from "../../services/scene-effect";
 
+// 常量定义
+const LINE_COLORS = [BABYLON.Color3.White(), new BABYLON.Color3(1, 0.5, 0)];
+const LINE_OPTIONS = {
+    useColors: true,
+    colors: LINE_COLORS,
+    colorDistribution: BABYLON.GreasedLineMeshColorDistribution.COLOR_DISTRIBUTION_REPEAT,
+    width: 0.1
+};
+
 export class Measure {
     private markSize: number;
     private points: BABYLON.Vector3[];
     private pointMarkers: BABYLON.Mesh[];
     public lineDistance: number;
-    private lineColor: BABYLON.Color4;
     public area: number;
     public angle: number;
     private scene: BABYLON.Scene;
-    private measureType: 'distance' | 'area' | 'angle';
+    private measureType: 'distance' | 'area' | 'angle' | 'coordinate';
     private areaPoints: BABYLON.Vector3[];
-    private areaLines: BABYLON.LinesMesh[];
+    private areaLines: BABYLON.Mesh[];
     private areaMarkers: BABYLON.Mesh[];
     private areaMeasurementActive: boolean;
+    private coordinateMarker?: BABYLON.Mesh;
+    private coordinatePoint: BABYLON.Vector3 | null;
     private _pointerObservable: BABYLON.Nullable<BABYLON.Observer<BABYLON.PointerInfo>>;
-    private tempLine?: BABYLON.LinesMesh;
-    private line?: BABYLON.LinesMesh;
+    private tempLine?: BABYLON.Mesh;
+    private line?: BABYLON.Mesh;
     private effectManager: any;
+    private lineWidth: number | undefined;
 
-    constructor(scene: BABYLON.Scene, type: 'distance' | 'area' | 'angle', markSize?: number) {
+    constructor(scene: BABYLON.Scene, type: 'distance' | 'area' | 'angle' | 'coordinate', markSize?: number, lineWidth?: number) {
         this.markSize = markSize || 1; // 默认标记点大小
+        this.lineWidth = lineWidth || 0.1;
         this.points = [];
         this.pointMarkers = [];
         this.lineDistance = 0;
-        this.lineColor = new BABYLON.Color4(1, 0, 0, 1);
         this.area = 0;
         this.angle = 0;
         this.scene = scene;
@@ -34,40 +45,49 @@ export class Measure {
         this.areaLines = []; // 存储面积测量的线条（只显示边界）
         this.areaMarkers = []; // 存储面积测量的标记点
         this.areaMeasurementActive = false; // 标记是否正在进行面积测量
+        this.coordinateMarker = undefined;
+        this.coordinatePoint = null;
         this._pointerObservable = null;
         this.addObserver();
         this.effectManager = EffectManager.getInstance(scene);
     }
 
-    public setLineColor(color: BABYLON.Color4): void {
-        this.lineColor = color;
+    // 创建带颜色的线条
+    private createColoredLine(name: string, points: BABYLON.Vector3[], width?: number): BABYLON.Mesh {
+        const vecPoints = BABYLON.GreasedLineTools.SegmentizeLineBySegmentLength(points, 1);
+        const line = BABYLON.CreateGreasedLine(name, {
+            points: vecPoints
+        }, {
+            ...LINE_OPTIONS,
+            width: this.lineWidth || width
+        }, this.scene);
+
+        line.isPickable = false;
+        line.renderingGroupId = 1;
+        this.effectManager.simpleTarget.renderList.push(line);
+        this.effectManager?.simpleTarget.setMaterialForRendering(line, line.material);
+
+        return line;
     }
 
     // 绘制测量线
     private createMeasureLine(point: BABYLON.Vector3): void {
         this.points.push(point.clone());
         if (this.pointMarkers.length === 2) {
-            this.pointMarkers.forEach(marker => marker.dispose());
+            this.pointMarkers.forEach(marker => marker.dispose(true));
             this.pointMarkers = [];
         }
         this.createMarker(point);
         if (this.line) {
-            this.line.dispose();
+            this.line.dispose(true);
             this.line = undefined;
         }
         if (this.points.length === 2) {
-            this.tempLine?.dispose();
+            this.tempLine?.dispose(true);
             this.tempLine = undefined;
             this.lineDistance = BABYLON.Vector3.Distance(this.points[0], this.points[1]);
-            this.line = BABYLON.MeshBuilder.CreateLines("measureLine", {
-                points: this.points,
-                colors: [this.lineColor, this.lineColor]
-            }, this.scene);
-            this.line.isPickable = false; // 测量线不参与拾取
-            this.line.renderingGroupId = 1;
+            this.line = this.createColoredLine('measureLine', this.points);
             this.points = [];
-            this.effectManager.simpleTarget.renderList.push(this.line);
-            this.effectManager?.simpleTarget.setMaterialForRendering(this.line, this.line.material);
         }
     }
 
@@ -82,18 +102,8 @@ export class Measure {
 
         if (pickResult?.hit && pickResult.pickedPoint && pickResult.pickedMesh) {
             if (pickResult.pickedMesh.parent?.name === "modelMesh") {
-                if (this.tempLine) {
-                    this.tempLine.dispose();
-                    this.tempLine = undefined;
-                }
-                this.tempLine = BABYLON.MeshBuilder.CreateLines("tempLine", {
-                    points: [point, pickResult.pickedPoint],
-                    colors: [this.lineColor, this.lineColor]
-                }, this.scene);
-                this.tempLine.isPickable = false;
-                this.tempLine.renderingGroupId = 1;
-                this.effectManager.simpleTarget.renderList.push(this.tempLine);
-                this.effectManager?.simpleTarget.setMaterialForRendering(this.tempLine, this.tempLine.material);
+                this.tempLine?.dispose(true);
+                this.tempLine = this.createColoredLine('tempLine', [point, pickResult.pickedPoint]);
 
                 if (this.measureType === 'distance') {
                     this.lineDistance = BABYLON.Vector3.Distance(point, pickResult.pickedPoint);
@@ -121,19 +131,32 @@ export class Measure {
         console.log('Started new area measurement');
     }
 
+    // 清除所有临时线条
+    private clearTempLines(): void {
+        // 清除主要的临时线条
+        this.tempLine?.dispose(true);
+        this.tempLine = undefined;
+        
+        // 清除所有可能的临时线条
+        const tempLineNames = ['tempLine_toMouse', 'tempLine_mouseToFirst', 'tempLine'];
+        tempLineNames.forEach(name => {
+            const meshes = this.scene.meshes.filter(mesh => mesh.name === name);
+            meshes.forEach(mesh => mesh.dispose(true));
+        });
+    }
+
     // 清除上一次面积测量的数据
     private clearPreviousAreaMeasurement(): void {
         // 清除面积线条
-        this.areaLines.forEach(line => line.dispose());
+        this.areaLines.forEach(line => line.dispose(true));
         this.areaLines = [];
 
         // 清除面积标记点
-        this.areaMarkers.forEach(marker => marker.dispose());
+        this.areaMarkers.forEach(marker => marker.dispose(true));
         this.areaMarkers = [];
 
-        // 清除临时线条
-        this.tempLine?.dispose();
-        this.tempLine = undefined;
+        // 清除所有临时线条
+        this.clearTempLines();
 
         // 重置数据
         this.areaPoints = [];
@@ -167,30 +190,20 @@ export class Measure {
     // 更新面积边界线条（只显示多边形的边，不显示内部分割线）
     private updateAreaBoundaryLines(): void {
         // 清除所有现有线条
-        this.areaLines.forEach(line => line.dispose());
+        this.areaLines.forEach(line => line.dispose(true));
         this.areaLines = [];
 
         if (this.areaPoints.length < 2) return;
 
-        // 绘制多边形的边界线条
-        const boundaryPoints = [...this.areaPoints];
-
-        // 如果有3个或更多点，形成封闭多边形
-        if (this.areaPoints.length >= 3) {
-            boundaryPoints.push(this.areaPoints[0]); // 闭合多边形
+        // 为每条边单独创建线条，确保每条边都被分成5段显示红白相间
+        for (let i = 0; i < this.areaPoints.length; i++) {
+            const startPoint = this.areaPoints[i];
+            const endPoint = (i === this.areaPoints.length - 1) ? this.areaPoints[0] : this.areaPoints[i + 1];
+            const boundaryLine = this.createColoredLine(`areaBoundary_${i}`, [startPoint, endPoint]);
+            this.areaLines.push(boundaryLine);
         }
-
-        // 创建边界线条
-        const boundaryLine = BABYLON.MeshBuilder.CreateLines("areaBoundary", {
-            points: boundaryPoints,
-            colors: Array(boundaryPoints.length).fill(this.lineColor)
-        }, this.scene);
-        boundaryLine.isPickable = false; // 边界线条不参与拾取
-        boundaryLine.renderingGroupId = 1;
-        this.areaLines.push(boundaryLine);
-        this.effectManager.simpleTarget.renderList.push(boundaryLine);
-        this.effectManager?.simpleTarget.setMaterialForRendering(boundaryLine, boundaryLine.material);
     }
+
 
     // 计算总面积（使用三角形分割法）
     private calculateTotalArea(): void {
@@ -232,37 +245,23 @@ export class Measure {
 
         if (pickResult?.hit && pickResult.pickedPoint && pickResult.pickedMesh) {
             if (pickResult.pickedMesh.parent?.name === "modelMesh") {
-                // 清除之前的鼠标跟随线
-                this.tempLine?.dispose();
-                this.tempLine = undefined;
+                // 清除所有之前的临时线条
+                this.clearTempLines();
 
                 const lastPoint = this.areaPoints[this.areaPoints.length - 1];
 
                 if (this.areaPoints.length === 1) {
                     // 第一个点到鼠标的线
-                    this.tempLine = BABYLON.MeshBuilder.CreateLines("tempLine", {
-                        points: [this.areaPoints[0], pickResult.pickedPoint],
-                        colors: [this.lineColor, this.lineColor]
-                    }, this.scene);
-                    this.tempLine.isPickable = false; // 临时线条不参与拾取
-                    this.tempLine.renderingGroupId = 1;
-                    this.effectManager.simpleTarget.renderList.push(this.tempLine);
-                    this.effectManager?.simpleTarget.setMaterialForRendering(this.tempLine, this.tempLine.material);
+                    this.tempLine = this.createColoredLine('tempLine', [this.areaPoints[0], pickResult.pickedPoint]);
                 } else {
-                    // 最后一个点到鼠标的线，以及鼠标到第一个点的线（预览封闭图形）
-                    const previewPoints = [
-                        lastPoint,
-                        pickResult.pickedPoint,
-                        this.areaPoints[0]
-                    ];
-                    this.tempLine = BABYLON.MeshBuilder.CreateLines("tempLine", {
-                        points: previewPoints,
-                        colors: [this.lineColor, this.lineColor, this.lineColor]
-                    }, this.scene);
-                    this.tempLine.isPickable = false; // 临时线条不参与拾取
-                    this.tempLine.renderingGroupId = 1;
-                    this.effectManager.simpleTarget.renderList.push(this.tempLine);
-                    this.effectManager?.simpleTarget.setMaterialForRendering(this.tempLine, this.tempLine.material);
+                    // 创建两条独立的线：最后一个点到鼠标的线，以及鼠标到第一个点的线（预览封闭图形）
+                    // 创建最后一点到鼠标位置的线
+                    const lineToMouse = this.createColoredLine('tempLine_toMouse', [lastPoint, pickResult.pickedPoint]);
+                    // 创建鼠标位置到第一点的线
+                    this.createColoredLine('tempLine_mouseToFirst', [pickResult.pickedPoint, this.areaPoints[0]]);
+                    
+                    // 保存临时线条引用，用于后续清理
+                    this.tempLine = lineToMouse;
                 }
             }
         }
@@ -272,7 +271,7 @@ export class Measure {
     private finishAreaMeasurement(): void {
         if (this.areaPoints.length >= 3) {
             // 清除临时线条
-            this.tempLine?.dispose();
+            this.tempLine?.dispose(true);
             this.tempLine = undefined;
 
             // 计算最终面积
@@ -308,25 +307,15 @@ export class Measure {
         }
         this.createMarker(point);
         if (this.points.length === 2) {
-            this.tempLine?.dispose();
+            this.tempLine?.dispose(true);
             this.tempLine = undefined;
-            this.line = BABYLON.MeshBuilder.CreateLines("measureLine", {
-                points: this.points,
-                colors: [this.lineColor, this.lineColor]
-            }, this.scene);
-            this.line.isPickable = false; // 角度测量线不参与拾取
-            this.line.renderingGroupId = 1;
-            this.effectManager.simpleTarget.renderList.push(this.line);
-            this.effectManager?.simpleTarget.setMaterialForRendering(this.line, this.line.material);
+            this.line = this.createColoredLine('measureLine', this.points);
         }
         if (this.points.length === 3) {
-            this.tempLine?.dispose();
+            this.tempLine?.dispose(true);
             this.tempLine = undefined;
-            this.line = BABYLON.MeshBuilder.CreateLines("measureLine", {
-                points: [this.points[1], this.points[2]],
-                colors: [this.lineColor, this.lineColor]
-            }, this.scene);
-            this.line.isPickable = false; // 角度测量线不参与拾取
+            this.line = this.createColoredLine('measureLine', [this.points[1], this.points[2]]);
+
             const pointA = this.points[0];
             const pointB = this.points[1];
             const pointC = this.points[2];
@@ -335,9 +324,6 @@ export class Measure {
             const dotProduct = BABYLON.Vector3.Dot(vectorBA.normalize(), vectorBC.normalize());
             const radians = Math.acos(dotProduct);
             this.angle = BABYLON.Angle.FromRadians(radians).degrees();
-            this.line.renderingGroupId = 1;
-            this.effectManager.simpleTarget.renderList.push(this.line);
-            this.effectManager?.simpleTarget.setMaterialForRendering(this.line, this.line.material);
         }
     }
     // 修改事件监听
@@ -354,6 +340,10 @@ export class Measure {
                     }
                     if (this.measureType === 'angle' && pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedPoint) {
                         this.createMeasureAngleLine(pointerInfo.pickInfo.pickedPoint);
+                    }
+                    // 坐标测量逻辑
+                    if (this.measureType === 'coordinate' && pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedPoint) {
+                        this.createCoordinateMarker(pointerInfo.pickInfo.pickedPoint);
                     }
                     break;
                 case BABYLON.PointerEventTypes.POINTERMOVE:
@@ -390,12 +380,40 @@ export class Measure {
         marker.position = point.clone();
         marker.renderingGroupId = 1;
         const material = new BABYLON.StandardMaterial("areaMarkerMat", this.scene);
-        material.diffuseColor = new BABYLON.Color3(this.lineColor.r, this.lineColor.g, this.lineColor.b);
+        material.diffuseColor = new BABYLON.Color3(1, 1, 1);
         material.emissiveColor = material.diffuseColor.scale(0.3);
         marker.material = material;
         this.areaMarkers.push(marker);
         this.effectManager.simpleTarget.renderList.push(marker);
         this.effectManager?.simpleTarget.setMaterialForRendering(marker, marker.material);
+    }
+
+    // 创建坐标标记点
+    private createCoordinateMarker(point: BABYLON.Vector3): void {
+        // 清除之前的坐标标记点
+        this.coordinateMarker?.dispose();
+        this.coordinateMarker = undefined;
+
+        // 创建新的标记点
+        this.coordinateMarker = BABYLON.MeshBuilder.CreateSphere("coordinateMarker", {
+            diameter: this.markSize,
+            segments: 32
+        }, this.scene);
+
+        this.coordinateMarker.isPickable = false;
+        this.coordinateMarker.position = point.clone();
+        this.coordinateMarker.renderingGroupId = 1;
+
+        const material = new BABYLON.StandardMaterial("coordinateMarkerMat", this.scene);
+        material.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        material.emissiveColor = material.diffuseColor.scale(0.3);
+        this.coordinateMarker.material = material;
+
+        this.coordinatePoint = point.clone();
+
+        // 添加到渲染列表
+        this.effectManager.simpleTarget.renderList.push(this.coordinateMarker);
+        this.effectManager?.simpleTarget.setMaterialForRendering(this.coordinateMarker, this.coordinateMarker.material);
     }
 
     // 创建标记点（用于距离和角度测量）
@@ -408,7 +426,7 @@ export class Measure {
         marker.position = point.clone();
         marker.renderingGroupId = 1;
         const material = new BABYLON.StandardMaterial("markerMat", this.scene);
-        material.diffuseColor = new BABYLON.Color3(this.lineColor.r, this.lineColor.g, this.lineColor.b);
+        material.diffuseColor = new BABYLON.Color3(1, 1, 1);
         material.emissiveColor = material.diffuseColor.scale(0.3);
         marker.material = material;
         this.pointMarkers.push(marker);
@@ -429,9 +447,6 @@ export class Measure {
         return this.angle;
     }
 
-    public getMeasureType(): 'distance' | 'area' | 'angle' {
-        return this.measureType;
-    }
 
     public isAreaMeasurementActive(): boolean {
         return this.areaMeasurementActive;
@@ -441,20 +456,33 @@ export class Measure {
         return this.areaPoints.length;
     }
 
+    public getCoordinatePoint(): BABYLON.Vector3 | null {
+        return this.coordinatePoint;
+    }
+
+    public getMeasureType(): 'distance' | 'area' | 'angle' | 'coordinate' {
+        return this.measureType;
+    }
+
     public destroy(): void {
         this._pointerObservable?.remove();
         this._pointerObservable = null;
 
-        this.tempLine?.dispose();
+        this.tempLine?.dispose(true);
         this.tempLine = undefined;
 
-        this.line?.dispose();
+        this.line?.dispose(true);
         this.line = undefined;
 
         // 清除所有面积测量数据
         this.clearPreviousAreaMeasurement();
 
-        this.pointMarkers.forEach(marker => marker.dispose());
+        // 清除坐标测量数据
+        this.coordinateMarker?.dispose(true);
+        this.coordinateMarker = undefined;
+        this.coordinatePoint = null;
+
+        this.pointMarkers.forEach(marker => marker.dispose(true));
         this.pointMarkers = [];
 
         // 清理其他资源

@@ -280,9 +280,6 @@ export class SceneManager {
 
       // 设置初始相机状态到历史管理器
       this.cameraHistoryManager.setInitialState(this.initialCameraState);
-      const linkMesh = BABYLON.MeshBuilder.CreateBox("linkMesh", { size: 0.1 }, this.scene);
-      linkMesh.position = this.initialCameraState.target;
-      linkMesh.setEnabled(false); // 不显示链接点
       new CubeView(this.scene);
     }
   }
@@ -522,39 +519,27 @@ export class SceneManager {
    * 处理测量功能
    * @param type 测量类型
    * @param measure 测量实例
-   * @param CoordinateTemp 坐标临时存储
    * @param updateTempLineLabel 更新临时线标签的函数
    * @returns 新的Measure实例或null
    */
   public handleMeasure(
     type: 'distance' | 'area' | 'angle' | 'coordinate' | 'clear',
     measure: Measure | null,
-    CoordinateTemp: { point: { x: number, y: number, z: number } | null },
     updateTempLineLabel: (tempLine: BABYLON.AbstractMesh, anchor: BABYLON.Mesh) => void
   ): Measure | null {
-    this.effectManager.isHighlightRender = false;
+    this.effectManager!.isHighlightRender = false;
     if (!this.scene || !this.camera) return measure;
-    if (!this.utilityLayer)
-      this.utilityLayer = new BABYLON.UtilityLayerRenderer(this.scene);
 
-    // 清除现有的UI元素
-    const existingUI = this.utilityLayer.utilityLayerScene.textures.filter(t => t.name === "myUI");
-    if (existingUI) {
-      existingUI.forEach(t => t.dispose());
+    // 初始化Utility Layer
+    if (!this.utilityLayer) {
+      this.utilityLayer = new BABYLON.UtilityLayerRenderer(this.scene);
     }
 
-    const oldMeshes = this.scene.meshes.filter(mesh =>
-      mesh.name === "measureLine" ||
-      mesh.name === "tempLine" ||
-      mesh.name === "measureRectangle" ||
-      mesh.name === "tempRectangle" ||
-      mesh.name === "rectangleMesh" ||
-      mesh.name === "pointMarker"
-    );
-    oldMeshes.forEach(mesh => mesh.dispose());
+    // 清理现有测量资源
+    this.cleanupMeasurementResources();
 
     if (type === 'clear') {
-      this.effectManager.isHighlightRender = true;
+      this.effectManager!.isHighlightRender = true;
       if (measure) {
         measure.destroy();
         measure = null;
@@ -562,61 +547,16 @@ export class SceneManager {
       return measure;
     }
 
-    let markSize = 1;
-    markSize = 0.1 + (this.camera.radius / 100) * 0.5;
-    markSize = Math.max(0.1, Math.min(markSize, 5));
-    const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI", true, this.utilityLayer.utilityLayerScene);
-    const container = new GUI.Rectangle();
-    container.width = "500px";
-    container.height = "300px";
-    container.background = "transparent";
-    container.thickness = 0;
-    container.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    container.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
-    advancedTexture.addControl(container);
+    // 计算标记尺寸
+    const markSize = this.calculateMarkSize();
 
-    const distanceLabel = new GUI.TextBlock();
-    distanceLabel.color = "Red";
-    distanceLabel.fontSize = 50;
-    distanceLabel.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    container.addControl(distanceLabel);
-    const anchor = BABYLON.MeshBuilder.CreateSphere("anchor", { diameter: 0.01 }, this.scene);
-    anchor.isVisible = false;
-    container.linkWithMesh(anchor);
-
-    if (type === 'coordinate') {
-      CoordinateTemp.point = null;
-      const sphere = BABYLON.MeshBuilder.CreateSphere("pointMarker", { diameter: markSize }, this.scene);
-      container.linkWithMesh(sphere);
-      const material = new BABYLON.StandardMaterial("pointMaterial", this.scene);
-      material.diffuseColor = new BABYLON.Color3(1, 0, 0);
-      // 添加发光效果
-      material.emissiveColor = material.diffuseColor.scale(0.3);
-      sphere.material = material;
-      sphere.setEnabled(false)
-
-      this.scene.onBeforeRenderObservable.add(() => {
-        if (CoordinateTemp.point) {
-          sphere.setEnabled(true)
-          sphere.position = new BABYLON.Vector3(CoordinateTemp.point.x, CoordinateTemp.point.y, CoordinateTemp.point.z);
-          distanceLabel.text =
-            `x: ${CoordinateTemp.point.x.toFixed(2)}\n` +
-            `y: ${CoordinateTemp.point.y.toFixed(2)}\n` +
-            `z: ${CoordinateTemp.point.z.toFixed(2)}`;
-        }
-      });
-      this.effectManager.simpleTarget.renderList.push(sphere);
-      this.effectManager?.simpleTarget.setMaterialForRendering(sphere, sphere.material);
-
-
-      return measure;
-    }
+    // 创建测量UI
+    const { distanceLabel, anchor } = this.createMeasurementUI();
 
     if (measure) {
       measure.destroy();
     }
-    measure = new Measure(this.scene, type, markSize);
-    measure.setLineColor(new BABYLON.Color4(255, 0, 0, 1));
+    measure = new Measure(this.scene, type, markSize, markSize * 0.5);
 
     this.scene.onBeforeRenderObservable.add(() => {
       const meshes = this.scene!.meshes.filter(mesh => mesh.name === "tempLine");
@@ -629,12 +569,81 @@ export class SceneManager {
       } else if (type === 'area') {
         distanceLabel.text = measure?.area ? `${measure.area.toFixed(2)} m²` : '';
       } else if (type === 'angle') {
-
         distanceLabel.text = measure?.angle ? `${measure.angle.toFixed(2)} °` : '';
+      } else if (type === 'coordinate') {
+        const coordinatePoint = measure?.getCoordinatePoint();
+        if (!coordinatePoint) return;
+        anchor.position = coordinatePoint;
+        distanceLabel.text =
+          `x: ${coordinatePoint.x.toFixed(2)}\n` +
+          `y: ${coordinatePoint.y.toFixed(2)}\n` +
+          `z: ${coordinatePoint.z.toFixed(2)}`;
       }
     });
 
     return measure;
+  }
+
+  /**
+   * 清理测量相关的资源
+   */
+  private cleanupMeasurementResources(): void {
+    if (!this.scene || !this.utilityLayer) return;
+
+    // 清除UI元素
+    const existingUI = this.utilityLayer.utilityLayerScene.textures.filter(t => t.name === "myUI");
+    existingUI.forEach(t => t.dispose());
+
+    // 清除测量相关的网格
+    const oldMeshes = this.scene.meshes.filter(mesh =>
+      mesh.name === "measureLine" ||
+      mesh.name === "tempLine" ||
+      mesh.name === "measureRectangle" ||
+      mesh.name === "tempRectangle" ||
+      mesh.name === "rectangleMesh" ||
+      mesh.name === "pointMarker"
+    );
+    oldMeshes.forEach(mesh => mesh.dispose());
+  }
+
+  /**
+   * 计算标记尺寸
+   */
+  private calculateMarkSize(): number {
+    if (!this.camera) return 1;
+    let markSize = 0.1 + (this.camera.radius / 100) * 0.5;
+    return Math.max(0.1, Math.min(markSize, 5));
+  }
+
+  /**
+   * 创建测量UI
+   */
+  private createMeasurementUI(): { distanceLabel: GUI.TextBlock; anchor: BABYLON.Mesh } {
+    if (!this.scene || !this.utilityLayer) {
+      throw new Error("Scene or utility layer not initialized");
+    }
+
+    const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI", true, this.utilityLayer.utilityLayerScene);
+    const container = new GUI.Rectangle();
+    container.width = "300px";
+    container.height = "200px";
+    container.background = "transparent";
+    container.thickness = 0;
+    container.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    container.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+    advancedTexture.addControl(container);
+
+    const distanceLabel = new GUI.TextBlock();
+    distanceLabel.color = "red";
+    distanceLabel.fontSize = 50;
+    distanceLabel.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    container.addControl(distanceLabel);
+
+    const anchor = BABYLON.MeshBuilder.CreateSphere("anchor", { diameter: 0.01 }, this.scene);
+    anchor.isVisible = false;
+    container.linkWithMesh(anchor);
+
+    return { distanceLabel, anchor };
   }
 
   /**
@@ -786,7 +795,7 @@ export class SceneManager {
     }
     if (data.type === 'highlightMode') {
       this.effectManager!.isHighlightRender = data.value;
-      console.log("this.effectManager.isHighlightRender", this.effectManager!.isHighlightRender,this.selectedMeshId);
+      console.log("this.effectManager.isHighlightRender", this.effectManager!.isHighlightRender, this.selectedMeshId);
       await this.ifcPropertyUtils.handleComponentClick(this.selectedMeshId, meshConfig, this.modelStore.modelData.tree);
     }
     if (data.type === 'highlightColor') {
@@ -899,21 +908,7 @@ export class SceneManager {
     this.selectedMeshId = '';
 
     // 清理UI纹理
-    const existingUI = this.utilityLayer?.utilityLayerScene.textures.filter(t => t.name === "myUI");
-    if (existingUI) {
-      existingUI.forEach(t => t.dispose());
-    }
-
-    // 清理测量相关的网格
-    const oldMeshes = this.scene.meshes.filter(mesh =>
-      mesh.name === "measureLine" ||
-      mesh.name === "tempLine" ||
-      mesh.name === "measureRectangle" ||
-      mesh.name === "tempRectangle" ||
-      mesh.name === "rectangleMesh" ||
-      mesh.name === "pointMarker"
-    );
-    oldMeshes.forEach(mesh => mesh.dispose());
+    this.cleanupMeasurementResources();
 
     // 重置爆炸滑块
     const handleSliderExplosionX = document.getElementById("horizontalSliderExplosionX") as any;

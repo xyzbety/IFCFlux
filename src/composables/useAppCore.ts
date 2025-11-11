@@ -1,4 +1,4 @@
-import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted, h } from 'vue';
+import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -30,9 +30,6 @@ function createAppCore() {
     let isSidebarVisible = ref(false);
     let isFocus = false;
     let measure: Measure | null;
-    let CoordinateTemp = {
-        point: null as { x: number, y: number, z: number } | null
-    };
 
     let selectedMeshIds = new Set<string>();
     let originalMaterialProperties = new Map<string, { alpha: number }>();
@@ -158,7 +155,7 @@ function createAppCore() {
     };
     const handleMeasure = (type: any) => {
         clear();
-        measure = sceneManager.handleMeasure(type, measure, CoordinateTemp, updateTempLineLabel);
+        measure = sceneManager.handleMeasure(type, measure, updateTempLineLabel);
     };
     const handleBuildTree = () => toggleStructureTree();
     const handlePropertiesTable = () => togglePropertyTable();
@@ -187,7 +184,6 @@ function createAppCore() {
         isClickVisible.value = true;
         lastClickedMeshId = null;
         measure = null;
-        CoordinateTemp.point = null;
         sceneManager.clear();
     }
 
@@ -264,7 +260,6 @@ function createAppCore() {
         } else if (event?.detail?.expressID !== undefined) {
             expressID = event.detail.expressID;
             globalId = event.detail.globalId || expressID;
-            CoordinateTemp.point = event.detail.point;
             if (expressID) {
                 lastClickedMeshId = expressID;
                 let node = ifcPropertyUtils.findNodeByExpressId(tree, expressID);
