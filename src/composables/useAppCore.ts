@@ -4,9 +4,7 @@ import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useModelStore, useSceneStore, useSelectedStore } from '../store';
 import { useSettingsStore } from '../store/settings';
-import { Measure } from '../utils/analysis/measure';
 import { ifcPropertyColumns } from '../utils/config';
-import { updateTempLineLabel } from '../utils/index';
 import { IfcExplosion } from '../utils/analysis/explosion';
 import { useLayoutManager } from './useLayoutManager';
 import { ModelManager } from "../services/model-manager";
@@ -23,16 +21,12 @@ import { saveAsGLB, saveAsDB, saveAsJSON } from '../services/model-export';
 let appCoreInstance: ReturnType<typeof createAppCore> | null = null;
 
 function createAppCore() {
-    let initResult: any = null; // 用于存储初始化结果
-
     const isTauriEnv = isTauri();
     let isMaximized = ref(true);
     let isSidebarVisible = ref(false);
     let isFocus = false;
-    let measure: Measure | null;
 
     let selectedMeshIds = new Set<string>();
-    let originalMaterialProperties = new Map<string, { alpha: number }>();
     let isClickVisible = ref(true);
     let inspectType = ref('');
     let lastClickedMeshId: string | null = null;
@@ -151,11 +145,11 @@ function createAppCore() {
         sceneManager.handleSlice(action);
     };
     const handleVisibility = (mode: any) => {
-        sceneManager.handleVisibility(mode, selectedMeshIds, originalMaterialProperties, isClickVisible);
+        sceneManager.handleVisibility(mode, selectedMeshIds, isClickVisible);
     };
     const handleMeasure = (type: any) => {
-        clear();
-        measure = sceneManager.handleMeasure(type, measure, updateTempLineLabel);
+        sceneManager.clear();
+        sceneManager.handleMeasure(type);
     };
     const handleBuildTree = () => toggleStructureTree();
     const handlePropertiesTable = () => togglePropertyTable();
@@ -170,27 +164,17 @@ function createAppCore() {
         await sceneManager.exportSceneData(type, isTauriEnv);
     }
 
-    function clear() {
-        if (measure) {
-            measure.destroy();
-            measure = null;
-        }
-        sceneManager.clear();
-    }
-
     function resetGlobalVariables() {
         selectedMeshIds.clear();
-        originalMaterialProperties.clear();
         isClickVisible.value = true;
         lastClickedMeshId = null;
-        measure = null;
         sceneManager.clear();
     }
 
     const handleFileUploaded = async (file: File) => {
         if (!file || !sceneManager.scene) return;
         const scene = sceneManager.scene;
-        clear();
+        sceneManager.clear();
         pageState.treeData = [];
         resetGlobalVariables();
 
@@ -199,13 +183,12 @@ function createAppCore() {
                 const modelData = modelStore.modelData;
                 if (modelData) {
                     inspectType.value = "";
-                    initResult = ifcPropertyUtils.initializeModelData(modelData);
-                    pageState.treeData = initResult.treeData;
+                    pageState.treeData = modelData.tree;
                     pageState.property = [];
                     pageState.groupMap = new Map<number, any>();
-                    pageState.ifcExpressIds = initResult.ifcExpressIds;
-                    pageState.propertyAll = initResult.propertyAll;
-                    pageState.psetRelations = initResult.psetRelations;
+                    pageState.ifcExpressIds = modelData.ifcExpressIds;
+                    pageState.propertyAll = modelData.properties;
+                    pageState.psetRelations = modelData.psetRelations;
                     eventManager.emit('file-loaded');
 
                     sceneManager.setIfcExplosion(new IfcExplosion(scene));
@@ -213,7 +196,7 @@ function createAppCore() {
                     sceneManager.setupCameraAndLight();
                     sceneManager.setDefaultScene()
                     await sceneManager.setupShadows();
-                    await sceneManager.saveOriginalMaterialProperties(originalMaterialProperties);
+                    await sceneManager.saveOriginalMaterialProperties();
                 }
             });
         } catch (error) {
@@ -250,16 +233,13 @@ function createAppCore() {
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
         let expressID: string | null = null;
-        let globalId: string | null = null;
 
         if (event[0]?.originData?.expressId) {
             expressID = event[0]?.originData?.type === 'ifcSiteNode' ? event[0]?.originData?.expressId.replace('ifcSiteNode_', '') : event[0]?.originData?.expressId;
-            globalId = event[0]?.originData?.globalId || expressID;
             selectedMeshIds = new Set(ifcPropertyUtils.getChildrenExpressIds(event[0]?.originData));
             lastClickedMeshId = expressID;
         } else if (event?.detail?.expressID !== undefined) {
             expressID = event.detail.expressID;
-            globalId = event.detail.globalId || expressID;
             if (expressID) {
                 lastClickedMeshId = expressID;
                 let node = ifcPropertyUtils.findNodeByExpressId(tree, expressID);
@@ -285,7 +265,7 @@ function createAppCore() {
         const { items, groupRowMap } = await ifcPropertyUtils.flattenTreeToGroupedItems(property);
         pageState.property = items;
         pageState.groupMap = groupRowMap;
-        const meshConfig = { scene, selectedMeshId: sceneManager.selectedMeshId, globalId: globalId || expressID, isFocus };
+        const meshConfig = { scene, isFocus };
         await ifcPropertyUtils.handleComponentClick(expressID, meshConfig, pageState.treeData);
     };
 
@@ -425,7 +405,6 @@ function createAppCore() {
         toggleStructureTreeDialog, togglePropertyTableDialog, tableRowClick, onTableSelectChange,
         handleDragStart, onInspectVisibleChange, handleTabChange,
         sceneManager,
-        originalMaterialProperties,
     };
 }
 

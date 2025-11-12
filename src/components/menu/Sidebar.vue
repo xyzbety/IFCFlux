@@ -125,7 +125,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import type { Theme } from '../store/settings';
+import type { Theme } from '../../store/settings';
 import { ModelManager } from '../../services/model-manager';
 import { useSettingsStore } from '../../store/settings';
 import { useModelStore } from "../../store/index.ts";

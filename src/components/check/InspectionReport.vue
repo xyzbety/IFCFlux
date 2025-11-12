@@ -244,12 +244,9 @@ const handleRowClick = async (event: any) => {
     if (sceneManager.scene) {
         ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
         if (expressID) {
-            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
+            let data = modelData.tree;
             const meshConfig = {
                 scene: sceneManager.scene,
-                selectedMeshId: expressID,
-                globalId: expressID,
-                isHighlight: true,
                 isFocus: false
             };
             // 调用统一的处理方法
@@ -316,12 +313,9 @@ const handleFocus = async (event: any) => {
     if (sceneManager.scene) {
         ifcPropertyUtils.clearAllHighlights(sceneManager.scene);
         if (expressID) {
-            let data = ifcPropertyUtils.initializeModelData(modelData).treeData;
+            let data = modelData.tree;
             const meshConfig = {
                 scene: sceneManager.scene,
-                selectedMeshId: expressID,
-                globalId: expressID,
-                isHighlight: true,
                 isFocus: true
             };
             // 调用统一的处理方法

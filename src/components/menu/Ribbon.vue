@@ -31,7 +31,7 @@ const modelStore = useModelStore();
 const emit = defineEmits([
   'navigate-event', 'change-view', 'visible-control', 'explosion-event', 'inspect-click',
   'measure-event', 'slice-event', 'build-tree', 'properties-table', 'file-uploaded',
-  'light-settings', 'light-settings-reset', 'scene-settings', 'toggle-file-menu', 'ribbon-tab-change'
+  'light-settings', 'scene-settings', 'toggle-file-menu', 'ribbon-tab-change'
 ]);
 
 let eventManager = RibbonEventManager.getInstance();

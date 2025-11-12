@@ -45,10 +45,10 @@ export function createGround(scene: BABYLON.Scene, bbox: any, isGrid: boolean) {
     const gridMaterial = new GridMaterial("gridMaterial", scene);
     gridMaterial.majorUnitFrequency = 1; // 主线每1格
     gridMaterial.minorUnitVisibility = 1; // 次线可见度
-    gridMaterial.gridRatio = gridWidth / 30; // 每格实际大小
-    // gridMaterial.lineColor = new BABYLON.Color3(1.0, 1.0, 1.0); // 主线颜色
-    gridMaterial.mainColor = new BABYLON.Color3(1.0, 1.0, 1.0); // 背景色
-    gridMaterial.opacity = 0.999; // 接近1但不完全1
+    gridMaterial.gridRatio = gridWidth / 20; // 减小网格大小，增加网格密度
+    gridMaterial.lineColor = new BABYLON.Color3(0.0, 1.0, 1.0); 
+    gridMaterial.mainColor = new BABYLON.Color3(0.5, 0.5, 0.5); 
+    gridMaterial.opacity = 0.99; 
     gridMaterial.alphaMode = BABYLON.Engine.ALPHA_COMBINE;
     gridMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; // 允许alpha混合
     gridMaterial.backFaceCulling = false;
@@ -58,6 +58,7 @@ export function createGround(scene: BABYLON.Scene, bbox: any, isGrid: boolean) {
     grid.position.y = gridY;
     grid.setEnabled(isGrid);
     console.log("地面加载完成", grid);
+    return grid;
 }
 // 提取相机初始化设置为独立函数
 export function setupCameraByBoundingBox(camera: BABYLON.ArcRotateCamera, bbox: any) {
@@ -74,7 +75,7 @@ export function setupCameraByBoundingBox(camera: BABYLON.ArcRotateCamera, bbox: 
     camera.beta = Math.PI / 3; // 设置初始仰角
 
     // 设置相机距离（radius），让模型完整显示
-    camera.radius = maxSize * 1.5;
+    camera.radius = maxSize * 1.6;
 
     // 根据距离动态调整相机平移惯性和灵敏度
     const minRadius = 10;
@@ -167,11 +168,12 @@ export function updateTempLineLabel(tempLine: BABYLON.AbstractMesh, anchor: BABY
     const end = new BABYLON.Vector3(points[points.length - 3], points[points.length - 2], points[points.length - 1]);
     // 计算中点
     const mid = BABYLON.Vector3.Center(start, end);
+    console.log("mid", tempLine.position,start, end, mid);    
     anchor.position.copyFrom(mid);
 }
 
 export function debounce(func: Function, wait: number = 500) {
-    let timeout: number | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
     return function executedFunction(...args: any[]) {
         const later = () => {
             timeout = null;

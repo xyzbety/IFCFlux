@@ -5,8 +5,6 @@ import { EffectManager } from './scene-effect';
 
 export interface MeshHighlightConfig {
   scene: BABYLON.Scene;
-  selectedMeshId: string;
-  globalId: string;
   isFocus: boolean;
 }
 
@@ -437,124 +435,63 @@ export class IfcPropertyUtils {
   }
 
   /**
-   * 初始化模型数据的通用处理
-   * @param modelData - 模型数据
-   * @returns 初始化结果
-   */
-  public initializeModelData(
-    modelData: any
-  ): {
-    treeData: any[];
-    ifcExpressIds: any[];
-    propertyAll: any[];
-    psetRelations: any;
-  } {
-    const treeData = modelData.tree;
-    IfcPropertyUtils.rootExpressId = modelData.tree[0].expressId;
-
-    const ifcExpressIds = modelData.ifcExpressIds;
-    const propertyAll = modelData.properties;
-    const psetRelations = modelData.psetRelations;
-
-    return {
-      treeData,
-      ifcExpressIds,
-      propertyAll,
-      psetRelations,
-    };
-  }
-
-  /**
    * 处理构件点击事件 - 包含树同步和mesh高亮
    * @param expressID - 构件的expressID
    * @param meshConfig - mesh高亮配置
    * @param treeConfig - 树同步配置（可选）
-   * @returns Promise<boolean> - 是否成功处理
    */
   public async handleComponentClick(
     expressID: string,
     meshConfig: MeshHighlightConfig,
     treeData?: any[]
-  ): Promise<boolean> {
+  ) {
     if (!expressID || !meshConfig.scene) {
       console.warn('handleComponentClick: expressID or scene is missing');
-      return false;
+      return;
     }
 
     try {
-      const highlighted = await this.highlightComponentMesh(expressID, meshConfig, treeData);
-      return highlighted;
+      const { scene, isFocus } = meshConfig;
+
+      // 查找当前节点及其所有子节点的expressID
+      const allExpressIds = treeData ?
+        this.findAllChildExpressIds(treeData, expressID) :
+        [expressID];
+
+      allExpressIds.push(expressID); // 包含当前节点本身
+      const expressIdSet = new Set(allExpressIds);
+
+      const exactMatches = scene.meshes.filter(mesh => {
+        return expressIdSet.has(mesh.id);
+      });
+
+      // 高亮mesh
+      if (exactMatches.length > 0) {
+        if (!this.effectManager) {
+          this.effectManager = EffectManager.getInstance(scene);
+        }
+        this.effectManager.applyHighlight(exactMatches);
+
+        // 自动聚焦
+        if (isFocus) {
+          try {
+            const bbox = getBoundingBoxForMeshes(exactMatches);
+            const arcRotateCamera = scene.activeCamera as BABYLON.ArcRotateCamera;
+            arcRotateCamera.setTarget(bbox.center);
+            arcRotateCamera.radius = bbox.maximum.subtract(bbox.minimum).length() * 1.8;
+          } catch (e) {
+            console.error("Focus error:", e);
+          }
+        }
+        return;
+      }
+
+      return;
     } catch (error) {
       console.error('handleComponentClick error:', error);
-      return false;
+      return;
     }
   }
-
-  /**
-   * 高亮构件对应的mesh
-   * @param expressID - 构件的expressID
-   * @param meshConfig - mesh高亮配置
-   * @param treeData - 树数据（用于查找子节点）
-   * @returns boolean - 是否成功高亮
-   */
-  private async highlightComponentMesh(
-    expressID: string,
-    meshConfig: MeshHighlightConfig,
-    treeData?: any[]
-  ): Promise<boolean> {
-    const { scene, selectedMeshId, globalId, isFocus } = meshConfig;
-
-    // 查找当前节点及其所有子节点的expressID
-    const allExpressIds = treeData ?
-      this.findAllChildExpressIds(treeData, expressID) :
-      [expressID];
-
-    allExpressIds.push(expressID); // 包含当前节点本身
-    const expressIdSet = new Set(allExpressIds);
-
-    // 基于 GlobalId 查找对应的mesh进行联动
-    const exactMatches = scene.meshes.filter(mesh => {
-      // 优先使用 GlobalId 匹配，如果没有则使用 expressId
-      return expressIdSet.has(mesh.metadata?.globalId) || expressIdSet.has(mesh.id);
-    });
-
-    // 排除天空盒
-    if (exactMatches.length === 1 && exactMatches[0]?.name === 'skyBox') {
-      return false;
-    }
-
-    // 检查mesh可见性
-    let isVisibleMeshHighlight = true;
-    scene.meshes.forEach((mesh) => {
-      if (mesh.id === selectedMeshId || mesh.metadata?.globalId === globalId) {
-        isVisibleMeshHighlight = mesh.isVisible;
-      }
-    });
-
-    // 高亮mesh
-    if ( isVisibleMeshHighlight && exactMatches.length > 0) {
-      if (!this.effectManager) {
-        this.effectManager = EffectManager.getInstance(scene);
-      }
-      this.effectManager.applyHighlight(exactMatches);
-
-      // 自动聚焦
-      if (isFocus) {
-        try {
-          const bbox = getBoundingBoxForMeshes(exactMatches);
-          const arcRotateCamera = scene.activeCamera as BABYLON.ArcRotateCamera;
-          arcRotateCamera.setTarget(bbox.center);
-          arcRotateCamera.radius = bbox.maximum.subtract(bbox.minimum).length() * 1.8;
-        } catch (e) {
-          console.error("Focus error:", e);
-        }
-      }
-      return true;
-    }
-
-    return false;
-  }
-
 
 
   /**
@@ -649,30 +586,30 @@ export class IfcPropertyUtils {
  * @returns 包含所有需要展开的父节点 key 的数组
  */
 export function getAllExpandedKeys(data: any[], childrenKey = 'children') {
-    // 初始化一个空数组，用于存储所有需要展开的父节点的 key
-    const keys: string[] = [];
+  // 初始化一个空数组，用于存储所有需要展开的父节点的 key
+  const keys: string[] = [];
 
-    /**
-     * 递归遍历树形结构的辅助函数
-     * @param list - 当前层级的节点列表
-     */
-    function traverse(list: any[]) {
-        // 遍历当前层级的每个节点
-        list.forEach(item => {
-            // 检查当前节点是否有子节点
-            if (item[childrenKey] && item[childrenKey].length) {
-                // 如果有子节点，将当前节点的 key 存入 keys 数组
-                keys.push(item.key);
-                // 递归遍历子节点
-                traverse(item[childrenKey]);
-            }
-        });
-    }
+  /**
+   * 递归遍历树形结构的辅助函数
+   * @param list - 当前层级的节点列表
+   */
+  function traverse(list: any[]) {
+    // 遍历当前层级的每个节点
+    list.forEach(item => {
+      // 检查当前节点是否有子节点
+      if (item[childrenKey] && item[childrenKey].length) {
+        // 如果有子节点，将当前节点的 key 存入 keys 数组
+        keys.push(item.key);
+        // 递归遍历子节点
+        traverse(item[childrenKey]);
+      }
+    });
+  }
 
-    // 从顶层节点开始遍历
-    traverse(data);
-    // 返回所有需要展开的父节点的 key
-    return keys;
+  // 从顶层节点开始遍历
+  traverse(data);
+  // 返回所有需要展开的父节点的 key
+  return keys;
 }
 
 /**
@@ -681,65 +618,65 @@ export function getAllExpandedKeys(data: any[], childrenKey = 'children') {
  * @returns 转换后的树形结构数据
  */
 export function convertToTreeData(obj: any) {
-    // 用于生成唯一ID的计数器
-    let idCounter = 1;
-    // 存储最终的树形结构数据
-    const result = [];
+  // 用于生成唯一ID的计数器
+  let idCounter = 1;
+  // 存储最终的树形结构数据
+  const result = [];
 
-    // 处理基础属性（非对象或数组类型的属性）
-    const baseChildren = [];
-    for (const [key, value] of Object.entries(obj)) {
-        // 检查属性是否为非对象或数组类型
-        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-            baseChildren.push({
-                id: idCounter++, // 生成唯一ID
-                key: `base-${idCounter}`, // 生成唯一key
-                name: key === 'Entity' ? 'IfcEntity' : (key === 'Guid' ? 'GlobalId' : key), // 特殊字段名映射
-                value: value, // 属性值
-                _parentName: 'Element Specific' // 标记父节点名称
-            });
-        }
+  // 处理基础属性（非对象或数组类型的属性）
+  const baseChildren = [];
+  for (const [key, value] of Object.entries(obj)) {
+    // 检查属性是否为非对象或数组类型
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      baseChildren.push({
+        id: idCounter++, // 生成唯一ID
+        key: `base-${idCounter}`, // 生成唯一key
+        name: key === 'Entity' ? 'IfcEntity' : (key === 'Guid' ? 'GlobalId' : key), // 特殊字段名映射
+        value: value, // 属性值
+        _parentName: 'Element Specific' // 标记父节点名称
+      });
     }
+  }
 
-    // 如果有基础属性，则添加到结果中
-    if (baseChildren.length) {
-        result.push({
-            id: idCounter++,
-            key: `element-specific-${idCounter}`,
-            name: 'Element Specific', // 父节点名称
-            value: '', // 父节点值
-            children: baseChildren // 子节点列表
-        });
+  // 如果有基础属性，则添加到结果中
+  if (baseChildren.length) {
+    result.push({
+      id: idCounter++,
+      key: `element-specific-${idCounter}`,
+      name: 'Element Specific', // 父节点名称
+      value: '', // 父节点值
+      children: baseChildren // 子节点列表
+    });
+  }
+
+  // 处理对象类型的属性（属性集）
+  for (const [key, value] of Object.entries(obj)) {
+    // 检查属性是否为对象类型且非数组
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      // 遍历对象的子属性
+      const children = Object.entries(value).map(([subKey, subVal]) => ({
+        id: idCounter++,
+        key: `child-${idCounter}`,
+        name: subKey, // 子属性名称
+        state: Array.isArray(subVal) ? subVal[0] : subVal, // 状态值（如果是数组，取第一个元素）
+        value: Array.isArray(subVal)
+          ? (typeof subVal[1] === 'boolean' ? (subVal[1] ? '是' : '否') : subVal[1]) // 处理布尔值显示
+          : subVal, // 属性值
+        dataType: Array.isArray(subVal) ? subVal[2] : subVal, // 数据类型（如果是数组，取第三个元素）
+        _parentName: key // 标记父节点名称
+      }));
+
+      // 将属性集添加到结果中
+      result.push({
+        id: idCounter++,
+        key: `parent-${idCounter}`,
+        name: key, // 属性集名称
+        value: '', // 父节点值
+        children // 子节点列表
+      });
     }
+  }
 
-    // 处理对象类型的属性（属性集）
-    for (const [key, value] of Object.entries(obj)) {
-        // 检查属性是否为对象类型且非数组
-        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-            // 遍历对象的子属性
-            const children = Object.entries(value).map(([subKey, subVal]) => ({
-                id: idCounter++,
-                key: `child-${idCounter}`,
-                name: subKey, // 子属性名称
-                state: Array.isArray(subVal) ? subVal[0] : subVal, // 状态值（如果是数组，取第一个元素）
-                value: Array.isArray(subVal) 
-                    ? (typeof subVal[1] === 'boolean' ? (subVal[1] ? '是' : '否') : subVal[1]) // 处理布尔值显示
-                    : subVal, // 属性值
-                dataType: Array.isArray(subVal) ? subVal[2] : subVal, // 数据类型（如果是数组，取第三个元素）
-                _parentName: key // 标记父节点名称
-            }));
-
-            // 将属性集添加到结果中
-            result.push({
-                id: idCounter++,
-                key: `parent-${idCounter}`,
-                name: key, // 属性集名称
-                value: '', // 父节点值
-                children // 子节点列表
-            });
-        }
-    }
-
-    // 返回最终的树形结构数据
-    return result;
+  // 返回最终的树形结构数据
+  return result;
 }

@@ -43,6 +43,7 @@ export class EffectManager {
    */
   public applyHighlight(meshes: BABYLON.AbstractMesh[]): void {
     this.clearAll();
+    console.log("applyHighlight", meshes);
 
     meshes.forEach(mesh => {
       if (!mesh.metadata) mesh.metadata = {};
@@ -52,17 +53,16 @@ export class EffectManager {
 
       // 保存原始状态以便后续恢复
       mesh.metadata.originalMaterial = mesh.material;
-      mesh.metadata.originalVisibility = mesh.isVisible;
 
       if (this.isHighlightRender && this.maskTarget && this.materialmask) {
         if (mesh.material) {
           const hightMaterial = mesh.material.clone(mesh.material.name + 'hightMaterial');
-          hightMaterial.alpha = 0.5;
-          this.simpleTarget?.setMaterialForRendering(mesh, hightMaterial);
-          mesh.metadata.hightMaterial = hightMaterial;
+          if (hightMaterial) {
+            hightMaterial.alpha = 0.5;
+            this.simpleTarget?.setMaterialForRendering(mesh, hightMaterial);
+            mesh.metadata.hightMaterial = hightMaterial;
+          }
         }
-        mesh.isVisible = true;
-        mesh.renderingGroupId = 1;
 
         // 使用自定义后处理实现边框渲染
         this.maskTarget.renderList?.push(mesh);
@@ -100,11 +100,8 @@ export class EffectManager {
         }
 
         mesh.material = mesh.metadata.originalMaterial;
-        mesh.isVisible = mesh.metadata.originalVisibility !== false;
-        mesh.renderingGroupId = 0;
         this.simpleTarget?.setMaterialForRendering(mesh, mesh.metadata.originalMaterial);
         delete mesh.metadata.originalMaterial;
-        delete mesh.metadata.originalVisibility;
       }
     });
   }
@@ -232,7 +229,6 @@ export class EffectManager {
       this.scene
     );
 
-    this.simpleTarget.clearColor = new BABYLON.Color4(0, 0, 0, 0);
     this.simpleTarget.activeCamera = this.scene.activeCamera;
     this.simpleTarget.samples = 4; // 多重采样抗锯齿
     this.scene.customRenderTargets.push(this.simpleTarget);
@@ -247,7 +243,6 @@ export class EffectManager {
       this.scene
     );
 
-    this.maskTarget.clearColor = new BABYLON.Color4(0, 0, 0, 0);
     this.maskTarget.activeCamera = this.scene.activeCamera;
     this.maskTarget.samples = 4; // 多重采样抗锯齿
     this.scene.customRenderTargets.push(this.maskTarget);
@@ -323,7 +318,7 @@ export class EffectManager {
       effect.setTexture('textureSimpleSampler', this.simpleTarget!);
 
       // 设置轮廓参数
-      effect.setInt('outline_pixel_width', 10); // 轮廓像素宽度
+      effect.setInt('outline_pixel_width', 20); // 轮廓像素宽度
       effect.setVector4("outline_color", new BABYLON.Vector4(
         this.highlightColor.r,
         this.highlightColor.g,

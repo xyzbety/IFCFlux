@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
 import { MessagePlugin } from 'tdesign-vue-next';
-import { setupCameraByBoundingBox, createGround, rgbToHex, calculateEdgeWidthByBoundingBox } from '../utils';
+import { setupCameraByBoundingBox, createGround, rgbToHex, calculateEdgeWidthByBoundingBox,updateTempLineLabel } from '../utils';
 import { IfcExplosion } from '../utils/analysis/explosion';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { Measure } from '../utils/analysis/measure';
@@ -28,6 +28,7 @@ export class SceneManager {
 
   private cameraHistoryManager: CameraHistoryManager;
   private slicePlane: SlicePlane | null = null;
+  private measure: Measure | null = null;
   private ifcExplosion: IfcExplosion | null = null;
   private hiddenMeshIds: Set<string> = new Set(); // 存储已隐藏的mesh ID
   private isolatedMeshIds: Set<string> = new Set(); // 存储已隔离的mesh ID
@@ -38,6 +39,7 @@ export class SceneManager {
   private effectManager: EffectManager | null = null;
   public selectedMeshId: string | '' = '';
   private utilityLayer: BABYLON.UtilityLayerRenderer | null = null;
+  private originalMaterialProperties = new Map<string, { alpha: number }>(); //存储原始材质属性的Map
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -66,6 +68,7 @@ export class SceneManager {
 
     // --- Scene Properties ---
     this.scene.useRightHandedSystem = true;
+    this.scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 0);
     this.scene.autoClear = false;
 
     // --- Camera Creation ---
@@ -183,15 +186,14 @@ export class SceneManager {
 
   /**
    * 保存场景中所有网格的原始材质属性
-   * @param originalMaterialProperties 存储原始材质属性的Map
    */
-  public async saveOriginalMaterialProperties(originalMaterialProperties: Map<string, { alpha: number }>) {
+  public async saveOriginalMaterialProperties() {
     if (!this.scene) return;
 
     for (const mesh of this.scene.meshes) {
       // 保存原始材质属性
-      if (mesh.material && !originalMaterialProperties.has(mesh.id)) {
-        originalMaterialProperties.set(mesh.id, {
+      if (mesh.material && !this.originalMaterialProperties.has(mesh.id)) {
+        this.originalMaterialProperties.set(mesh.id, {
           alpha: mesh.material.alpha
         });
       }
@@ -363,13 +365,11 @@ export class SceneManager {
    * @param mode 可见性模式
    * @param selectedMeshIds 选中的网格ID集合
    * @param selectedMeshId 当前选中的网格ID
-   * @param originalMaterialProperties 原始材质属性映射
    * @param isClickVisibleRef 是否通过点击选择可见的引用
    */
   public handleVisibility(
     mode: 'showAll' | 'hideSelected' | 'isolateSelected' | 'transparentSelected',
     selectedMeshIds: Set<string>,
-    originalMaterialProperties: Map<string, { alpha: number }>,
     isClickVisibleRef: { value: boolean }
   ) {
     if (!this.scene) return;
@@ -393,7 +393,7 @@ export class SceneManager {
         // 还原透明度到原始值
         if (mesh.material) {
           this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
-          const originalProps = originalMaterialProperties.get(mesh.id);
+          const originalProps = this.originalMaterialProperties.get(mesh.id);
           if (originalProps) {
             if (mesh.material.name === 'highlightMat') {
               mesh.material.alpha = 0.5;
@@ -488,7 +488,7 @@ export class SceneManager {
         // 还原非半透明mesh的透明度到原始值
         if (mesh.material) {
           this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
-          const originalProps = originalMaterialProperties.get(mesh.id);
+          const originalProps = this.originalMaterialProperties.get(mesh.id);
           if (originalProps) {
             mesh.material.alpha = originalProps.alpha;
           } else {
@@ -518,17 +518,12 @@ export class SceneManager {
   /**
    * 处理测量功能
    * @param type 测量类型
-   * @param measure 测量实例
-   * @param updateTempLineLabel 更新临时线标签的函数
-   * @returns 新的Measure实例或null
    */
   public handleMeasure(
-    type: 'distance' | 'area' | 'angle' | 'coordinate' | 'clear',
-    measure: Measure | null,
-    updateTempLineLabel: (tempLine: BABYLON.AbstractMesh, anchor: BABYLON.Mesh) => void
-  ): Measure | null {
+    type: 'distance' | 'area' | 'angle' | 'coordinate' | 'clear'
+  ) {
     this.effectManager!.isHighlightRender = false;
-    if (!this.scene || !this.camera) return measure;
+    if (!this.scene || !this.camera) return;
 
     // 初始化Utility Layer
     if (!this.utilityLayer) {
@@ -537,51 +532,46 @@ export class SceneManager {
 
     // 清理现有测量资源
     this.cleanupMeasurementResources();
+    if (this.measure) {
+      this.measure.destroy();
+      this.measure = null;
+    }
 
     if (type === 'clear') {
       this.effectManager!.isHighlightRender = true;
-      if (measure) {
-        measure.destroy();
-        measure = null;
-      }
-      return measure;
+    } else {
+      // 计算标记尺寸
+      const markSize = this.calculateMarkSize();
+
+      // 创建测量UI
+      const { distanceLabel, anchor } = this.createMeasurementUI();
+
+      this.measure = new Measure(this.scene, type, markSize, markSize * 0.5);
+
+      this.scene.onBeforeRenderObservable.add(() => {
+        const meshes = this.scene!.meshes.filter(mesh => mesh.name === "tempLine");
+        if (meshes.length > 0) {
+          const tempLine = meshes[0];
+          updateTempLineLabel(tempLine, anchor);
+        }
+        if (type === 'distance') {
+          distanceLabel.text = this.measure?.lineDistance ? `${this.measure.lineDistance.toFixed(2)} m` : '';
+        } else if (type === 'area') {
+          distanceLabel.text = this.measure?.area ? `${this.measure.area.toFixed(2)} m²` : '';
+        } else if (type === 'angle') {
+          distanceLabel.text = this.measure?.angle ? `${this.measure.angle.toFixed(2)} °` : '';
+        } else if (type === 'coordinate') {
+          const coordinatePoint = this.measure?.getCoordinatePoint();
+          if (!coordinatePoint) return;
+          anchor.position = coordinatePoint;
+          distanceLabel.text =
+            `x: ${coordinatePoint.x.toFixed(2)}\n` +
+            `y: ${coordinatePoint.y.toFixed(2)}\n` +
+            `z: ${coordinatePoint.z.toFixed(2)}`;
+        }
+      });
+
     }
-
-    // 计算标记尺寸
-    const markSize = this.calculateMarkSize();
-
-    // 创建测量UI
-    const { distanceLabel, anchor } = this.createMeasurementUI();
-
-    if (measure) {
-      measure.destroy();
-    }
-    measure = new Measure(this.scene, type, markSize, markSize * 0.5);
-
-    this.scene.onBeforeRenderObservable.add(() => {
-      const meshes = this.scene!.meshes.filter(mesh => mesh.name === "tempLine");
-      if (meshes.length > 0) {
-        const tempLine = meshes[0];
-        updateTempLineLabel(tempLine, anchor);
-      }
-      if (type === 'distance') {
-        distanceLabel.text = measure?.lineDistance ? `${measure.lineDistance.toFixed(2)} m` : '';
-      } else if (type === 'area') {
-        distanceLabel.text = measure?.area ? `${measure.area.toFixed(2)} m²` : '';
-      } else if (type === 'angle') {
-        distanceLabel.text = measure?.angle ? `${measure.angle.toFixed(2)} °` : '';
-      } else if (type === 'coordinate') {
-        const coordinatePoint = measure?.getCoordinatePoint();
-        if (!coordinatePoint) return;
-        anchor.position = coordinatePoint;
-        distanceLabel.text =
-          `x: ${coordinatePoint.x.toFixed(2)}\n` +
-          `y: ${coordinatePoint.y.toFixed(2)}\n` +
-          `z: ${coordinatePoint.z.toFixed(2)}`;
-      }
-    });
-
-    return measure;
   }
 
   /**
@@ -624,6 +614,7 @@ export class SceneManager {
     }
 
     const advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("myUI", true, this.utilityLayer.utilityLayerScene);
+    // advancedTexture.renderScale = 0.5
     const container = new GUI.Rectangle();
     container.width = "300px";
     container.height = "200px";
@@ -635,7 +626,7 @@ export class SceneManager {
 
     const distanceLabel = new GUI.TextBlock();
     distanceLabel.color = "red";
-    distanceLabel.fontSize = 50;
+    distanceLabel.fontSize = 48;
     distanceLabel.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
     container.addControl(distanceLabel);
 
@@ -778,7 +769,7 @@ export class SceneManager {
    */
   public async setSceneSettings(data: any) {
     if (!this.scene) return;
-    const meshConfig = { scene: this.scene, selectedMeshId: this.selectedMeshId, globalId: this.selectedMeshId, isFocus: false };
+    const meshConfig = { scene: this.scene, isFocus: false };
     const viewer = document.getElementById("viewer-canvas") as HTMLDivElement;
     if (data.type === 'backgroundColor' && viewer) {
       viewer.style.backgroundColor = data.value;
@@ -906,9 +897,14 @@ export class SceneManager {
       this.scene._edgeRenderLineShader = null;
     }
     this.selectedMeshId = '';
+    this.originalMaterialProperties.clear();
 
     // 清理UI纹理
     this.cleanupMeasurementResources();
+    if (this.measure) {
+      this.measure.destroy();
+      this.measure = null;
+    }
 
     // 重置爆炸滑块
     const handleSliderExplosionX = document.getElementById("horizontalSliderExplosionX") as any;
