@@ -69,7 +69,7 @@ export class SceneManager {
     // --- Scene Properties ---
     this.scene.useRightHandedSystem = true;
     this.scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 0);
-    this.scene.autoClear = false;
+    this.scene.autoClear = true;
 
     // --- Camera Creation ---
     const canvas = scene.getEngine().getRenderingCanvas();
