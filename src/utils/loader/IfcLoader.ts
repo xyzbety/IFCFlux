@@ -2,7 +2,6 @@ import * as WEBIFC from "web-ifc";
 import * as BABYLON from "@babylonjs/core";
 import { cacheDB } from './CacheDB';
 import { IfcParser } from "./IfcParser";
-import { GeometryTypes } from "../ifc/ifcGeometryTypes";
 import { ifcGuidToUuid } from '../ifc/ifcGuidConverter'
 
 
@@ -40,6 +39,20 @@ interface IIfcEntity {
     };
 }
 
+// 定义几何优化配置接口
+interface IGeometryOptimizationConfig {
+    // 几何精度级别
+    detailLevel: number;
+    // 是否启用快速布尔运算
+    useFastBooleans: boolean;
+    // 是否优化轮廓
+    optimizeProfiles: boolean;
+    // 是否启用几何简化
+    enableGeometrySimplification: boolean;
+    // 简化阈值（顶点数量超过此值进行简化）
+    simplificationThreshold: number;
+}
+
 /**
  * IFC模型加载器，用于加载和解析IFC文件并在Babylon.js场景中渲染
  */
@@ -68,6 +81,8 @@ export class IfcLoader {
     private enableDebugVisualization: boolean;
     // 是否解析ifc树
     private isParser: boolean;
+    // 几何优化配置
+    private geometryOptimization: IGeometryOptimizationConfig;
 
     public ifcTree: any; // 用于存储解析后的IFC树
     public properties: any;
@@ -111,6 +126,14 @@ export class IfcLoader {
         this.enableDebugVisualization = false;
         // 是否解析ifc树
         this.isParser = true;
+        // 几何优化配置
+        this.geometryOptimization = {
+            detailLevel: 8,
+            useFastBooleans: true,
+            optimizeProfiles: true,
+            enableGeometrySimplification: true,
+            simplificationThreshold: 500
+        };
 
         this.ifcTree = null; // 用于存储解析后的IFC树
         this.properties = null;
@@ -204,6 +227,9 @@ export class IfcLoader {
 
                 this.isComplete = true;
                 this.model.setEnabled(true);
+                
+                console.log('模型加载完成');
+                
                 this.ifcApi.CloseModel(this.modelID!);
                 resolve();
             } catch (error) {
@@ -263,14 +289,20 @@ export class IfcLoader {
             }
         }
         if (buffer) {
-            this.modelID = await this.ifcApi.OpenModel(new Uint8Array(buffer), {
+            // 应用几何优化配置
+            const config = {
                 COORDINATE_TO_ORIGIN: false, // 不将坐标系移动到原点
-                // OPTIMIZE_PROFILES: true, // 优化轮廓
-                CIRCLE_SEGMENTS: detail_level, // 设置圆的线段数，影响几何精细度
+                OPTIMIZE_PROFILES: this.geometryOptimization.optimizeProfiles, // 优化轮廓
+                USE_FAST_BOOLS: this.geometryOptimization.useFastBooleans, // 启用快速布尔运算
+                CIRCLE_SEGMENTS: this.geometryOptimization.detailLevel, // 设置圆的线段数，影响几何精细度
                 // MEMORY_LIMIT: 8294967296, // 内存限制
                 // TAPE_SIZE: 6, // 磁带大小
                 // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
-            });
+            };
+            
+            console.log('应用几何优化配置:', config);
+            
+            this.modelID = await this.ifcApi.OpenModel(new Uint8Array(buffer), config);
         } else {
             console.error("无法获取IFC文件数据");
         }
@@ -283,33 +315,12 @@ export class IfcLoader {
         return null;
     }
 
-    private async getAllGeometriesIds(): Promise<Set<number>> {
-        const geometriesIds = new Set<number>();
-        const geomTypesArray = Array.from(GeometryTypes);
-
-        for (let i = 0; i < geomTypesArray.length; i++) {
-            const category = geomTypesArray[i];
-            try {
-                const ids = await this.ifcApi.GetLineIDsWithType(this.modelID!, category);
-                const idsSize = ids.size();
-                for (let j = 0; j < idsSize; j++) {
-                    geometriesIds.add(ids.get(j));
-                }
-            } catch (error) {
-                console.error(`Error adding geometry IDs for category ${category}:`, error);
-            }
-        }
-
-        return geometriesIds;
-    }
-
     private processGeometryData(flatMesh: IFlatGeometry): void {
         const placedGeometries = flatMesh.geometries;
         const size = placedGeometries.size();
         const expressID = flatMesh.expressID;
         const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, expressID);
         const guid = ifcGuidToUuid(entity.GlobalId.value)
-
 
         if (size > 1) {
             const meshes: BABYLON.Mesh[] = [];
@@ -326,11 +337,13 @@ export class IfcLoader {
                 }
             }
 
-            const mergedMesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
-            if (mergedMesh) {
-                mergedMesh.id = `${expressID}`;
-                mergedMesh.name = guid;
-                mergedMesh.parent = this.model;
+            if (meshes.length > 0) {
+                const mergedMesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
+                if (mergedMesh) {
+                    mergedMesh.id = `${expressID}`;
+                    mergedMesh.name = guid;
+                    mergedMesh.parent = this.model;
+                }
             }
         } else if (size === 1) {
             const placedGeometry = placedGeometries.get(0);
@@ -338,6 +351,8 @@ export class IfcLoader {
             if (mesh) {
                 mesh.id = `${expressID}`;
                 mesh.name = guid;
+                
+                this.processMeshTransform(mesh);
                 this.assignMeshMaterial(placedGeometry, mesh);
 
                 if (this.useInstancing) {
@@ -349,7 +364,6 @@ export class IfcLoader {
                         this.geometryCache.set(geometryKey, [mesh]);
                     }
                 } else {
-                    this.processMeshTransform(mesh);
                     mesh.isVisible = true;
                     if (this.isFreezeTransformMatrix) {
                         mesh.freezeWorldMatrix();
@@ -460,9 +474,24 @@ export class IfcLoader {
             const vertexData = new BABYLON.VertexData();
             const { positions, normals } = this.extractPositionAndNormals(vertexArray);
 
-            vertexData.positions = positions;
-            vertexData.normals = normals;
-            vertexData.indices = indexArray;
+            // 应用几何简化（如果启用）
+            let simplifiedPositions = positions;
+            let simplifiedNormals = normals;
+            let simplifiedIndices = indexArray;
+
+            if (this.geometryOptimization.enableGeometrySimplification && 
+                positions.length / 3 > this.geometryOptimization.simplificationThreshold) {
+                const simplified = this.simplifyGeometry(positions, normals, indexArray);
+                simplifiedPositions = simplified.positions;
+                simplifiedNormals = simplified.normals;
+                simplifiedIndices = simplified.indices;
+                
+                console.log(`几何简化: ${positions.length / 3} -> ${simplifiedPositions.length / 3} 顶点`);
+            }
+
+            vertexData.positions = simplifiedPositions;
+            vertexData.normals = simplifiedNormals;
+            vertexData.indices = simplifiedIndices;
 
             // @ts-ignore
             geometry.delete();
@@ -492,6 +521,77 @@ export class IfcLoader {
         }
 
         return { positions, normals };
+    }
+
+    /**
+     * 几何简化算法（基于顶点合并）
+     * @param positions 原始顶点位置
+     * @param normals 原始法线
+     * @param indices 原始索引
+     */
+    private simplifyGeometry(
+        positions: Float32Array, 
+        normals: Float32Array, 
+        indices: Uint32Array
+    ): { positions: Float32Array; normals: Float32Array; indices: Uint32Array } {
+        const tolerance = 0.01; // 合并容差
+        const vertexCount = positions.length / 3;
+        
+        // 创建顶点映射表
+        const vertexMap = new Map<string, number>();
+        const newPositions: number[] = [];
+        const newNormals: number[] = [];
+        
+        // 合并相近顶点
+        for (let i = 0; i < vertexCount; i++) {
+            const x = positions[i * 3];
+            const y = positions[i * 3 + 1];
+            const z = positions[i * 3 + 2];
+            
+            // 量化顶点坐标
+            const quantizedX = Math.round(x / tolerance) * tolerance;
+            const quantizedY = Math.round(y / tolerance) * tolerance;
+            const quantizedZ = Math.round(z / tolerance) * tolerance;
+            
+            const key = `${quantizedX},${quantizedY},${quantizedZ}`;
+            
+            if (!vertexMap.has(key)) {
+                const newIndex = newPositions.length / 3;
+                vertexMap.set(key, newIndex);
+                newPositions.push(x, y, z);
+                newNormals.push(
+                    normals[i * 3], 
+                    normals[i * 3 + 1], 
+                    normals[i * 3 + 2]
+                );
+            }
+        }
+        
+        // 重新映射索引
+        const newIndices: number[] = [];
+        for (let i = 0; i < indices.length; i++) {
+            const vertexIndex = indices[i];
+            const x = positions[vertexIndex * 3];
+            const y = positions[vertexIndex * 3 + 1];
+            const z = positions[vertexIndex * 3 + 2];
+            
+            const quantizedX = Math.round(x / tolerance) * tolerance;
+            const quantizedY = Math.round(y / tolerance) * tolerance;
+            const quantizedZ = Math.round(z / tolerance) * tolerance;
+            
+            const key = `${quantizedX},${quantizedY},${quantizedZ}`;
+            const newIndex = vertexMap.get(key);
+            
+            if (newIndex !== undefined) {
+                newIndices.push(newIndex);
+            }
+        }
+        
+        return {
+            positions: new Float32Array(newPositions),
+            normals: new Float32Array(newNormals),
+            indices: new Uint32Array(newIndices)
+        };
     }
 
     /**
@@ -600,7 +700,6 @@ export class IfcLoader {
     public setIsParser(isParser: boolean): void {
         this.isParser = isParser;
     }
-
     /**
      * 销毁资源
      */

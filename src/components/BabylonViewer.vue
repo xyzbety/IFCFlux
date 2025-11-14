@@ -13,8 +13,10 @@ const bjsCanvas = ref<HTMLCanvasElement | null>(null);
 
 onMounted(() => {
   if (bjsCanvas.value) {
-    const engine = new BABYLON.Engine(bjsCanvas.value, true);
-    const scene = new BABYLON.Scene(engine);
+    const engine = new BABYLON.Engine(bjsCanvas.value, true, { powerPreference: 'default' });
+    engine.enableOfflineSupport = false;
+    engine.doNotHandleContextLost = true;
+    const scene = new BABYLON.Scene(engine, { useGeometryUniqueIdsMap: true, useMaterialMeshMap: true, useClonedMeshMap: true, });
 
     // 初始化场景管理器
     const sceneManager = SceneManager.getInstance();

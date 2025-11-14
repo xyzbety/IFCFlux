@@ -858,6 +858,8 @@ export class SceneManager {
   }
 
   public setDefaultScene() {
+    this.scene?.createOrUpdateSelectionOctree();
+    this.scene?.cleanCachedTextureBuffer();
     const handleGridCheckbox = document.getElementById("gridCheckbox") as HTMLInputElement;
     if (handleGridCheckbox.checked) {
       this.setupGround(handleGridCheckbox.checked);
