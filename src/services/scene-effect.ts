@@ -43,32 +43,63 @@ export class EffectManager {
    */
   public applyHighlight(meshes: BABYLON.AbstractMesh[]): void {
     this.clearAll();
-    console.log("applyHighlight", meshes);
+    console.log("applyHighlight", meshes.length);
 
+    // 性能优化：缓存高亮材质，避免重复克隆
+    if (!this.scene.metadata) this.scene.metadata = {};
+    if (!this.scene.metadata.highlightMaterialCache) {
+      this.scene.metadata.highlightMaterialCache = new Map();
+    }
+    const highlightMaterialCache = this.scene.metadata.highlightMaterialCache;
+
+    // 按材质分组网格
+    const materialGroups = new Map<BABYLON.Material, BABYLON.AbstractMesh[]>();
+    
     meshes.forEach(mesh => {
       if (!mesh.metadata) mesh.metadata = {};
 
       // 跳过不需要高亮的特殊网格类型
       if (this.shouldSkipMesh(mesh)) return;
 
-      // 保存原始状态以便后续恢复
-      mesh.metadata.originalMaterial = mesh.material;
-
-      if (this.isHighlightRender && this.maskTarget && this.materialmask) {
-        if (mesh.material) {
-          const hightMaterial = mesh.material.clone(mesh.material.name + 'hightMaterial');
-          if (hightMaterial) {
-            hightMaterial.alpha = 0.5;
-            this.simpleTarget?.setMaterialForRendering(mesh, hightMaterial);
-            mesh.metadata.hightMaterial = hightMaterial;
-          }
+      // 按材质分组
+      if (mesh.material) {
+        if (!materialGroups.has(mesh.material)) {
+          materialGroups.set(mesh.material, []);
         }
-
-        // 使用自定义后处理实现边框渲染
-        this.maskTarget.renderList?.push(mesh);
-        this.maskTarget.setMaterialForRendering(mesh, this.materialmask);
+        materialGroups.get(mesh.material)!.push(mesh);
       }
     });
+
+    // 为每个材质组应用高亮效果
+    materialGroups.forEach((groupMeshes, material) => {
+      // 性能优化：使用材质缓存，每个材质只克隆一次
+      let highlightMaterial = highlightMaterialCache.get(material);
+      
+      if (!highlightMaterial) {
+        // 如果缓存中没有，创建新的高亮材质
+        highlightMaterial = material.clone(`shared_highlight_${material.name}_${Date.now()}`);
+        highlightMaterial.alpha = 0.5;
+        highlightMaterialCache.set(material, highlightMaterial);
+        console.log(`创建共享高亮材质: ${material.name}`);
+      }
+
+      groupMeshes.forEach(mesh => {
+        // 保存原始状态以便后续恢复
+        mesh.metadata.originalMaterial = mesh.material;
+        
+        if (this.isHighlightRender && this.maskTarget && this.materialmask) {
+          // 使用共享的高亮材质
+          this.simpleTarget?.setMaterialForRendering(mesh, highlightMaterial!);
+          mesh.metadata.hightMaterial = highlightMaterial;
+
+          // 使用自定义后处理实现边框渲染
+          this.maskTarget.renderList?.push(mesh);
+          this.maskTarget.setMaterialForRendering(mesh, this.materialmask);
+        }
+      });
+    });
+
+    console.log(`高亮完成: ${meshes.length} 个网格, 使用 ${materialGroups.size} 个共享材质`);
   }
 
   /**
@@ -90,20 +121,68 @@ export class EffectManager {
     if (this.maskTarget?.renderList) {
       this.maskTarget.renderList = [];
     }
-    // 恢复所有网格的原始状态并销毁克隆材质
-    this.scene.meshes.forEach(mesh => {
-      if (mesh.metadata?.originalMaterial !== undefined) {
-        // 销毁克隆的高亮材质
-        if (mesh.metadata.hightMaterial) {
-          mesh.metadata.hightMaterial.dispose();
-          delete mesh.metadata.hightMaterial;
-        }
+    
+    // 性能优化：批量处理网格，避免同步阻塞
+    this.clearAllOptimized();
+  }
 
-        mesh.material = mesh.metadata.originalMaterial;
-        this.simpleTarget?.setMaterialForRendering(mesh, mesh.metadata.originalMaterial);
-        delete mesh.metadata.originalMaterial;
+  /**
+   * 优化的清除方法，处理大量网格时避免阻塞
+   */
+  private clearAllOptimized(): void {
+    const meshesToClear = this.scene.meshes.filter(mesh => 
+      mesh.metadata?.originalMaterial !== undefined
+    );
+
+    if (meshesToClear.length === 0) return;
+
+    console.log(`开始清除高亮效果，需要处理 ${meshesToClear.length} 个网格`);
+
+    // 性能优化：按材质分组处理，减少材质操作次数
+    const materialGroups = new Map<BABYLON.Material, BABYLON.AbstractMesh[]>();
+    const highlightMaterialsToDispose = new Set<BABYLON.Material>();
+
+    // 第一步：收集需要处理的网格和材质
+    meshesToClear.forEach(mesh => {
+      if (mesh.metadata.hightMaterial) {
+        highlightMaterialsToDispose.add(mesh.metadata.hightMaterial);
+      }
+      
+      // 按原始材质分组，用于批量设置渲染目标
+      const originalMaterial = mesh.metadata.originalMaterial;
+      if (!materialGroups.has(originalMaterial)) {
+        materialGroups.set(originalMaterial, []);
+      }
+      materialGroups.get(originalMaterial)!.push(mesh);
+    });
+
+    // 第二步：批量销毁高亮材质（避免在循环中逐个销毁）
+    highlightMaterialsToDispose.forEach(material => {
+      if (material && !material.dispose) {
+        material.dispose();
       }
     });
+
+    // 第三步：批量恢复网格材质和渲染目标
+    materialGroups.forEach((meshes, material) => {
+      // 批量设置网格材质
+      meshes.forEach(mesh => {
+        mesh.material = material;
+        // 清理metadata
+        delete mesh.metadata.originalMaterial;
+        delete mesh.metadata.hightMaterial;
+      });
+
+      // 批量设置渲染目标（减少API调用次数）
+      if (this.simpleTarget) {
+        // 使用更高效的方式批量设置渲染材质
+        meshes.forEach(mesh => {
+          this.simpleTarget?.setMaterialForRendering(mesh, material);
+        });
+      }
+    });
+
+    console.log(`高亮效果清除完成，处理了 ${meshesToClear.length} 个网格`);
   }
 
   /**

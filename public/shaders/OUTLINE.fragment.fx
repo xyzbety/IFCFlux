@@ -7,74 +7,70 @@ varying vec2 vUV;
 uniform sampler2D textureMaskSampler;
 uniform sampler2D textureSimpleSampler;
 
-uniform int outline_pixel_width;
+uniform int outline_pixel_width; 
 uniform vec4 outline_color;
 uniform float screenSizeX;
 uniform float screenSizeY;
 
 void main(void)
 {
-    vec4 BG = texture2D(textureMaskSampler, vUV);
-    vec4 FG = texture2D(textureSimpleSampler, vUV);
+    // 预计算
+    vec2 texel = vec2(1.0 / screenSizeX, 1.0 / screenSizeY);
+    float threshold = 0.4;
 
-    float texel_screen_size_x = 1.0 / screenSizeX;
-    float texel_screen_size_y = 1.0 / screenSizeY;
-    int number_pixels = outline_pixel_width;
+    // 先只读取 mask 中心（避免不必要的 FG 采样）
+    float centerMask = texture2D(textureMaskSampler, vUV).r;
 
-    // 当前像素是否在模型内部（使用原始遮罩判断）
-    bool isInsideModel = BG.r > 0.4;
-    
-    // 如果不在模型内部，直接显示前景色
-    if (!isInsideModel) {
-        gl_FragColor = FG;
+    // 如果不在模型内部，直接输出前景（延后取 FG 也仅取一次）
+    if (centerMask <= threshold) {
+        gl_FragColor = texture2D(textureSimpleSampler, vUV);
         return;
     }
-    
-    // 检查是否是边缘像素
-    bool isEdgePixel = false;
-    
-    // 检查周围像素是否在模型外部
-    for (int i = -number_pixels/2; i <= number_pixels/2; i++)
-    {
-        for (int j = -number_pixels/2; j <= number_pixels/2; j++)
-        {
-            // 跳过中心点
-            if (i == 0 && j == 0) continue;
-            
-            vec2 sampleUV = vUV + vec2(float(i) * texel_screen_size_x, float(j) * texel_screen_size_y);
-            
-            // 确保采样坐标在有效范围内
-            if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) {
-                continue; // 跳过屏幕边缘
-            }
-            
-            // 获取采样点的遮罩值
-            float maskValue = texture2D(textureMaskSampler, sampleUV).r;
-            
-            // 如果周围像素不在模型内部，标记为边缘
-            if (maskValue <= 0.4) {
-                isEdgePixel = true;
+
+    // 8 邻域采样偏移（单圈）
+    vec2 offsets[8];
+    offsets[0] = vec2( texel.x,  0.0); // E
+    offsets[1] = vec2(-texel.x,  0.0); // W
+    offsets[2] = vec2( 0.0,  texel.y); // N
+    offsets[3] = vec2( 0.0, -texel.y); // S
+    offsets[4] = vec2( texel.x,  texel.y); // NE
+    offsets[5] = vec2(-texel.x,  texel.y); // NW
+    offsets[6] = vec2( texel.x, -texel.y); // SE
+    offsets[7] = vec2(-texel.x, -texel.y); // SW
+
+    // 限制最大半径，避免动态大循环（编译期稳定）
+    const int MAX_RADIUS = 8; // 可根据硬件调小或调大（性能 vs 质量）
+    int maxR = outline_pixel_width;
+    if (maxR > MAX_RADIUS) maxR = MAX_RADIUS;
+    bool isEdge = false;
+
+    // 检查 1..maxR 环上的采样（每圈 8 个采样点）
+    for (int r = 1; r <= MAX_RADIUS; ++r) {
+        if (r > maxR) break;
+        // 缩放偏移量
+        float scale = float(r);
+        for (int i = 0; i < 8; ++i) {
+            vec2 sampleUV = clamp(vUV + offsets[i] * scale, 0.0, 1.0);
+            float m = texture2D(textureMaskSampler, sampleUV).r;
+            if (m <= threshold) {
+                isEdge = true;
                 break;
             }
         }
-        if (isEdgePixel) break;
+        if (isEdge) break;
     }
 
-    // 判断是否显示边框
-    if (isEdgePixel)
-    {
-        // 边框区域：显示边框颜色
-        gl_FragColor = outline_color; 
-    }
-    else
-    {
-        // 模型内部：显示前景色并叠加颜色
-        vec4 result = FG; 
-        
-        // 在模型表面叠加颜色（仅对模型内部区域生效）
-        vec4 overrideLayer = outline_color; 
-        overrideLayer.a = 0.3; 
-        result = mix(result, overrideLayer, overrideLayer.a); // 混合
+    // 现在再采样 FG（只一次）
+    vec4 FG = texture2D(textureSimpleSampler, vUV);
+
+    if (isEdge) {
+        // 边缘区域显示边框颜色
+        gl_FragColor = outline_color;
+    } else {
+        // 内部区域：在 FG 上叠加半透明覆盖色
+        vec4 overrideLayer = outline_color;
+        overrideLayer.a = 0.3;
+        vec4 result = mix(FG, overrideLayer, overrideLayer.a);
         result.a = 0.9;
         gl_FragColor = result;
     }
