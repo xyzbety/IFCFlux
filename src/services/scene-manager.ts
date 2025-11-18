@@ -1,5 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
+import '@babylonjs/inspector'
 import { MessagePlugin } from 'tdesign-vue-next';
 import { setupCameraByBoundingBox, createGround, rgbToHex, calculateEdgeWidthByBoundingBox,updateTempLineLabel } from '../utils';
 import { IfcExplosion } from '../utils/analysis/explosion';
@@ -39,7 +40,7 @@ export class SceneManager {
   private effectManager: EffectManager | null = null;
   public selectedMeshId: string | '' = '';
   private utilityLayer: BABYLON.UtilityLayerRenderer | null = null;
-  private originalMaterialProperties = new Map<string, { alpha: number }>(); //存储原始材质属性的Map
+  private originalMaterialProperties = new Map<string, { alpha: number; originalMaterial: BABYLON.Material }>(); //存储原始材质属性的Map
 
   private constructor() {
     // 私有构造函数，防止外部实例化
@@ -70,6 +71,7 @@ export class SceneManager {
     this.scene.useRightHandedSystem = true;
     this.scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 0);
     this.scene.autoClear = true;
+    this.scene.debugLayer.show();
 
     // --- Camera Creation ---
     const canvas = scene.getEngine().getRenderingCanvas();
@@ -185,25 +187,103 @@ export class SceneManager {
   }
 
   /**
-   * 保存场景中所有网格的原始材质属性
+   * 批量处理场景网格（合并材质保存和阴影设置）
    */
-  public async saveOriginalMaterialProperties() {
+  public async batchProcessSceneMeshes(): Promise<void> {
     if (!this.scene) return;
 
-    for (const mesh of this.scene.meshes) {
-      // 保存原始材质属性
-      if (mesh.material && !this.originalMaterialProperties.has(mesh.id)) {
-        this.originalMaterialProperties.set(mesh.id, {
-          alpha: mesh.material.alpha
-        });
+    const meshes = this.scene.meshes;
+    const totalMeshes = meshes.length;
+    
+    if (totalMeshes === 0) {
+      console.log('场景中没有网格需要处理');
+      return;
+    }
+
+    // 创建阴影生成器（如果需要）
+    let shadowGenerator: BABYLON.ShadowGenerator | null = null;
+    if (this.light && this.effectManager?.simpleTarget) {
+      shadowGenerator = new BABYLON.ShadowGenerator(2048, this.light);
+      shadowGenerator.usePoissonSampling = true;
+      
+      // 初始化渲染列表
+      if (!this.effectManager.simpleTarget.renderList) {
+        this.effectManager.simpleTarget.renderList = [];
+      }
+    }
+
+    // 预先查找网格（避免循环中重复查找）
+    const grid = meshes.find(m => m.name === 'infiniteGrid');
+
+    let materialProcessed = 0;
+    let materialSkipped = 0;
+    let shadowCasters = 0;
+    let shadowReceivers = 0;
+    let invalidMeshes = 0;
+
+    // 优化批次处理
+    const batchSize = Math.min(800, Math.max(200, Math.ceil(totalMeshes / 8)));
+    const batches = Math.ceil(totalMeshes / batchSize);
+
+    for (let batch = 0; batch < batches; batch++) {
+      const start = batch * batchSize;
+      const end = Math.min(start + batchSize, totalMeshes);
+
+      // 同步处理当前批次
+      for (let i = start; i < end; i++) {
+        const mesh = meshes[i];
+        
+        // 跳过无效网格
+        if (!mesh || !mesh.material) {
+          invalidMeshes++;
+          continue;
+        }
+
+        // 1. 保存原始材质属性
+        if (!this.originalMaterialProperties.has(mesh.id)) {
+          this.originalMaterialProperties.set(mesh.id, {
+            alpha: mesh.material.alpha,
+            originalMaterial: mesh.material
+          });
+          materialProcessed++;
+        } else {
+          materialSkipped++;
+        }
+
+        // 2. 设置阴影和渲染目标（如果阴影生成器存在）
+        if (shadowGenerator && this.effectManager?.simpleTarget) {
+          // 添加到渲染列表（避免重复添加）
+          if (!this.effectManager.simpleTarget.renderList.includes(mesh)) {
+            this.effectManager.simpleTarget.renderList.push(mesh);
+            this.effectManager.simpleTarget.setMaterialForRendering(mesh, mesh.material);
+          }
+
+          // 设置阴影属性（排除网格）
+          if (mesh !== grid) {
+            shadowGenerator.addShadowCaster(mesh);
+            shadowCasters++;
+            
+            // 仅对可见且有材质的网格启用接收阴影
+            if (mesh.isVisible && mesh.material) {
+              mesh.receiveShadows = true;
+              shadowReceivers++;
+            }
+          }
+        }
       }
 
-      // 每处理100个网格，让出控制权给浏览器，防止阻塞UI
-      if (this.scene.meshes.indexOf(mesh) % 100 === 0) {
+      // 每批次结束后让出控制权
+      if (batch < batches - 1) {
         await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
-    console.log('原始材质属性保存完毕');
+
+    console.log(`批量处理完成：`);
+    console.log(`- 材质：处理 ${materialProcessed} 个，跳过 ${materialSkipped} 个`);
+    if (shadowGenerator) {
+      console.log(`- 阴影：${shadowCasters}个投射器，${shadowReceivers}个接收器`);
+    }
+    console.log(`- 无效网格：${invalidMeshes} 个，总计 ${totalMeshes} 个网格`);
   }
 
   /**
@@ -216,38 +296,6 @@ export class SceneManager {
     const grid = createGround(this.scene, this.bbox, isGrid);
     this.effectManager.simpleTarget.renderList.push(grid);
     this.effectManager.simpleTarget.setMaterialForRendering(grid, grid.material);
-  }
-
-  /**
-   * 设置阴影生成器
-   */
-  public async setupShadows() {
-    if (!this.scene || !this.light) return;
-
-    const shadowGenerator = new BABYLON.ShadowGenerator(2048, this.light);
-    shadowGenerator.usePoissonSampling = true;
-
-    if (shadowGenerator) {
-      const grid = this.scene.meshes.find(m => m.name === 'infiniteGrid');
-
-      for (let i = 0; i < this.scene.meshes.length; i++) {
-        const mesh = this.scene.meshes[i];
-        if (!this.effectManager?.simpleTarget.renderList) {
-          this.effectManager.simpleTarget.renderList = [];
-        }
-        this.effectManager.simpleTarget.renderList.push(mesh);
-        this.effectManager?.simpleTarget.setMaterialForRendering(mesh, mesh.material);
-        if (mesh !== grid) {
-          shadowGenerator.addShadowCaster(mesh); // 仅模型投射阴影
-          mesh.receiveShadows = true;
-        }
-
-        if (i % 2000 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
-      }
-    }
-    console.log("阴影生成器设置完成");
   }
   /**
    * 设置场景相机和光照

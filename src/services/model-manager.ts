@@ -73,7 +73,7 @@ export class ModelManager {
         };
 
         await ifcLoader.load(onProgressCallback);
-        console.log("IFC模型加载完成,模型数据为", ifcLoader);
+        // console.log("IFC模型加载完成,模型数据为", ifcLoader);
 
         this.modelStore.setModel(file, {
           tree: ifcLoader.ifcTree,
@@ -85,6 +85,8 @@ export class ModelManager {
         }, ifcLoader.psetLines);
 
         this.updateProgress(100, "完成");
+        ifcLoader.dispose();
+        ifcLoader.cleanupGeometryData();
 
       } else {
         throw new Error(`Unsupported file format: ${fileExtension}`);

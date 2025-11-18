@@ -195,8 +195,8 @@ function createAppCore() {
                     switchToMode(LM.VIEW);
                     sceneManager.setupCameraAndLight();
                     sceneManager.setDefaultScene()
-                    await sceneManager.setupShadows();
-                    await sceneManager.saveOriginalMaterialProperties();
+                    await sceneManager.batchProcessSceneMeshes();
+                    // await sceneManager.saveOriginalMaterialProperties();
                 }
             });
         } catch (error) {
@@ -216,7 +216,8 @@ function createAppCore() {
         if (!sceneManager.scene) return;
         let expressId = event.args[0]?.originData?.expressId;
         const isChecked = event.selectState;
-        if (event.args[0].cellLocation === 'columnHeader') expressId = IfcPropertyUtils.rootExpressId;
+        console.log("onTableSelectChange:", modelStore.modelData.tree[0].expressId);
+        if (event.args[0].cellLocation === 'columnHeader') expressId = modelStore.modelData.tree[0].expressId;
         if (expressId) ifcPropertyUtils.updateModelVisibilityByCheckbox(sceneManager.scene, expressId, isChecked, pageState.treeData);
     };
 
@@ -399,12 +400,11 @@ function createAppCore() {
 
     return {
         isMaximized, isSidebarVisible, layoutState, structureTreeRef,
-        leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab, ifcPropertyColumn,
+        leftDragBarRef, inspectDragBarRef, rightDragBarRef, pageState, activeTab,
         themeStyle, inspectType,
         handleOpenFile, handleReplay, handleRedo, handleFileUploaded, handleRibbonInteraction,
         toggleStructureTreeDialog, togglePropertyTableDialog, tableRowClick, onTableSelectChange,
         handleDragStart, onInspectVisibleChange, handleTabChange,
-        sceneManager,
     };
 }
 

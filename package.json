@@ -1,7 +1,10 @@
 {
   "name": "IFCFlux",
   "description": "本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理IFC模型数据",
-  "keywords": ["IFC","BIM"],
+  "keywords": [
+    "IFC",
+    "BIM"
+  ],
   "author": "",
   "private": true,
   "version": "0.1.0",
@@ -15,6 +18,7 @@
   "dependencies": {
     "@babylonjs/core": "^8.31.0",
     "@babylonjs/gui": "^8.31.0",
+    "@babylonjs/inspector": "^8.37.0",
     "@babylonjs/materials": "^8.31.0",
     "@babylonjs/serializers": "^8.31.0",
     "@duckdb/duckdb-wasm": "^1.30.0",

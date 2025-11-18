@@ -199,7 +199,7 @@ const debouncedCopyToClipboard = debounce(copyToClipboard, 500);
 onMounted(() => {
 
     watch(() => props.propertyData, (newValue) => {
-        console.log('propertyData', newValue);
+        // console.log('propertyData', newValue);
         treeData.value = newValue
         if (treeInstance) {
             // 清理旧的事件监听器

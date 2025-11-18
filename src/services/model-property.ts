@@ -11,7 +11,6 @@ export interface MeshHighlightConfig {
 export class IfcPropertyUtils {
   private static instance: IfcPropertyUtils | null = null;
 
-  public static rootExpressId = '0';
   private hiddenNodeIds = new Set<string>();
   private effectManager: EffectManager | null = null;
 

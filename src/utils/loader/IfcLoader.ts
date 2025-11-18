@@ -131,7 +131,7 @@ export class IfcLoader {
             detailLevel: 8,
             useFastBooleans: true,
             optimizeProfiles: true,
-            enableGeometrySimplification: true,
+            enableGeometrySimplification: false,
             simplificationThreshold: 500
         };
 
@@ -151,7 +151,7 @@ export class IfcLoader {
      * @param onProgress - a callback function that will be called with the loading progress
      * @returns 返回包含模型的根网格或null（加载失败时）
      */
-    public async load(onProgress: ProgressCallback | null = null, detail_level:number = 12): Promise<void> {
+    public async load(onProgress: ProgressCallback | null = null, detail_level: number = 12): Promise<void> {
         await this.loadFileToArrayBuffer(detail_level);
         this.ifcParser = new IfcParser(this.ifcApi);
         if (this.isParser) {
@@ -171,6 +171,11 @@ export class IfcLoader {
 
                 const flatMeshes = this.ifcApi.LoadAllGeometry(this.modelID!);
                 const geometryCount = flatMeshes.size();
+                if (geometryCount > 10000) {
+                    this.geometryOptimization.enableGeometrySimplification = true;
+                } else {
+                    this.geometryOptimization.enableGeometrySimplification = false;
+                }
                 let loadedGeometries = 0;
 
                 const processMeshes = async (): Promise<void> => {
@@ -190,7 +195,8 @@ export class IfcLoader {
                         }
 
                         (mesh as any).delete;
-                        if (i % 200 === 0) await new Promise(r => setTimeout(r, 0));
+                        const batchSize = Math.max(50, Math.min(1000, Math.floor(geometryCount / 100)));
+                        if (i % batchSize === 0) await new Promise(r => setTimeout(r, 0));
                     }
                     (flatMeshes as any).delete();
                 };
@@ -227,9 +233,9 @@ export class IfcLoader {
 
                 this.isComplete = true;
                 this.model.setEnabled(true);
-                
+
                 console.log('模型加载完成');
-                
+
                 this.ifcApi.CloseModel(this.modelID!);
                 resolve();
             } catch (error) {
@@ -299,9 +305,7 @@ export class IfcLoader {
                 // TAPE_SIZE: 6, // 磁带大小
                 // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
             };
-            
-            console.log('应用几何优化配置:', config);
-            
+
             this.modelID = await this.ifcApi.OpenModel(new Uint8Array(buffer), config);
         } else {
             console.error("无法获取IFC文件数据");
@@ -351,7 +355,7 @@ export class IfcLoader {
             if (mesh) {
                 mesh.id = `${expressID}`;
                 mesh.name = guid;
-                
+
                 this.processMeshTransform(mesh);
                 this.assignMeshMaterial(placedGeometry, mesh);
 
@@ -396,6 +400,7 @@ export class IfcLoader {
                     geometryKey: geometryKey,
                     flatTransformation: geometry.flatTransformation,
                 };
+
                 return mesh;
             }
             return null;
@@ -479,13 +484,13 @@ export class IfcLoader {
             let simplifiedNormals = normals;
             let simplifiedIndices = indexArray;
 
-            if (this.geometryOptimization.enableGeometrySimplification && 
+            if (this.geometryOptimization.enableGeometrySimplification &&
                 positions.length / 3 > this.geometryOptimization.simplificationThreshold) {
                 const simplified = this.simplifyGeometry(positions, normals, indexArray);
                 simplifiedPositions = simplified.positions;
                 simplifiedNormals = simplified.normals;
                 simplifiedIndices = simplified.indices;
-                
+
                 console.log(`几何简化: ${positions.length / 3} -> ${simplifiedPositions.length / 3} 顶点`);
             }
 
@@ -530,43 +535,43 @@ export class IfcLoader {
      * @param indices 原始索引
      */
     private simplifyGeometry(
-        positions: Float32Array, 
-        normals: Float32Array, 
+        positions: Float32Array,
+        normals: Float32Array,
         indices: Uint32Array
     ): { positions: Float32Array; normals: Float32Array; indices: Uint32Array } {
         const tolerance = 0.01; // 合并容差
         const vertexCount = positions.length / 3;
-        
+
         // 创建顶点映射表
         const vertexMap = new Map<string, number>();
         const newPositions: number[] = [];
         const newNormals: number[] = [];
-        
+
         // 合并相近顶点
         for (let i = 0; i < vertexCount; i++) {
             const x = positions[i * 3];
             const y = positions[i * 3 + 1];
             const z = positions[i * 3 + 2];
-            
+
             // 量化顶点坐标
             const quantizedX = Math.round(x / tolerance) * tolerance;
             const quantizedY = Math.round(y / tolerance) * tolerance;
             const quantizedZ = Math.round(z / tolerance) * tolerance;
-            
+
             const key = `${quantizedX},${quantizedY},${quantizedZ}`;
-            
+
             if (!vertexMap.has(key)) {
                 const newIndex = newPositions.length / 3;
                 vertexMap.set(key, newIndex);
                 newPositions.push(x, y, z);
                 newNormals.push(
-                    normals[i * 3], 
-                    normals[i * 3 + 1], 
+                    normals[i * 3],
+                    normals[i * 3 + 1],
                     normals[i * 3 + 2]
                 );
             }
         }
-        
+
         // 重新映射索引
         const newIndices: number[] = [];
         for (let i = 0; i < indices.length; i++) {
@@ -574,19 +579,19 @@ export class IfcLoader {
             const x = positions[vertexIndex * 3];
             const y = positions[vertexIndex * 3 + 1];
             const z = positions[vertexIndex * 3 + 2];
-            
+
             const quantizedX = Math.round(x / tolerance) * tolerance;
             const quantizedY = Math.round(y / tolerance) * tolerance;
             const quantizedZ = Math.round(z / tolerance) * tolerance;
-            
+
             const key = `${quantizedX},${quantizedY},${quantizedZ}`;
             const newIndex = vertexMap.get(key);
-            
+
             if (newIndex !== undefined) {
                 newIndices.push(newIndex);
             }
         }
-        
+
         return {
             positions: new Float32Array(newPositions),
             normals: new Float32Array(newNormals),
@@ -700,32 +705,5 @@ export class IfcLoader {
     public setIsParser(isParser: boolean): void {
         this.isParser = isParser;
     }
-    /**
-     * 销毁资源
-     */
-    public dispose(): void {
-        // 清理材质缓存
-        this.materialCache.forEach(material => {
-            if (!material.dispose) {
-                material.dispose();
-            }
-        });
-        this.materialCache.clear();
 
-        // 清理材质映射
-        this.materialsMap.clear();
-
-        // 清理几何缓存
-        this.geometryCache.clear();
-
-        // 销毁模型
-        if (this.model && !this.model.isDisposed) {
-            this.model.dispose();
-        }
-
-        // 关闭IFC模型
-        if (this.modelID !== null) {
-            this.ifcApi.CloseModel(this.modelID);
-        }
-    }
 }
