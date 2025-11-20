@@ -73,8 +73,7 @@ export class ModelManager {
         };
 
         await ifcLoader.load(onProgressCallback);
-        // console.log("IFC模型加载完成,模型数据为", ifcLoader);
-
+        console.log("IFC模型加载完成,模型数据为", ifcLoader); 
         this.modelStore.setModel(file, {
           tree: ifcLoader.ifcTree,
           properties: ifcLoader.properties,
@@ -85,8 +84,6 @@ export class ModelManager {
         }, ifcLoader.psetLines);
 
         this.updateProgress(100, "完成");
-        ifcLoader.dispose();
-        ifcLoader.cleanupGeometryData();
 
       } else {
         throw new Error(`Unsupported file format: ${fileExtension}`);
@@ -123,11 +120,14 @@ export class ModelManager {
 
   private clearExistingScene(): void {
     if (this.scene) {
-      this.scene.meshes.slice().forEach(mesh => {
-        if (mesh.name !== 'camera' && !mesh.name.toLowerCase().includes('light')) {
+      // 使用反向循环避免删除元素导致的循环问题
+      const meshes = this.scene.meshes.slice(); // 创建副本
+      for (let i = meshes.length - 1; i >= 0; i--) {
+        const mesh = meshes[i];
+        if (mesh.name !== 'camera' && !mesh.name.includes('Light')) {
           mesh.dispose();
         }
-      });
+      }
       this.scene.materials.slice().forEach(mat => mat.dispose());
       this.scene.textures.slice().forEach(tex => tex.dispose());
       this.modelStore.clearModel();

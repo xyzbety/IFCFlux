@@ -118,12 +118,40 @@ export class SceneManager {
             }
             parent = parent.parent;
           }
-          this.selectedMeshId = pointerInfo.pickInfo.pickedMesh.id;
+          
+          // 检测是否为合并网格，如果是则找到对应的子网格
+          const clickedMesh = pointerInfo.pickInfo.pickedMesh;
+          const clickedPoint = pointerInfo.pickInfo.pickedPoint;
+          
+          let targetExpressID = clickedMesh.id;
+          let targetMesh = clickedMesh;
+          
+          // 检查是否是合并网格
+          if (clickedMesh.metadata?.isMergedMesh) {
+            // 找到点击位置对应的子网格
+            const subMeshInfo = this.findClickedSubMesh(clickedMesh, clickedPoint);
+            if (subMeshInfo) {
+              targetExpressID = subMeshInfo.expressID;
+              targetMesh = subMeshInfo.mesh;
+              console.log(`成功找到子网格: ${targetExpressID}`);
+            } else {
+              // 如果找不到子网格，使用合并网格的mergedFrom信息
+              const mergedFrom = clickedMesh.metadata?.mergedFrom || [];
+              if (mergedFrom.length > 0) {
+                // 使用第一个子网格的信息作为回退
+                const firstSubMesh = mergedFrom[0];
+                targetExpressID = firstSubMesh.originalExpressID || clickedMesh.id;
+                console.log(`未找到精确子网格，使用第一个子网格: ${targetExpressID}`);
+              }
+            }
+          }
+          
+          this.selectedMeshId = targetExpressID;
           window.dispatchEvent(new CustomEvent('mesh-clicked', {
             detail: {
-              expressID: pointerInfo.pickInfo.pickedMesh.id,
-              mesh: pointerInfo.pickInfo.pickedMesh,
-              point: pointerInfo.pickInfo.pickedPoint
+              expressID: targetExpressID,
+              mesh: targetMesh,
+              point: clickedPoint
             }
           }));
         } else {
@@ -437,6 +465,12 @@ export class SceneManager {
         if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
           return;
         }
+        
+        // 如果是合并网格，恢复所有子网格
+        if (mesh.metadata?.isMergedMesh && mesh.metadata.restoreSubMesh) {
+          mesh.metadata.restoreSubMesh(); // 恢复所有子网格
+        }
+        
         mesh.isVisible = true;
         // 还原透明度到原始值
         if (mesh.material) {
@@ -507,7 +541,65 @@ export class SceneManager {
       // 应用可见性
       mesh.isVisible = meshVisible;
 
-      // 应用透明度
+      // 如果是合并网格，处理子网格的隐藏、半透明和隔离效果
+      if (mesh.metadata?.isMergedMesh) {
+        const mergedFrom = mesh.metadata.mergedFrom || [];
+        
+        // 检查是否处于隔离模式
+        const isIsolationMode = this.isolatedMeshIds.size > 0;
+        
+        // 检查当前合并网格是否有子网格在隔离集合中
+        const hasIsolatedSubMesh = mergedFrom.some((subMeshInfo: any) => 
+          this.isolatedMeshIds.has(subMeshInfo.originalExpressID)
+        );
+        
+        // 处理隔离模式：只有隔离的子网格可见，其他所有子网格都隐藏
+        if (isIsolationMode && hasIsolatedSubMesh) {
+          // 遍历所有子网格
+          mergedFrom.forEach((subMeshInfo: any) => {
+            const expressID = subMeshInfo.originalExpressID;
+            
+            if (this.isolatedMeshIds.has(expressID)) {
+              // 隔离的子网格：确保可见
+              if (mesh.metadata.restoreSubMesh) {
+                mesh.metadata.restoreSubMesh(expressID);
+              }
+            } else {
+              // 非隔离的子网格：隐藏
+              if (mesh.metadata.hideSubMesh) {
+                mesh.metadata.hideSubMesh(expressID);
+              }
+            }
+          });
+        } else if (!isIsolationMode) {
+          // 非隔离模式：处理隐藏和半透明效果
+          mergedFrom.forEach((subMeshInfo: any) => {
+            const expressID = subMeshInfo.originalExpressID;
+            
+            // 检查子网格的expressID是否在隐藏集合中
+            if (this.hiddenMeshIds.has(expressID)) {
+              // 隐藏子网格
+              if (mesh.metadata.hideSubMesh) {
+                mesh.metadata.hideSubMesh(expressID);
+              }
+            }
+            // 检查子网格的expressID是否在半透明集合中
+            else if (this.transparentMeshIds.has(expressID)) {
+              // 半透明子网格
+              if (mesh.metadata.transparentSubMesh) {
+                mesh.metadata.transparentSubMesh(expressID, 0.5);
+              }
+            } else {
+              // 既不在隐藏也不在半透明集合中：确保可见
+              if (mesh.metadata.restoreSubMesh) {
+                mesh.metadata.restoreSubMesh(expressID);
+              }
+            }
+          });
+        }
+      }
+
+      // 应用透明度（针对非合并网格或合并网格整体）
       if (meshTransparent) {
         // 为半透明mesh设置材质
         if (mesh.material && mesh.material.getClassName && mesh.material.getClassName() === "StandardMaterial") {
@@ -978,5 +1070,281 @@ export class SceneManager {
    */
   public getCameraHistoryManager(): CameraHistoryManager {
     return this.cameraHistoryManager;
+  }
+
+  /**
+   * 在合并网格中找到点击位置对应的子网格
+   * @param mergedMesh 合并后的父网格
+   * @param clickedPoint 点击的世界坐标点
+   * @returns 子网格信息，包含expressID和虚拟网格对象
+   */
+  private findClickedSubMesh(mergedMesh: BABYLON.Mesh, clickedPoint: BABYLON.Vector3): { expressID: string } | null {
+    const metadata = mergedMesh.metadata || {};
+    const originalMeshData = metadata.originalMeshData || [];
+    
+    if (originalMeshData.length === 0) {
+      console.warn('合并网格中没有保存子网格数据');
+      return null;
+    }
+
+    // 将点击点转换到合并网格的局部坐标系
+    const worldMatrix = mergedMesh.getWorldMatrix();
+    const inverseWorldMatrix = worldMatrix.clone().invert();
+    const localPoint = BABYLON.Vector3.TransformCoordinates(clickedPoint, inverseWorldMatrix);
+
+    let closestSubMesh: { expressID: string;  distance: number } | null = null;
+
+    // 遍历所有子网格数据，找到距离点击点最近的子网格
+    for (let i = 0; i < originalMeshData.length; i++) {
+      const meshData = originalMeshData[i];
+      
+      // 检查几何数据是否有效
+      if (!meshData.positions || !meshData.indices || meshData.positions.length === 0 || meshData.indices.length === 0) {
+        console.warn(`子网格 ${i} 的几何数据无效，跳过`);
+        continue;
+      }
+      
+      // 将点击点转换到子网格的局部坐标系
+      const subMeshTransform = meshData.transformMatrix;
+      const inverseSubMeshTransform = subMeshTransform.clone().invert();
+      const subMeshLocalPoint = BABYLON.Vector3.TransformCoordinates(localPoint, inverseSubMeshTransform);
+      
+      // 检查点击点是否在子网格的包围盒内
+      if (this.isPointInMeshBounds(subMeshLocalPoint, meshData.positions, meshData.indices)) {
+        // 计算点击点到子网格表面的距离
+        const distance = this.calculateDistanceToMeshSurface(subMeshLocalPoint, meshData.positions, meshData.indices);
+        
+        // 放宽距离阈值，确保能匹配到子网格
+        // 如果距离在合理范围内，或者点击点在包围盒内但距离计算失败，都认为是有效的点击
+        if (distance < 5.0 || (distance === Infinity && this.isPointInMeshBounds(subMeshLocalPoint, meshData.positions, meshData.indices))) {
+          const subMeshMetadata = meshData.metadata || {};
+          const expressID = subMeshMetadata.originalExpressID || `${i}`;
+          const guid = subMeshMetadata.originalGuid;
+          
+          
+          // 如果找到更近的子网格，更新结果
+          if (!closestSubMesh || distance < closestSubMesh.distance) {
+            closestSubMesh = {
+              expressID: expressID,
+              distance: distance
+            };
+          }
+        }
+      }
+    }
+    
+    // 如果精确查找失败，使用包围盒中心距离作为回退
+    if (!closestSubMesh) {
+      console.log('精确查找失败，使用包围盒中心距离回退');
+      for (let i = 0; i < originalMeshData.length; i++) {
+        const meshData = originalMeshData[i];
+        if (!meshData.positions || meshData.positions.length === 0) continue;
+        
+        const subMeshTransform = meshData.transformMatrix;
+        const inverseSubMeshTransform = subMeshTransform.clone().invert();
+        const subMeshLocalPoint = BABYLON.Vector3.TransformCoordinates(localPoint, inverseSubMeshTransform);
+        
+        // 计算包围盒中心距离
+        const bounds = this.calculateMeshBounds(meshData.positions);
+        const center = new BABYLON.Vector3(
+          (bounds.minX + bounds.maxX) / 2,
+          (bounds.minY + bounds.maxY) / 2,
+          (bounds.minZ + bounds.maxZ) / 2
+        );
+        const distance = BABYLON.Vector3.Distance(subMeshLocalPoint, center);
+        
+        // 使用较大的阈值
+        if (distance < 10.0) {
+          const subMeshMetadata = meshData.metadata || {};
+          const expressID = subMeshMetadata.originalExpressID || `${i}`;
+          const guid = subMeshMetadata.originalGuid;
+          
+          if (!closestSubMesh || distance < closestSubMesh.distance) {
+            closestSubMesh = {
+              expressID: expressID,
+              distance: distance
+            };
+          }
+        }
+      }
+    }
+    
+    console.log("找到子网格", closestSubMesh);
+    // 返回距离最近的子网格，如果没有找到则返回null
+    return closestSubMesh ? { expressID: closestSubMesh.expressID } : null;
+  }
+
+  /**
+   * 检查点是否在网格的包围盒内
+   * @param point 局部坐标点
+   * @param positions 顶点位置数据
+   * @param indices 索引数据
+   * @returns 是否在包围盒内
+   */
+  private isPointInMeshBounds(point: BABYLON.Vector3, positions: number[], indices: number[]): boolean {
+    if (!positions || positions.length === 0 || !indices || indices.length === 0) {
+      return false;
+    }
+
+    // 计算网格的包围盒
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+    for (let i = 0; i < positions.length; i += 3) {
+      const x = positions[i];
+      const y = positions[i + 1];
+      const z = positions[i + 2];
+      
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      minZ = Math.min(minZ, z);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      maxZ = Math.max(maxZ, z);
+    }
+
+    // 检查点是否在包围盒内
+    return point.x >= minX && point.x <= maxX &&
+           point.y >= minY && point.y <= maxY &&
+           point.z >= minZ && point.z <= maxZ;
+  }
+
+  /**
+   * 计算点到网格表面的距离
+   * @param point 局部坐标点
+   * @param positions 顶点位置数据
+   * @param indices 索引数据
+   * @returns 到网格表面的距离
+   */
+  private calculateDistanceToMeshSurface(point: BABYLON.Vector3, positions: number[], indices: number[]): number {
+    if (!positions || positions.length === 0 || !indices || indices.length === 0) {
+      return Infinity;
+    }
+
+    let minDistance = Infinity;
+
+    // 遍历所有三角形面片
+    for (let i = 0; i < indices.length; i += 3) {
+      const i1 = indices[i] * 3;
+      const i2 = indices[i + 1] * 3;
+      const i3 = indices[i + 2] * 3;
+
+      // 获取三角形的三个顶点
+      const v1 = new BABYLON.Vector3(positions[i1], positions[i1 + 1], positions[i1 + 2]);
+      const v2 = new BABYLON.Vector3(positions[i2], positions[i2 + 1], positions[i2 + 2]);
+      const v3 = new BABYLON.Vector3(positions[i3], positions[i3 + 1], positions[i3 + 2]);
+
+      // 计算点到三角形平面的距离
+      const distance = this.distancePointToTriangle(point, v1, v2, v3);
+      minDistance = Math.min(minDistance, distance);
+    }
+
+    return minDistance;
+  }
+
+  /**
+   * 计算点到三角形的距离
+   * @param point 点
+   * @param v1 三角形顶点1
+   * @param v2 三角形顶点2
+   * @param v3 三角形顶点3
+   * @returns 点到三角形的距离
+   */
+  private distancePointToTriangle(point: BABYLON.Vector3, v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3): number {
+    // 计算三角形法线
+    const edge1 = v2.subtract(v1);
+    const edge2 = v3.subtract(v1);
+    const normal = BABYLON.Vector3.Cross(edge1, edge2);
+    
+    // 计算点到平面的距离
+    const planeDistance = Math.abs(BABYLON.Vector3.Dot(point.subtract(v1), normal)) / normal.length();
+    
+    // 检查点是否在三角形内部
+    if (this.isPointInTriangle(point, v1, v2, v3)) {
+      return planeDistance;
+    }
+    
+    // 如果不在三角形内部，计算到三条边的距离
+    const distanceToEdge1 = this.distancePointToLineSegment(point, v1, v2);
+    const distanceToEdge2 = this.distancePointToLineSegment(point, v2, v3);
+    const distanceToEdge3 = this.distancePointToLineSegment(point, v3, v1);
+    
+    return Math.min(planeDistance, distanceToEdge1, distanceToEdge2, distanceToEdge3);
+  }
+
+  /**
+   * 检查点是否在三角形内部
+   */
+  private isPointInTriangle(point: BABYLON.Vector3, v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3): boolean {
+    const d1 = this.sign(point, v1, v2);
+    const d2 = this.sign(point, v2, v3);
+    const d3 = this.sign(point, v3, v1);
+    
+    const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+    
+    return !(hasNeg && hasPos);
+  }
+
+  /**
+   * 计算点到线段的距离
+   */
+  private distancePointToLineSegment(point: BABYLON.Vector3, lineStart: BABYLON.Vector3, lineEnd: BABYLON.Vector3): number {
+    const lineVec = lineEnd.subtract(lineStart);
+    const lineLength = lineVec.length();
+    const lineDir = lineVec.normalize();
+    
+    const pointVec = point.subtract(lineStart);
+    const projection = BABYLON.Vector3.Dot(pointVec, lineDir);
+    
+    if (projection <= 0) {
+      return pointVec.length();
+    } else if (projection >= lineLength) {
+      return point.subtract(lineEnd).length();
+    } else {
+      const closestPoint = lineStart.add(lineDir.scale(projection));
+      return point.subtract(closestPoint).length();
+    }
+  }
+
+  /**
+   * 计算点的符号（用于三角形内部检测）
+   */
+  private sign(p1: BABYLON.Vector3, p2: BABYLON.Vector3, p3: BABYLON.Vector3): number {
+    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+  }
+
+  /**
+   * 计算网格的包围盒边界
+   * @param positions 顶点位置数据
+   * @returns 包围盒边界对象
+   */
+  private calculateMeshBounds(positions: number[]): { minX: number; minY: number; minZ: number; maxX: number; maxY: number; maxZ: number } {
+    if (!positions || positions.length === 0) {
+      return { minX: 0, minY: 0, minZ: 0, maxX: 0, maxY: 0, maxZ: 0 };
+    }
+
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+    for (let i = 0; i < positions.length; i += 3) {
+      const x = positions[i];
+      const y = positions[i + 1];
+      const z = positions[i + 2];
+      
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      minZ = Math.min(minZ, z);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      maxZ = Math.max(maxZ, z);
+    }
+
+    // 如果所有值都是无穷大，返回默认值
+    if (minX === Infinity) {
+      return { minX: 0, minY: 0, minZ: 0, maxX: 0, maxY: 0, maxZ: 0 };
+    }
+
+    return { minX, minY, minZ, maxX, maxY, maxZ };
   }
 }
