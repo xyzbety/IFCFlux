@@ -91,7 +91,7 @@ export class SceneManager {
     // --- Light Creation ---
     const mainlight = new BABYLON.DirectionalLight("mainLight", new BABYLON.Vector3(-1, -1, -1), this.scene);
     mainlight.intensity = 0.5;
-    mainlight.shadowEnabled = true;
+    mainlight.shadowEnabled = false;
 
 
     const fillLight = new BABYLON.DirectionalLight('fillLight', new BABYLON.Vector3(1, -0.5, 0.5), this.scene);
@@ -790,7 +790,7 @@ export class SceneManager {
     if (data.type === 'reset') {
       this.light.direction = new BABYLON.Vector3(1, -0.5, 0.5);
       this.light.intensity = 0.75;
-      this.light.shadowEnabled = true;
+      this.light.shadowEnabled = false;
 
       const handleSliderX = document.getElementById("horizontalSliderX") as any;
       const handleSliderY = document.getElementById("horizontalSliderY") as any;
@@ -802,7 +802,7 @@ export class SceneManager {
       if (handleSliderY) handleSliderY.val(this.light.direction.y);
       if (handleSliderZ) handleSliderZ.val(this.light.direction.z);
       if (inputIndensity) inputIndensity.value = this.light.intensity.toString();
-      if (checkboxShadow) checkboxShadow.checked = true;
+      if (checkboxShadow) checkboxShadow.checked = false;
     }
     if (data.type === 'indensity')
       this.light.intensity = Number(data.value);

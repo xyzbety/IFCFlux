@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
+import { EffectManager } from '../../../services/scene-effect';
 // 常见对象类型
 export interface CommonObject {
   [key: string | number]: string | number | boolean | CommonObject
@@ -96,6 +97,7 @@ export function createArrowWithLine(
     arrowColor: BABYLON.Color3;
     lineColor: BABYLON.Color3;
     scaleFactor: number;
+    effectManager: EffectManager
   }
 ): BABYLON.Mesh {
   const parentHalfSize = parentSize / 2;
@@ -124,6 +126,10 @@ export function createArrowWithLine(
   const line = BABYLON.MeshBuilder.CreateLines("arrowConnectorLine", { points: linePoints }, scene);
   line.parent = parent;
   line.material = createStandardMaterial(scene, "lineMaterial", options.lineColor, true, false);
+  if (options.effectManager?.simpleTarget?.renderList) {
+    options.effectManager.simpleTarget.renderList.push(line);
+    options.effectManager.simpleTarget.setMaterialForRendering(line, line.material);
+  }
   mergedMesh.scaling = new BABYLON.Vector3(options.scaleFactor, options.scaleFactor, options.scaleFactor);
 
 
@@ -143,6 +149,7 @@ export function createSmallPlane(
     offset: number;
     rotationAxis: "x" | "y";
     iconPath: string;
+    effectManager: EffectManager
   }
 ): BABYLON.Mesh {
   const parentHalfSize = parentSize / 2;
@@ -153,7 +160,7 @@ export function createSmallPlane(
   smallPlane.parent = parent;
 
   // 设置位置和旋转
-  const { position, rotation } = getSmallPlaneTransform(options.position, parentHalfSize, options.offset, options.rotationAxis);
+  const { position, rotation } = getSmallPlaneTransform(options.position, parentHalfSize, options.offset);
   smallPlane.position = position;
   smallPlane.rotation = rotation;
 
@@ -166,6 +173,10 @@ export function createSmallPlane(
   // 设置材质（禁用剖切）
   smallPlane.material = createTextureMaterial(scene, "smallPlaneMaterial", options.iconPath, false);
   line.material = createStandardMaterial(scene, "lineMaterial", new BABYLON.Color3(1, 0.5, 0), true, false);
+  if (options.effectManager?.simpleTarget?.renderList) {
+    options.effectManager.simpleTarget.renderList.push(line);
+    options.effectManager.simpleTarget.setMaterialForRendering(line, line.material);
+  }
   return smallPlane;
 }
 
@@ -374,7 +385,7 @@ function setupTubeActions(
 
   tube.actionManager.registerAction(
     new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOutTrigger, () => {
-      tube.scaling = new BABYLON.Vector3(1,1,1);
+      tube.scaling = new BABYLON.Vector3(1, 1, 1);
     })
   );
 
@@ -485,7 +496,6 @@ function getSmallPlaneTransform(
   position: string,
   parentHalfSize: number,
   offset: number,
-  rotationAxis: string
 ): { position: BABYLON.Vector3; rotation: BABYLON.Vector3 } {
   const rotation = new BABYLON.Vector3();
   let localPosition = BABYLON.Vector3.Zero();
@@ -561,7 +571,7 @@ function setupSmallPlaneActions(
     })
   );
 
-    smallPlane.actionManager.registerAction(
+  smallPlane.actionManager.registerAction(
     new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPointerOutTrigger, () => {
       smallPlane.scaling = new BABYLON.Vector3(1, 1, 1);
     })

@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import { type ISliceShape, type IBaseSlice, type ISlicePlane, type ISliceShapeBorder, type ISliceShapeFill, type ISliceShapeStyle, DEFAULT_SHAPE_STYLE } from "./type";
 import { SceneManager } from "../../../services/scene-manager";
+import { EffectManager } from "../../../services/scene-effect";
 import { createArrowWithLine, createSmallPlane, setupRotationAndDrag, setupScenePointerHandlers, createCornerTubes, deepMerge, createPlaneEdges } from "./utils";
 
 export class SlicePlane implements IBaseSlice {
@@ -16,13 +17,38 @@ export class SlicePlane implements IBaseSlice {
   _isShowPlane: boolean = true;
   size: number;
   sceneManager: SceneManager;
+  effectManager: EffectManager;
 
   constructor(scene: BABYLON.Scene, size: number = 10) {
     this.scene = scene;
     this.size = size;
     this.sceneManager = SceneManager.getInstance();
+    this.effectManager = EffectManager.getInstance(scene);
   }
 
+  /**
+   * 将网格添加到渲染列表
+   * @param mesh 要添加的网格
+   */
+  private addToRenderList(mesh: BABYLON.AbstractMesh): void {
+    if (!this.effectManager.simpleTarget.renderList.includes(mesh)) {
+      this.effectManager.simpleTarget.renderList.push(mesh);
+      if (mesh.material) {
+        this.effectManager.simpleTarget.setMaterialForRendering(mesh, mesh.material);
+      }
+    }
+  }
+
+  /**
+   * 从渲染列表中移除网格
+   * @param mesh 要移除的网格
+   */
+  private removeFromRenderList(mesh: BABYLON.AbstractMesh): void {
+    const index = this.effectManager.simpleTarget.renderList.indexOf(mesh);
+    if (index > -1) {
+      this.effectManager.simpleTarget.renderList.splice(index, 1);
+    }
+  }
   // ===================== 属性访问器 =====================
   set isShowPlane(value: boolean) {
     this._isShowPlane = value;
@@ -118,6 +144,7 @@ export class SlicePlane implements IBaseSlice {
     material.backFaceCulling = false;
     material.clipPlane = false
     plane.material = material;
+    this.addToRenderList(plane);
   }
 
   private setupPlaneControls(plane: BABYLON.Mesh) {
@@ -138,8 +165,10 @@ export class SlicePlane implements IBaseSlice {
       arrowColor: new BABYLON.Color3(1, 0.5, 0),
       lineColor: new BABYLON.Color3(1, 0.5, 0),
       scaleFactor: arrowSize,
+      effectManager: this.effectManager
     });
     arrow.renderingGroupId = 1;
+    this.addToRenderList(arrow);
 
     // 创建右侧小平面（用于X轴旋转）
     const smallPlaneRight = createSmallPlane(this.scene, plane, this.size, {
@@ -148,8 +177,10 @@ export class SlicePlane implements IBaseSlice {
       offset: smallPlaneSize, // 动态调整偏移
       rotationAxis: "x",
       iconPath: "./icons/rotate-x.svg",
+      effectManager: this.effectManager
     });
     smallPlaneRight.renderingGroupId = 1;
+    this.addToRenderList(smallPlaneRight);
 
     // 创建顶部小平面（用于Y轴旋转）
     const smallPlaneTop = createSmallPlane(this.scene, plane, this.size, {
@@ -158,14 +189,23 @@ export class SlicePlane implements IBaseSlice {
       offset: smallPlaneSize, // 动态调整偏移
       rotationAxis: "y",
       iconPath: "./icons/rotate-y.svg",
+      effectManager: this.effectManager
     });
     smallPlaneTop.renderingGroupId = 1;
+    this.addToRenderList(smallPlaneTop);
 
     // 创建四个角边框
     const lines = createCornerTubes(this.scene, plane, this.size, cornerTubeSize, cornerTubeSize * 0.05, new BABYLON.Color3(1, 0.5, 0), cornerTubeSize * 0.075); // 动态调整角边框大小
-    lines.forEach(line => line.renderingGroupId = 1);
+    lines.forEach(line => {
+      line.renderingGroupId = 1;
+      this.addToRenderList(line);
+    });
+    
     const edgeLines = createPlaneEdges(this.scene, plane, this.size, new BABYLON.Color3(1, 0.5, 0));
-    edgeLines.forEach(line => line.renderingGroupId = 1);
+    edgeLines.forEach(line => {
+      line.renderingGroupId = 1;
+      this.addToRenderList(line);
+    });
 
     // 设置旋转和拖拽行为
     setupRotationAndDrag(
@@ -325,5 +365,29 @@ export class SlicePlane implements IBaseSlice {
     this.planetoSceneClip(null);
     this._pointerObservable?.remove();
     this._pointerObservable = null;
+    
+    // 从renderList中移除所有相关网格
+    if (this.effectManager && this.effectManager.simpleTarget) {
+      // 获取所有子网格并从renderList中移除
+      const meshesToRemove: BABYLON.AbstractMesh[] = [];
+      
+      // 收集需要移除的网格
+      this.effectManager.simpleTarget.renderList.forEach(mesh => {
+        if (mesh.name && (
+          mesh.name.includes('slicePlane') ||
+          mesh.name.includes('arrow') ||
+          mesh.name.includes('smallPlane') ||
+          mesh.name.includes('cornerTube') ||
+          mesh.name.includes('edgeLine')
+        )) {
+          meshesToRemove.push(mesh);
+        }
+      });
+      
+      // 从renderList中移除
+      meshesToRemove.forEach(mesh => {
+        this.removeFromRenderList(mesh);
+      });
+    }
   }
 }

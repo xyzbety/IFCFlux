@@ -461,7 +461,7 @@ export default {
           ribbonItems: [
             {
               label: '',
-              itemTemplate: '<smart-check-box id="checkboxShadow" checked right-to-left>阴影开关</smart-check-box>',
+              itemTemplate: '<smart-check-box id="checkboxShadow" right-to-left>阴影开关</smart-check-box>',
               cssClass: 'verySmall',
               allowedSizes: ['verySmall']
             }
