@@ -26,10 +26,10 @@ function createAppCore() {
     let isSidebarVisible = ref(false);
     let isFocus = false;
 
-    let selectedMeshIds = new Set<string>();
+    let selectedMeshIds = new Set<number>();
     let isClickVisible = ref(true);
     let inspectType = ref('');
-    let lastClickedMeshId: string | null = null;
+    let lastClickedMeshId: string | null  = null;
 
     const sceneStore = useSceneStore();
     const modelStore = useModelStore();
@@ -233,11 +233,11 @@ function createAppCore() {
         if (!sceneManager.scene || !modelStore.modelData) return;
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
-        let expressID: string | null = null;
+        let expressID: string | null  = null;
 
         if (event[0]?.originData?.expressId) {
             expressID = event[0]?.originData?.type === 'ifcSiteNode' ? event[0]?.originData?.expressId.replace('ifcSiteNode_', '') : event[0]?.originData?.expressId;
-            selectedMeshIds = new Set(ifcPropertyUtils.getChildrenExpressIds(event[0]?.originData));
+            selectedMeshIds = ifcPropertyUtils.processYourData(new Set(ifcPropertyUtils.getChildrenExpressIds(event[0]?.originData)));
             lastClickedMeshId = expressID;
         } else if (event?.detail?.expressID !== undefined) {
             expressID = event.detail.expressID;

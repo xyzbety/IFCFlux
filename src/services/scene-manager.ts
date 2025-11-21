@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
 import '@babylonjs/inspector'
 import { MessagePlugin } from 'tdesign-vue-next';
-import { setupCameraByBoundingBox, createGround, rgbToHex, calculateEdgeWidthByBoundingBox,updateTempLineLabel } from '../utils';
+import { setupCameraByBoundingBox, createGround, rgbToHex, calculateEdgeWidthByBoundingBox, updateTempLineLabel } from '../utils';
 import { IfcExplosion } from '../utils/analysis/explosion';
 import { SlicePlane } from '../utils/analysis/slice/slicePlane';
 import { Measure } from '../utils/analysis/measure';
@@ -31,9 +31,9 @@ export class SceneManager {
   private slicePlane: SlicePlane | null = null;
   private measure: Measure | null = null;
   private ifcExplosion: IfcExplosion | null = null;
-  private hiddenMeshIds: Set<string> = new Set(); // 存储已隐藏的mesh ID
-  private isolatedMeshIds: Set<string> = new Set(); // 存储已隔离的mesh ID
-  private transparentMeshIds: Set<string> = new Set(); // 存储已半透明的mesh ID
+  private hiddenMeshIds: Set<number> = new Set(); // 存储已隐藏的mesh ID
+  private isolatedMeshIds: Set<number> = new Set(); // 存储已隔离的mesh ID
+  private transparentMeshIds: Set<number> = new Set(); // 存储已半透明的mesh ID
   private sceneStore = useSceneStore();
   private modelStore = useModelStore();
   private ifcPropertyUtils = IfcPropertyUtils.getInstance();
@@ -118,14 +118,14 @@ export class SceneManager {
             }
             parent = parent.parent;
           }
-          
+
           // 检测是否为合并网格，如果是则找到对应的子网格
           const clickedMesh = pointerInfo.pickInfo.pickedMesh;
           const clickedPoint = pointerInfo.pickInfo.pickedPoint;
-          
+
           let targetExpressID = clickedMesh.id;
           let targetMesh = clickedMesh;
-          
+
           // 检查是否是合并网格
           if (clickedMesh.metadata?.isMergedMesh) {
             // 找到点击位置对应的子网格
@@ -145,7 +145,7 @@ export class SceneManager {
               }
             }
           }
-          
+
           this.selectedMeshId = targetExpressID;
           window.dispatchEvent(new CustomEvent('mesh-clicked', {
             detail: {
@@ -222,7 +222,7 @@ export class SceneManager {
 
     const meshes = this.scene.meshes;
     const totalMeshes = meshes.length;
-    
+
     if (totalMeshes === 0) {
       console.log('场景中没有网格需要处理');
       return;
@@ -233,7 +233,7 @@ export class SceneManager {
     if (this.light && this.effectManager?.simpleTarget) {
       shadowGenerator = new BABYLON.ShadowGenerator(2048, this.light);
       shadowGenerator.usePoissonSampling = true;
-      
+
       // 初始化渲染列表
       if (!this.effectManager.simpleTarget.renderList) {
         this.effectManager.simpleTarget.renderList = [];
@@ -260,7 +260,7 @@ export class SceneManager {
       // 同步处理当前批次
       for (let i = start; i < end; i++) {
         const mesh = meshes[i];
-        
+
         // 跳过无效网格
         if (!mesh || !mesh.material) {
           invalidMeshes++;
@@ -290,7 +290,7 @@ export class SceneManager {
           if (mesh !== grid) {
             shadowGenerator.addShadowCaster(mesh);
             shadowCasters++;
-            
+
             // 仅对可见且有材质的网格启用接收阴影
             if (mesh.isVisible && mesh.material) {
               mesh.receiveShadows = true;
@@ -445,7 +445,7 @@ export class SceneManager {
    */
   public handleVisibility(
     mode: 'showAll' | 'hideSelected' | 'isolateSelected' | 'transparentSelected',
-    selectedMeshIds: Set<string>,
+    selectedMeshIds: Set<number>,
     isClickVisibleRef: { value: boolean }
   ) {
     if (!this.scene) return;
@@ -465,12 +465,18 @@ export class SceneManager {
         if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
           return;
         }
-        
+
+        // 显示所有高亮网格
+        if (mesh.name.includes('highlight')) {
+          mesh.isVisible = true;
+          return;
+        }
+
         // 如果是合并网格，恢复所有子网格
         if (mesh.metadata?.isMergedMesh && mesh.metadata.restoreSubMesh) {
           mesh.metadata.restoreSubMesh(); // 恢复所有子网格
         }
-        
+
         mesh.isVisible = true;
         // 还原透明度到原始值
         if (mesh.material) {
@@ -493,7 +499,7 @@ export class SceneManager {
 
     // 根据模式将选中的mesh添加到对应的集合中
     if (mode === 'hideSelected' || mode === 'isolateSelected' || mode === 'transparentSelected') {
-      let targetSet: Set<string>;
+      let targetSet: Set<number>;
 
       if (mode === 'hideSelected') {
         targetSet = this.hiddenMeshIds;
@@ -510,15 +516,46 @@ export class SceneManager {
         });
       } else if (this.selectedMeshId) {
         // 保持原有的单个元素处理逻辑
-        targetSet.add(this.selectedMeshId);
+        targetSet.add(Number(this.selectedMeshId));
       }
 
       console.log(`已${mode === 'hideSelected' ? '隐藏' : mode === 'isolateSelected' ? '隔离' : '半透明'}的mesh IDs:`, Array.from(targetSet));
     }
+    console.log("this.hiddenMeshIds", this.hiddenMeshIds)
 
     this.scene.meshes.forEach(mesh => {
       if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
         return;
+      }
+
+      // 处理高亮网格的可见性
+      if (mesh.name.includes('highlight')) {
+        if (mode === 'showAll') {
+          mesh.isVisible = true;
+        } else if (mode === 'hideSelected') {
+          // 隐藏选中模式：隐藏所有高亮网格
+          mesh.isVisible = false;
+        } else {
+          // isolateSelected 和 transparentSelected 模式：检查是否应该显示高亮网格
+          let shouldShowHighlight = false;
+          
+          if (selectedMeshIds && selectedMeshIds.size > 0) {
+            // 如果有选中的mesh，检查高亮网格对应的原始mesh是否在选中集合中
+            const originalMeshId = mesh.metadata?.originalExpressID;
+            if (originalMeshId && selectedMeshIds.has(Number(originalMeshId))) {
+              shouldShowHighlight = true;
+            }
+          } else if (this.selectedMeshId) {
+            // 单个选中元素的情况
+            const originalMeshId = mesh.metadata?.originalExpressID;
+            if (originalMeshId && Number(originalMeshId) === Number(this.selectedMeshId)) {
+              shouldShowHighlight = true;
+            }
+          }
+          
+          mesh.isVisible = shouldShowHighlight;
+        }
+        return; // 高亮网格单独处理，不需要后续逻辑
       }
 
       let meshVisible = true;
@@ -544,21 +581,21 @@ export class SceneManager {
       // 如果是合并网格，处理子网格的隐藏、半透明和隔离效果
       if (mesh.metadata?.isMergedMesh) {
         const mergedFrom = mesh.metadata.mergedFrom || [];
-        
+
         // 检查是否处于隔离模式
         const isIsolationMode = this.isolatedMeshIds.size > 0;
-        
+
         // 检查当前合并网格是否有子网格在隔离集合中
-        const hasIsolatedSubMesh = mergedFrom.some((subMeshInfo: any) => 
+        const hasIsolatedSubMesh = mergedFrom.some((subMeshInfo: any) =>
           this.isolatedMeshIds.has(subMeshInfo.originalExpressID)
         );
-        
+
         // 处理隔离模式：只有隔离的子网格可见，其他所有子网格都隐藏
         if (isIsolationMode && hasIsolatedSubMesh) {
           // 遍历所有子网格
           mergedFrom.forEach((subMeshInfo: any) => {
             const expressID = subMeshInfo.originalExpressID;
-            
+
             if (this.isolatedMeshIds.has(expressID)) {
               // 隔离的子网格：确保可见
               if (mesh.metadata.restoreSubMesh) {
@@ -575,7 +612,7 @@ export class SceneManager {
           // 非隔离模式：处理隐藏和半透明效果
           mergedFrom.forEach((subMeshInfo: any) => {
             const expressID = subMeshInfo.originalExpressID;
-            
+
             // 检查子网格的expressID是否在隐藏集合中
             if (this.hiddenMeshIds.has(expressID)) {
               // 隐藏子网格
@@ -1081,7 +1118,7 @@ export class SceneManager {
   private findClickedSubMesh(mergedMesh: BABYLON.Mesh, clickedPoint: BABYLON.Vector3): { expressID: string } | null {
     const metadata = mergedMesh.metadata || {};
     const originalMeshData = metadata.originalMeshData || [];
-    
+
     if (originalMeshData.length === 0) {
       console.warn('合并网格中没有保存子网格数据');
       return null;
@@ -1092,36 +1129,36 @@ export class SceneManager {
     const inverseWorldMatrix = worldMatrix.clone().invert();
     const localPoint = BABYLON.Vector3.TransformCoordinates(clickedPoint, inverseWorldMatrix);
 
-    let closestSubMesh: { expressID: string;  distance: number } | null = null;
+    let closestSubMesh: { expressID: string; distance: number } | null = null;
 
     // 遍历所有子网格数据，找到距离点击点最近的子网格
     for (let i = 0; i < originalMeshData.length; i++) {
       const meshData = originalMeshData[i];
-      
+
       // 检查几何数据是否有效
       if (!meshData.positions || !meshData.indices || meshData.positions.length === 0 || meshData.indices.length === 0) {
         console.warn(`子网格 ${i} 的几何数据无效，跳过`);
         continue;
       }
-      
+
       // 将点击点转换到子网格的局部坐标系
       const subMeshTransform = meshData.transformMatrix;
       const inverseSubMeshTransform = subMeshTransform.clone().invert();
       const subMeshLocalPoint = BABYLON.Vector3.TransformCoordinates(localPoint, inverseSubMeshTransform);
-      
+
       // 检查点击点是否在子网格的包围盒内
       if (this.isPointInMeshBounds(subMeshLocalPoint, meshData.positions, meshData.indices)) {
         // 计算点击点到子网格表面的距离
         const distance = this.calculateDistanceToMeshSurface(subMeshLocalPoint, meshData.positions, meshData.indices);
-        
+
         // 放宽距离阈值，确保能匹配到子网格
         // 如果距离在合理范围内，或者点击点在包围盒内但距离计算失败，都认为是有效的点击
         if (distance < 5.0 || (distance === Infinity && this.isPointInMeshBounds(subMeshLocalPoint, meshData.positions, meshData.indices))) {
           const subMeshMetadata = meshData.metadata || {};
           const expressID = subMeshMetadata.originalExpressID || `${i}`;
           const guid = subMeshMetadata.originalGuid;
-          
-          
+
+
           // 如果找到更近的子网格，更新结果
           if (!closestSubMesh || distance < closestSubMesh.distance) {
             closestSubMesh = {
@@ -1132,18 +1169,18 @@ export class SceneManager {
         }
       }
     }
-    
+
     // 如果精确查找失败，使用包围盒中心距离作为回退
     if (!closestSubMesh) {
       console.log('精确查找失败，使用包围盒中心距离回退');
       for (let i = 0; i < originalMeshData.length; i++) {
         const meshData = originalMeshData[i];
         if (!meshData.positions || meshData.positions.length === 0) continue;
-        
+
         const subMeshTransform = meshData.transformMatrix;
         const inverseSubMeshTransform = subMeshTransform.clone().invert();
         const subMeshLocalPoint = BABYLON.Vector3.TransformCoordinates(localPoint, inverseSubMeshTransform);
-        
+
         // 计算包围盒中心距离
         const bounds = this.calculateMeshBounds(meshData.positions);
         const center = new BABYLON.Vector3(
@@ -1152,13 +1189,13 @@ export class SceneManager {
           (bounds.minZ + bounds.maxZ) / 2
         );
         const distance = BABYLON.Vector3.Distance(subMeshLocalPoint, center);
-        
+
         // 使用较大的阈值
         if (distance < 10.0) {
           const subMeshMetadata = meshData.metadata || {};
           const expressID = subMeshMetadata.originalExpressID || `${i}`;
           const guid = subMeshMetadata.originalGuid;
-          
+
           if (!closestSubMesh || distance < closestSubMesh.distance) {
             closestSubMesh = {
               expressID: expressID,
@@ -1168,7 +1205,7 @@ export class SceneManager {
         }
       }
     }
-    
+
     console.log("找到子网格", closestSubMesh);
     // 返回距离最近的子网格，如果没有找到则返回null
     return closestSubMesh ? { expressID: closestSubMesh.expressID } : null;
@@ -1194,7 +1231,7 @@ export class SceneManager {
       const x = positions[i];
       const y = positions[i + 1];
       const z = positions[i + 2];
-      
+
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       minZ = Math.min(minZ, z);
@@ -1205,8 +1242,8 @@ export class SceneManager {
 
     // 检查点是否在包围盒内
     return point.x >= minX && point.x <= maxX &&
-           point.y >= minY && point.y <= maxY &&
-           point.z >= minZ && point.z <= maxZ;
+      point.y >= minY && point.y <= maxY &&
+      point.z >= minZ && point.z <= maxZ;
   }
 
   /**
@@ -1255,20 +1292,20 @@ export class SceneManager {
     const edge1 = v2.subtract(v1);
     const edge2 = v3.subtract(v1);
     const normal = BABYLON.Vector3.Cross(edge1, edge2);
-    
+
     // 计算点到平面的距离
     const planeDistance = Math.abs(BABYLON.Vector3.Dot(point.subtract(v1), normal)) / normal.length();
-    
+
     // 检查点是否在三角形内部
     if (this.isPointInTriangle(point, v1, v2, v3)) {
       return planeDistance;
     }
-    
+
     // 如果不在三角形内部，计算到三条边的距离
     const distanceToEdge1 = this.distancePointToLineSegment(point, v1, v2);
     const distanceToEdge2 = this.distancePointToLineSegment(point, v2, v3);
     const distanceToEdge3 = this.distancePointToLineSegment(point, v3, v1);
-    
+
     return Math.min(planeDistance, distanceToEdge1, distanceToEdge2, distanceToEdge3);
   }
 
@@ -1279,10 +1316,10 @@ export class SceneManager {
     const d1 = this.sign(point, v1, v2);
     const d2 = this.sign(point, v2, v3);
     const d3 = this.sign(point, v3, v1);
-    
+
     const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
     const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-    
+
     return !(hasNeg && hasPos);
   }
 
@@ -1293,10 +1330,10 @@ export class SceneManager {
     const lineVec = lineEnd.subtract(lineStart);
     const lineLength = lineVec.length();
     const lineDir = lineVec.normalize();
-    
+
     const pointVec = point.subtract(lineStart);
     const projection = BABYLON.Vector3.Dot(pointVec, lineDir);
-    
+
     if (projection <= 0) {
       return pointVec.length();
     } else if (projection >= lineLength) {
@@ -1331,7 +1368,7 @@ export class SceneManager {
       const x = positions[i];
       const y = positions[i + 1];
       const z = positions[i + 2];
-      
+
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       minZ = Math.min(minZ, z);

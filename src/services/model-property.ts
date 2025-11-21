@@ -85,7 +85,7 @@ export class IfcPropertyUtils {
 
     const findNode = (nodeList: any[], targetId: string | number): any => {
       for (const node of nodeList) {
-        if (String(node.expressId) === String(targetId)) {
+        if (node.expressId === targetId) {
           return node;
         }
         if (node.children && node.children.length > 0) {
@@ -98,7 +98,7 @@ export class IfcPropertyUtils {
 
     const collectAllChildren = (node: any): void => {
       if (node.expressId) {
-        allIds.push(String(node.expressId));
+        allIds.push(node.expressId);
       }
       if (node.children && node.children.length > 0) {
         node.children.forEach((child: any) => collectAllChildren(child));
@@ -161,7 +161,7 @@ export class IfcPropertyUtils {
     } else {
       // 复选框未选中：隐藏当前节点及其子节点
       currentNodeAndChildrenIds.forEach(id => {
-        this.hiddenNodeIds.add(Number(id));
+        this.hiddenNodeIds.add(this.extractAndCombineNumbersFromString(id));
       });
       console.log(`隐藏节点及子节点: ${expressId}`);
     }
@@ -199,10 +199,10 @@ export class IfcPropertyUtils {
         });
 
       }
-      if(mesh.name.includes('highlight')){
-        if(isChecked){
+      if (mesh.name.includes('highlight')) {
+        if (isChecked) {
           mesh.isVisible = true;
-        }else{
+        } else {
           mesh.isVisible = false;
         }
       }
@@ -468,9 +468,9 @@ export class IfcPropertyUtils {
     try {
       const { scene, isFocus } = meshConfig;
       const result = this.findAllChildExpressIds(treeData, expressID);
-      result.push(expressID);
+      result.push(String(expressID));
       // 统一使用字符串类型进行匹配
-      const expressIdSet = new Set(result.map(id => String(id)));
+      const expressIdSet = this.processYourData(new Set(result));
 
       const exactMatches = []
       scene.meshes.forEach(mesh => {
@@ -478,7 +478,7 @@ export class IfcPropertyUtils {
         if (mesh.metadata && mesh.metadata.originalMeshData) {
           mesh.metadata.originalMeshData.forEach((item: any) => {
             // 统一使用字符串类型进行匹配
-            if (expressIdSet.has(String(item.metadata.originalExpressID))) {
+            if (expressIdSet.has(item.metadata.originalExpressID)) {
               exactMatches.push(item);
             }
           })
@@ -675,7 +675,7 @@ export class IfcPropertyUtils {
 
   public findAllChildExpressIds(nodes: any[], targetExpressId: string, result: string[] = []): string[] {
     for (const node of nodes) {
-      if (node.expressId === targetExpressId) {
+      if (node.expressId == targetExpressId) {
         // 找到目标节点，递归收集所有子节点
         if (node.children && node.children.length > 0) {
           this.collectChildExpressIds(node.children, result);
@@ -744,6 +744,55 @@ export class IfcPropertyUtils {
     }
     return null;
   }
+  /**
+ * 提取字符串中的所有数字
+ * @param data - 输入的字符串
+ * @returns 包含所有找到的数字的数组
+ */
+  /**
+   * 提取字符串中的所有数字并将它们连接成一个新的数字
+   * @param data - 输入的字符串
+   * @returns 连接所有数字后形成的新数字，如果没有找到数字则返回0
+   */
+  public extractAndCombineNumbersFromString(data: string): number {
+    // 使用正则表达式匹配字符串中的所有数字
+    const matches = data.match(/\d+/g);
+
+    if (matches) {
+      // 将所有匹配的数字连接成一个字符串
+      const combinedNumberStr = matches.join('');
+
+      // 转换为数字并返回
+      const result = parseInt(combinedNumberStr, 10);
+
+      // 检查结果是否为有效数字
+      return isNaN(result) ? 0 : result;
+    }
+
+    // 如果没有找到数字，返回0
+    return 0;
+  }
+
+  public processYourData(data: Set<string>): Set<number> {
+    const numbers = new Set<number>();
+
+    data.forEach(str => {
+      // 使用正则表达式匹配字符串中的所有数字
+      const matches = str.match(/\d+/g);
+
+      if (matches) {
+        matches.forEach(match => {
+          const num = parseInt(match, 10);
+          if (!isNaN(num)) {
+            numbers.add(num);
+          }
+        });
+      }
+    });
+
+    return numbers;
+  }
+
 }
 
 
@@ -848,3 +897,4 @@ export function convertToTreeData(obj: any) {
   // 返回最终的树形结构数据
   return result;
 }
+
