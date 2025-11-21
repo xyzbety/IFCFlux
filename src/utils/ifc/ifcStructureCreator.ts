@@ -103,9 +103,12 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
     }
     let isc = false
     // 当不存在ifcTypeID中表示构件
-    if (!ifcTypeID.includes(properties[relations[id][0]].type)) {
-      isc = true
+    if (properties[relations[id][0]]) {
+      if (!ifcTypeID.includes(properties[relations[id][0]].type)) {
+        isc = true
+      }
     }
+
     relations[id].forEach((expressId: string) => {
       const property = properties[expressId]
       if (!property) {
