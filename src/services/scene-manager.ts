@@ -34,6 +34,7 @@ export class SceneManager {
   private hiddenMeshIds: Set<number> = new Set(); // 存储已隐藏的mesh ID
   private isolatedMeshIds: Set<number> = new Set(); // 存储已隔离的mesh ID
   private transparentMeshIds: Set<number> = new Set(); // 存储已半透明的mesh ID
+  private transparentOverlayMeshes: Map<number, BABYLON.Mesh> = new Map(); // 存储半透明覆盖网格
   private sceneStore = useSceneStore();
   private modelStore = useModelStore();
   private ifcPropertyUtils = IfcPropertyUtils.getInstance();
@@ -461,6 +462,9 @@ export class SceneManager {
       this.transparentMeshIds.clear();
       selectedMeshIds.clear();
 
+      // 清除所有透明覆盖网格
+      this.clearTransparentOverlayMeshes();
+
       this.scene.meshes.forEach(mesh => {
         if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
           return;
@@ -536,9 +540,10 @@ export class SceneManager {
           // 隐藏选中模式：隐藏所有高亮网格
           mesh.isVisible = false;
         } else {
+          
           // isolateSelected 和 transparentSelected 模式：检查是否应该显示高亮网格
           let shouldShowHighlight = false;
-          
+
           if (selectedMeshIds && selectedMeshIds.size > 0) {
             // 如果有选中的mesh，检查高亮网格对应的原始mesh是否在选中集合中
             const originalMeshId = mesh.metadata?.originalExpressID;
@@ -552,8 +557,8 @@ export class SceneManager {
               shouldShowHighlight = true;
             }
           }
-          
-          mesh.isVisible = shouldShowHighlight;
+
+          mesh.isVisible = true;
         }
         return; // 高亮网格单独处理，不需要后续逻辑
       }
@@ -622,57 +627,24 @@ export class SceneManager {
             }
             // 检查子网格的expressID是否在半透明集合中
             else if (this.transparentMeshIds.has(expressID)) {
-              // 半透明子网格
-              if (mesh.metadata.transparentSubMesh) {
-                mesh.metadata.transparentSubMesh(expressID, 0.5);
+              // 创建半透明覆盖网格（不依赖合并网格的材质）
+              this.createTransparentOverlayMesh(mesh, expressID, 0.5);
+              // 隐藏原始子网格，避免覆盖透明效果
+              if (mesh.metadata.hideSubMesh) {
+                mesh.metadata.hideSubMesh(expressID);
               }
             } else {
               // 既不在隐藏也不在半透明集合中：确保可见
               if (mesh.metadata.restoreSubMesh) {
                 mesh.metadata.restoreSubMesh(expressID);
               }
+              // 移除半透明覆盖网格
+              this.removeTransparentOverlayMesh(expressID);
             }
           });
         }
       }
 
-      // 应用透明度（针对非合并网格或合并网格整体）
-      if (meshTransparent) {
-        // 为半透明mesh设置材质
-        if (mesh.material && mesh.material.getClassName && mesh.material.getClassName() === "StandardMaterial") {
-          if (!(mesh.material as any)._isClonedForTransparent) {
-            const newMat = mesh.material.clone(mesh.material.name + "_transparent");
-            if (newMat) {
-              newMat.alpha = 0.5;
-              (newMat as any)._isClonedForTransparent = true;
-              mesh.material = newMat;
-              this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, newMat);
-            }
-          } else {
-            mesh.material.alpha = 0.5;
-            this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
-          }
-        } else if (mesh.material) {
-          const newMat = mesh.material.clone(mesh.material.name + "_transparent");
-          if (newMat) {
-            newMat.alpha = 0.5;
-            (newMat as any)._isClonedForTransparent = true;
-            mesh.material = newMat;
-            this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, newMat);
-          }
-        }
-      } else {
-        // 还原非半透明mesh的透明度到原始值
-        if (mesh.material) {
-          this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
-          const originalProps = this.originalMaterialProperties.get(mesh.id);
-          if (originalProps) {
-            mesh.material.alpha = originalProps.alpha;
-          } else {
-            mesh.material.alpha = 1;
-          }
-        }
-      }
     });
   }
 
@@ -1061,6 +1033,111 @@ export class SceneManager {
     }
   }
   /**
+   * 创建半透明覆盖网格
+   * @param mergedMesh 合并网格
+   * @param expressID 子网格的expressID
+   * @param transparency 透明度（0-1）
+   */
+  private createTransparentOverlayMesh(mergedMesh: BABYLON.Mesh, expressID: number, transparency: number = 0.5): void {
+    if (!this.scene) return;
+
+    // 检查是否已经存在相同expressID的透明覆盖网格
+    if (this.transparentOverlayMeshes.has(expressID)) {
+      console.log(`expressID为 ${expressID} 的半透明覆盖网格已存在，跳过创建`);
+      return;
+    }
+
+    // 从合并网格的元数据中获取子网格的几何数据
+    const originalMeshData = mergedMesh.metadata?.originalMeshData || [];
+
+    // 查找匹配的子网格数据
+    const subMeshData = originalMeshData.find((data: any) =>
+      data.metadata?.originalExpressID === expressID
+    );
+
+    if (!subMeshData || !subMeshData.positions || !subMeshData.indices) {
+      console.warn(`未找到expressID为 ${expressID} 的子网格数据`);
+      return;
+    }
+
+    // 创建透明覆盖网格
+    const overlayMesh = new BABYLON.Mesh(`transparent_overlay_${expressID}`, this.scene);
+
+    // 创建顶点数据
+    const vertexData = new BABYLON.VertexData();
+    vertexData.positions = subMeshData.positions;
+    vertexData.normals = subMeshData.normals;
+    vertexData.indices = subMeshData.indices;
+
+    // 应用顶点数据
+    vertexData.applyToMesh(overlayMesh);
+
+    console.log('overlayMesh', subMeshData);
+
+    // 使用子网格的原始材质创建半透明材质
+    let transparentMaterial: BABYLON.StandardMaterial;
+
+    if (subMeshData.metadata?.originalMaterial) {
+      // 如果保存了原始材质，使用它并设置透明度
+      transparentMaterial = subMeshData.metadata.originalMaterial.clone(`transparent_mat_${expressID}`) as BABYLON.StandardMaterial;
+      transparentMaterial.alpha = transparency;
+      transparentMaterial.backFaceCulling = false;
+    } else {
+      // 如果没有保存原始材质，创建默认的绿色半透明材质
+      transparentMaterial = new BABYLON.StandardMaterial(`transparent_mat_${expressID}`, this.scene);
+      transparentMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2); // 绿色高亮
+      transparentMaterial.alpha = transparency;
+      transparentMaterial.backFaceCulling = false;
+    }
+
+    overlayMesh.material = transparentMaterial;
+
+    // 应用子网格的变换矩阵
+    if (subMeshData.transformMatrix) {
+      overlayMesh.setPreTransformMatrix(subMeshData.transformMatrix);
+    }
+
+    // 应用合并网格的变换
+    overlayMesh.parent = mergedMesh;
+
+    // 保存到映射表中
+    this.transparentOverlayMeshes.set(expressID, overlayMesh);
+
+    if (!this.effectManager) {
+      this.effectManager = EffectManager.getInstance(this.scene);
+    }
+
+    // 将合并后的网格添加到效果管理器
+    this.effectManager.simpleTarget?.renderList?.push(overlayMesh);
+    this.effectManager.simpleTarget.setMaterialForRendering(overlayMesh, overlayMesh.material);
+
+    console.log(`创建了expressID为 ${expressID} 的半透明覆盖网格`);
+  }
+
+  /**
+   * 移除半透明覆盖网格
+   * @param expressID 子网格的expressID
+   */
+  private removeTransparentOverlayMesh(expressID: number): void {
+    const overlayMesh = this.transparentOverlayMeshes.get(expressID);
+    if (overlayMesh) {
+      overlayMesh.dispose();
+      this.transparentOverlayMeshes.delete(expressID);
+      console.log(`移除了expressID为 ${expressID} 的半透明覆盖网格`);
+    }
+  }
+
+  /**
+   * 清除所有半透明覆盖网格
+   */
+  private clearTransparentOverlayMeshes(): void {
+    this.transparentOverlayMeshes.forEach((mesh, expressID) => {
+      mesh.dispose();
+    });
+    this.transparentOverlayMeshes.clear();
+  }
+
+  /**
    * 清除场景资源
    */
   public clear() {
@@ -1077,6 +1154,9 @@ export class SceneManager {
     }
     this.selectedMeshId = '';
     this.originalMaterialProperties.clear();
+
+    // 清理透明覆盖网格
+    this.clearTransparentOverlayMeshes();
 
     // 清理UI纹理
     this.cleanupMeasurementResources();

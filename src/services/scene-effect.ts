@@ -78,7 +78,6 @@ export class EffectManager {
       if (!highlightMaterial) {
         // 如果缓存中没有，创建新的高亮材质
         highlightMaterial = material.clone(`shared_highlight_${material.name}_${Date.now()}`);
-        highlightMaterial.alpha = 0.5;
         highlightMaterialCache.set(material, highlightMaterial);
         console.log(`创建共享高亮材质: ${material.name}`);
       }
@@ -140,7 +139,9 @@ export class EffectManager {
 
     // 第一步：收集需要处理的网格和材质
     meshesToClear.forEach(mesh => {
-      mesh.dispose()
+      console.log(`处理网格: ${mesh.name}`);
+      if (mesh.name.includes('highlight'))
+        mesh.dispose()
     });
 
     console.log(`高亮效果清除完成，处理了 ${meshesToClear.length} 个网格`, meshesToClear);

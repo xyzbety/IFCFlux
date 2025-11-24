@@ -845,7 +845,8 @@ export class IfcLoader {
                                         originalExpressID: metadata.originalExpressID,
                                         originalGuid: metadata.originalGuid,
                                         instanceIndex: metadata.instanceIndex,
-                                        colorID: metadata.colorID // 确保保留材质ID
+                                        colorID: metadata.colorID, // 确保保留材质ID
+                                        originalMaterial: mesh.material ? this.cloneMaterial(mesh.material) : null // 保存原始材质
                                     },
                                     transformMatrix: mesh.getWorldMatrix().clone(),
                                 };
@@ -871,7 +872,6 @@ export class IfcLoader {
                         originalGuid: firstOriginalMesh?.metadata?.originalGuid,
                         // 子网格操作功能
                         hideSubMesh: this.createHideSubMeshFunction(mergedMesh, originalMeshData),
-                        transparentSubMesh: this.createTransparentSubMeshFunction(mergedMesh, originalMeshData),
                         restoreSubMesh: this.createRestoreSubMeshFunction(mergedMesh, originalMeshData)
                     };
 
@@ -920,7 +920,6 @@ export class IfcLoader {
                                     isMergedMesh: false, // 标记为未合并的网格
                                     originalMeshData: originalMeshData,
                                     hideSubMesh: this.createHideSubMeshFunction(mesh, originalMeshData),
-                                    transparentSubMesh: this.createTransparentSubMeshFunction(mesh, originalMeshData),
                                     restoreSubMesh: this.createRestoreSubMeshFunction(mesh, originalMeshData)
                                 };
                             }
@@ -962,6 +961,21 @@ export class IfcLoader {
         }
         return 0;
     }
+
+    /**
+     * 克隆材质
+     * @param material 原始材质
+     */
+    private cloneMaterial(material: BABYLON.Material): BABYLON.StandardMaterial {
+        if (material instanceof BABYLON.StandardMaterial) {
+            const clonedMaterial = material.clone(`${material.name}_cloned`) as BABYLON.StandardMaterial;
+            return clonedMaterial;
+        }
+        // 如果不是StandardMaterial，创建一个新的StandardMaterial
+        const newMaterial = new BABYLON.StandardMaterial(`cloned_${material.name}`, this.scene);
+        // 这里可以根据需要复制其他材质属性
+        return newMaterial;
+    }
     /**
      * 创建隐藏子网格的函数（通过expressID）
      * @param mergedMesh 合并后的网格
@@ -989,32 +1003,6 @@ export class IfcLoader {
         };
     }
 
-    /**
-     * 创建半透明子网格的函数（通过expressID）
-     * @param mergedMesh 合并后的网格
-     * @param originalMeshData 原始网格数据
-     */
-    private createTransparentSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): (expressID: number, transparency: number) => void {
-        return (expressID: number, transparency: number = 0.5) => {
-            let foundAny = false;
-            
-            // 遍历所有子网格，设置所有匹配expressID的网格透明度
-            originalMeshData.forEach((meshData) => {
-                if (meshData.metadata?.originalExpressID === expressID) {
-                    // 标记该子网格为半透明状态
-                    meshData.transparency = Math.max(0, Math.min(1, transparency));
-                    foundAny = true;
-                }
-            });
-            
-            if (foundAny) {
-                // 重新构建合并网格以应用半透明效果
-                this.rebuildMergedMesh(mergedMesh, originalMeshData);
-            } else {
-                console.warn(`未找到expressID为 ${expressID} 的子网格`);
-            }
-        };
-    }
 
     /**
      * 创建恢复子网格的函数（通过expressID）
@@ -1027,7 +1015,6 @@ export class IfcLoader {
                 // 恢复所有子网格
                 originalMeshData.forEach(meshData => {
                     meshData.isVisible = true;
-                    meshData.transparency = undefined;
                 });
                 this.rebuildMergedMesh(mergedMesh, originalMeshData);
             } else {
@@ -1037,7 +1024,6 @@ export class IfcLoader {
                 originalMeshData.forEach((meshData) => {
                     if (meshData.metadata?.originalExpressID === expressID) {
                         meshData.isVisible = true;
-                        meshData.transparency = undefined;
                         foundAny = true;
                     }
                 });
@@ -1071,18 +1057,6 @@ export class IfcLoader {
                     vertexData.positions = meshData.positions;
                     vertexData.normals = meshData.normals;
                     vertexData.indices = meshData.indices;
-
-                    // 如果设置了透明度，创建半透明材质
-                    if (meshData.transparency !== undefined) {
-                        const transparentMaterial = new BABYLON.StandardMaterial(
-                            `transparent_mat_${expressID}_${index}`,
-                            this.scene
-                        );
-                        transparentMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
-                        transparentMaterial.alpha = 1 - meshData.transparency;
-                        transparentMaterial.backFaceCulling = false;
-                        vertexData.material = transparentMaterial;
-                    }
 
                     // 按expressID分组
                     if (!geometryGroups.has(expressID)) {
