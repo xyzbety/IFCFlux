@@ -248,7 +248,6 @@ export class IfcPropertyUtils {
     } else {
       console.log(`未找到expressID: ${processedExpressID}`);
     }
-
     if (pset === undefined) {
       return [];
     } else if (Object.keys(pset).length > 0) {
@@ -516,9 +515,14 @@ export class IfcPropertyUtils {
             highlightMesh.material = item.material;
           } else {
             // 如果没有材质，创建一个默认的材质
-            const defaultMaterial = new BABYLON.StandardMaterial(`highlight_default_${expressID}`, scene);
-            defaultMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
-            highlightMesh.material = defaultMaterial;
+            const material = scene.getMaterialById(`highlight_default_${expressID}`);
+            if (material) {
+              highlightMesh.material = material;
+            } else {
+              const defaultMaterial = new BABYLON.StandardMaterial(`highlight_default_${expressID}`, scene);
+              defaultMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+              highlightMesh.material = defaultMaterial;
+            }
           }
 
           // 确保高亮mesh可见
@@ -595,11 +599,31 @@ export class IfcPropertyUtils {
     // 创建合并后的网格
     const mergedMesh = new BABYLON.Mesh(`merged_highlight_${expressID}`, scene);
 
-    // 收集所有网格的顶点数据
-    const allPositions: number[] = [];
-    const allIndices: number[] = [];
-    const allNormals: number[] = [];
+    // 预计算总数据量，避免数组动态扩容
+    let totalPositions = 0;
+    let totalIndices = 0;
+    let totalNormals = 0;
 
+    highlightMeshes.forEach(mesh => {
+      const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+      const indices = mesh.getIndices();
+      const normals = mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind);
+
+      if (positions && indices) {
+        totalPositions += positions.length;
+        totalIndices += indices.length;
+        if (normals) totalNormals += normals.length;
+      }
+    });
+
+    // 预分配数组
+    const allPositions = new Array(totalPositions);
+    const allIndices = new Array(totalIndices);
+    const allNormals = new Array(totalNormals);
+
+    let positionIndex = 0;
+    let indicesIndex = 0;
+    let normalIndex = 0;
     let vertexOffset = 0;
 
     highlightMeshes.forEach((mesh, index) => {
@@ -609,16 +633,21 @@ export class IfcPropertyUtils {
       const normals = mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind);
 
       if (positions && indices) {
-        // 添加顶点位置数据
-        allPositions.push(...positions);
+        // 添加顶点位置数据 - 使用循环避免栈溢出
+        for (let i = 0; i < positions.length; i++) {
+          allPositions[positionIndex++] = positions[i];
+        }
 
-        // 添加索引数据（需要偏移）
-        const offsetIndices = indices.map(idx => idx + vertexOffset);
-        allIndices.push(...offsetIndices);
+        // 添加索引数据（需要偏移）- 使用循环避免栈溢出
+        for (let i = 0; i < indices.length; i++) {
+          allIndices[indicesIndex++] = indices[i] + vertexOffset;
+        }
 
-        // 添加法线数据（如果有）
+        // 添加法线数据（如果有）- 使用循环避免栈溢出
         if (normals) {
-          allNormals.push(...normals);
+          for (let i = 0; i < normals.length; i++) {
+            allNormals[normalIndex++] = normals[i];
+          }
         }
 
         // 更新顶点偏移量

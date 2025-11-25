@@ -47,8 +47,6 @@ interface IGeometryOptimizationConfig {
     useFastBooleans: boolean;
     // 是否优化轮廓
     optimizeProfiles: boolean;
-    // 是否启用几何简化
-    enableGeometrySimplification: boolean;
     // 简化阈值（顶点数量超过此值进行简化）
     simplificationThreshold: number;
 }
@@ -133,7 +131,6 @@ export class IfcLoader {
             detailLevel: 8,
             useFastBooleans: true,
             optimizeProfiles: true,
-            enableGeometrySimplification: false,
             simplificationThreshold: 500
         };
 
@@ -172,11 +169,7 @@ export class IfcLoader {
 
                 const flatMeshes = this.ifcApi.LoadAllGeometry(this.modelID!);
                 const geometryCount = flatMeshes.size();
-                if (geometryCount > 10000) {
-                    this.geometryOptimization.enableGeometrySimplification = true;
-                } else {
-                    this.geometryOptimization.enableGeometrySimplification = false;
-                }
+                console.log(`正在加载${geometryCount}个图元`);
                 let loadedGeometries = 0;
 
                 const processMeshes = async (): Promise<void> => {
@@ -328,7 +321,10 @@ export class IfcLoader {
         const baseExpressID = flatMesh.expressID;
         const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, baseExpressID);
         const baseGuid = ifcGuidToUuid(entity.GlobalId.value)
-
+        // 跳过处理不存在空间结构关系的元素
+        if (!this.ifcExpressIds.includes(String(baseExpressID))) {
+            return
+        }
         for (let i = 0; i < size; i++) {
             const placedGeometry = placedGeometries.get(i);
 
@@ -472,19 +468,19 @@ export class IfcLoader {
             const vertexData = new BABYLON.VertexData();
             const { positions, normals } = this.extractPositionAndNormals(vertexArray);
 
-            // 应用几何简化（如果启用）
+            // 动态判断是否需要几何简化
             let simplifiedPositions = positions;
             let simplifiedNormals = normals;
             let simplifiedIndices = indexArray;
 
-            if (this.geometryOptimization.enableGeometrySimplification &&
-                positions.length / 3 > this.geometryOptimization.simplificationThreshold) {
+            const vertexCount = positions.length / 3;
+            const shouldSimplify = this.shouldSimplifyGeometry(vertexCount);
+
+            if (shouldSimplify) {
                 const simplified = this.simplifyGeometry(positions, normals, indexArray);
                 simplifiedPositions = simplified.positions;
                 simplifiedNormals = simplified.normals;
                 simplifiedIndices = simplified.indices;
-
-                console.log(`几何简化: ${positions.length / 3} -> ${simplifiedPositions.length / 3} 顶点`);
             }
 
             vertexData.positions = simplifiedPositions;
@@ -497,6 +493,21 @@ export class IfcLoader {
         } catch (error) {
             console.warn("顶点数据创建失败:", error);
             return null;
+        }
+    }
+
+    /**
+     * 判断单个几何体是否需要简化
+     * @param vertexCount 顶点数量
+     * @returns 是否需要简化
+     */
+    private shouldSimplifyGeometry(vertexCount: number): boolean {
+        if (vertexCount > 6000) {
+            return true; // 大量顶点，总是简化
+        } else if (vertexCount > 1000) {
+            return false; // 暂时不简化，保持精度
+        } else {
+            return false; // 少量顶点，不需要简化
         }
     }
 
@@ -635,7 +646,7 @@ export class IfcLoader {
         material.alpha = a;
 
         // 禁用背面剔除
-        material.backFaceCulling = false;
+        material.backFaceCulling = true;
         material.reflectionTexture = null;
 
         // 设置双面渲染
@@ -744,32 +755,50 @@ export class IfcLoader {
         geometriesByMaterials.forEach((geometries, colorID) => {
             if (geometries.length > 1) {
                 try {
+                    // 预计算总数据量，避免数组动态扩容
+                    let totalPositions = 0;
+                    let totalNormals = 0;
+                    let totalIndices = 0;
+
+                    geometries.forEach(vertexData => {
+                        if (vertexData.positions) totalPositions += vertexData.positions.length;
+                        if (vertexData.normals) totalNormals += vertexData.normals.length;
+                        if (vertexData.indices) totalIndices += vertexData.indices.length;
+                    });
+
                     // 合并相同材质的几何体（类似Three.js的mergeBufferGeometries）
                     const mergedVertexData = new BABYLON.VertexData();
 
-                    // 合并位置数据
-                    const positions: number[] = [];
-                    const normals: number[] = [];
-                    const indices: number[] = [];
+                    // 预分配数组大小
+                    const positions = new Array(totalPositions);
+                    const normals = new Array(totalNormals);
+                    const indices = new Array(totalIndices);
 
+                    let positionIndex = 0;
+                    let normalIndex = 0;
+                    let indicesIndex = 0;
                     let vertexOffset = 0;
 
                     geometries.forEach(vertexData => {
-                        // 添加位置数据
+                        // 添加位置数据 - 直接写入预分配的数组
                         if (vertexData.positions) {
-                            positions.push(...vertexData.positions);
+                            for (let i = 0; i < vertexData.positions.length; i++) {
+                                positions[positionIndex++] = vertexData.positions[i];
+                            }
                         }
 
-                        // 添加法线数据
+                        // 添加法线数据 - 直接写入预分配的数组
                         if (vertexData.normals) {
-                            normals.push(...vertexData.normals);
+                            for (let i = 0; i < vertexData.normals.length; i++) {
+                                normals[normalIndex++] = vertexData.normals[i];
+                            }
                         }
 
                         // 添加索引数据（需要偏移，类似Three.js的索引偏移）
                         if (vertexData.indices) {
-                            vertexData.indices.forEach(index => {
-                                indices.push(index + vertexOffset);
-                            });
+                            for (let i = 0; i < vertexData.indices.length; i++) {
+                                indices[indicesIndex++] = vertexData.indices[i] + vertexOffset;
+                            }
                         }
 
                         // 更新顶点偏移量
@@ -846,8 +875,9 @@ export class IfcLoader {
                                         originalGuid: metadata.originalGuid,
                                         instanceIndex: metadata.instanceIndex,
                                         colorID: metadata.colorID, // 确保保留材质ID
-                                        originalMaterial: mesh.material ? this.cloneMaterial(mesh.material) : null // 保存原始材质
+                                        originalMaterial: mesh.material // 保存原始材质
                                     },
+                                    material: mesh.material, // 保留原始材质
                                     transformMatrix: mesh.getWorldMatrix().clone(),
                                 };
                                 originalMeshData.push(meshData);
@@ -911,7 +941,8 @@ export class IfcLoader {
                                     normals: normals,
                                     indices: indices,
                                     metadata: { ...mesh.metadata },
-                                    isVisible: true
+                                    isVisible: true,
+                                    material: mesh.material,
                                 }];
 
                                 // 更新网格的元数据，添加子网格操作功能
@@ -961,21 +992,6 @@ export class IfcLoader {
         }
         return 0;
     }
-
-    /**
-     * 克隆材质
-     * @param material 原始材质
-     */
-    private cloneMaterial(material: BABYLON.Material): BABYLON.StandardMaterial {
-        if (material instanceof BABYLON.StandardMaterial) {
-            const clonedMaterial = material.clone(`${material.name}_cloned`) as BABYLON.StandardMaterial;
-            return clonedMaterial;
-        }
-        // 如果不是StandardMaterial，创建一个新的StandardMaterial
-        const newMaterial = new BABYLON.StandardMaterial(`cloned_${material.name}`, this.scene);
-        // 这里可以根据需要复制其他材质属性
-        return newMaterial;
-    }
     /**
      * 创建隐藏子网格的函数（通过expressID）
      * @param mergedMesh 合并后的网格
@@ -984,7 +1000,7 @@ export class IfcLoader {
     private createHideSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): (expressID: number) => void {
         return (expressID: number) => {
             let foundAny = false;
-            
+
             // 遍历所有子网格，隐藏所有匹配expressID的网格
             originalMeshData.forEach((meshData) => {
                 if (meshData.metadata?.originalExpressID === expressID) {
@@ -993,7 +1009,7 @@ export class IfcLoader {
                     foundAny = true;
                 }
             });
-            
+
             if (foundAny) {
                 // 重新构建合并网格以应用隐藏效果
                 this.rebuildMergedMesh(mergedMesh, originalMeshData);
@@ -1019,7 +1035,7 @@ export class IfcLoader {
                 this.rebuildMergedMesh(mergedMesh, originalMeshData);
             } else {
                 let foundAny = false;
-                
+
                 // 遍历所有子网格，恢复所有匹配expressID的网格
                 originalMeshData.forEach((meshData) => {
                     if (meshData.metadata?.originalExpressID === expressID) {
@@ -1027,7 +1043,7 @@ export class IfcLoader {
                         foundAny = true;
                     }
                 });
-                
+
                 if (foundAny) {
                     this.rebuildMergedMesh(mergedMesh, originalMeshData);
                 } else {
@@ -1044,108 +1060,112 @@ export class IfcLoader {
      */
     private rebuildMergedMesh(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): void {
         try {
+            // 预计算总顶点数和索引数
+            let totalPositions = 0;
+            let totalIndices = 0;
+            const geometryGroups = new Map<number, { positions: number[], normals: number[], indices: number[] }>();
 
-            // 按expressID分组，确保同一个构件的所有子网格都被正确处理
-            const geometryGroups = new Map<number, BABYLON.VertexData[]>();
-            
-            originalMeshData.forEach((meshData, index) => {
+            // 第一遍：计算每个expressID的总数据量
+            const groupSizes = new Map<number, { positions: number, normals: number, indices: number }>();
+
+            originalMeshData.forEach(meshData => {
                 const expressID = meshData.metadata?.originalExpressID;
-                if (!expressID) return;
+                if (!expressID || meshData.isVisible === false) return;
 
-                if (meshData.isVisible !== false) {
-                    const vertexData = new BABYLON.VertexData();
-                    vertexData.positions = meshData.positions;
-                    vertexData.normals = meshData.normals;
-                    vertexData.indices = meshData.indices;
+                if (!groupSizes.has(expressID)) {
+                    groupSizes.set(expressID, { positions: 0, normals: 0, indices: 0 });
+                }
+                const size = groupSizes.get(expressID)!;
+                size.positions += meshData.positions.length;
+                size.normals += meshData.normals.length;
+                size.indices += meshData.indices.length;
 
-                    // 按expressID分组
-                    if (!geometryGroups.has(expressID)) {
-                        geometryGroups.set(expressID, []);
-                    }
-                    geometryGroups.get(expressID)!.push(vertexData);
+                totalPositions += meshData.positions.length;
+                totalIndices += meshData.indices.length;
+            });
+
+            // 第二遍：预分配数组并填充数据
+            originalMeshData.forEach(meshData => {
+                const expressID = meshData.metadata?.originalExpressID;
+                if (!expressID || meshData.isVisible === false) return;
+
+                if (!geometryGroups.has(expressID)) {
+                    const size = groupSizes.get(expressID)!;
+                    geometryGroups.set(expressID, {
+                        positions: new Array(size.positions),
+                        normals: new Array(size.normals),
+                        indices: new Array(size.indices)
+                    });
+                }
+                const group = geometryGroups.get(expressID)!;
+
+                // 追踪当前写入位置
+                if (!group.currentPosIndex) group.currentPosIndex = 0;
+                if (!group.currentNormalIndex) group.currentNormalIndex = 0;
+                if (!group.currentIndicesIndex) group.currentIndicesIndex = 0;
+
+                // 直接写入预分配的数组
+                for (let i = 0; i < meshData.positions.length; i++) {
+                    group.positions[group.currentPosIndex++] = meshData.positions[i];
+                }
+                for (let i = 0; i < meshData.normals.length; i++) {
+                    group.normals[group.currentNormalIndex++] = meshData.normals[i];
+                }
+                for (let i = 0; i < meshData.indices.length; i++) {
+                    group.indices[group.currentIndicesIndex++] = meshData.indices[i];
                 }
             });
 
             if (geometryGroups.size === 0) {
-                // 所有子网格都被隐藏，隐藏合并网格
                 mergedMesh.isVisible = false;
                 return;
             }
 
-            // 合并可见的几何数据
-            const mergedVertexData = new BABYLON.VertexData();
-            const positions: number[] = [];
-            const normals: number[] = [];
-            const indices: number[] = [];
+            // 预分配内存
+            const positions = new Float32Array(totalPositions);
+            const normals = new Float32Array(totalPositions);
+            const indices = new Uint32Array(totalIndices);
 
             let vertexOffset = 0;
+            let indexOffset = 0;
 
-            // 按expressID分组处理，确保同一个构件的所有几何数据被正确合并
-            geometryGroups.forEach((vertexDatas) => {
-                // 首先合并同一个expressID的所有几何数据
-                const groupPositions: number[] = [];
-                const groupNormals: number[] = [];
-                const groupIndices: number[] = [];
-                let groupVertexOffset = 0;
+            // 合并数据 - 使用循环避免栈溢出
+            geometryGroups.forEach(group => {
+                const groupVertexCount = group.positions.length / 3;
 
-                vertexDatas.forEach(vertexData => {
-                    // 添加位置数据
-                    if (vertexData.positions) {
-                        groupPositions.push(...vertexData.positions);
-                    }
-
-                    // 添加法线数据
-                    if (vertexData.normals) {
-                        groupNormals.push(...vertexData.normals);
-                    }
-
-                    // 添加索引数据（需要偏移）
-                    if (vertexData.indices) {
-                        vertexData.indices.forEach(index => {
-                            groupIndices.push(index + groupVertexOffset);
-                        });
-                    }
-
-                    // 更新组内顶点偏移量
-                    if (vertexData.positions) {
-                        groupVertexOffset += vertexData.positions.length / 3;
-                    }
-                });
-
-                // 将合并后的组数据添加到最终结果
-                if (groupPositions.length > 0) {
-                    positions.push(...groupPositions);
-                    normals.push(...groupNormals);
-                    
-                    // 对组索引进行全局偏移
-                    groupIndices.forEach(index => {
-                        indices.push(index + vertexOffset);
-                    });
-
-                    // 更新全局顶点偏移量
-                    vertexOffset += groupPositions.length / 3;
+                // 填充位置和法线数据
+                for (let i = 0; i < group.positions.length; i++) {
+                    positions[vertexOffset * 3 + i] = group.positions[i];
+                    normals[vertexOffset * 3 + i] = group.normals[i];
                 }
+
+                // 填充索引数据（带偏移）
+                for (let i = 0; i < group.indices.length; i++) {
+                    indices[indexOffset + i] = group.indices[i] + vertexOffset;
+                }
+
+                vertexOffset += groupVertexCount;
+                indexOffset += group.indices.length;
             });
 
-            if (positions.length === 0) {
-                // 没有可见的几何数据，隐藏合并网格
+            if (vertexOffset === 0) {
                 mergedMesh.isVisible = false;
                 return;
             }
 
-            // 设置合并后的顶点数据
+            // 应用合并后的数据
+            const mergedVertexData = new BABYLON.VertexData();
             mergedVertexData.positions = positions;
             mergedVertexData.normals = normals;
             mergedVertexData.indices = indices;
-
-            // 应用新的几何数据到网格
             mergedVertexData.applyToMesh(mergedMesh);
-            mergedMesh.isVisible = true;
-            mergedMesh.refreshBoundingInfo(); // 刷新边界框
 
+            mergedMesh.isVisible = true;
+            mergedMesh.refreshBoundingInfo(); // 仅调用一次
         } catch (error) {
             console.error('重新构建合并网格时发生错误:', error);
         }
     }
+
 
 }
