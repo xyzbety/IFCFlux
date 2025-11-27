@@ -445,9 +445,8 @@ export class IFCParser {
       // 将子节点的 ID 和闭包 ID 添加到父节点的闭包中
       for (const closure of closures) {
         closure.push(cnode.id)
-        if (cnode['closure'].length > 30_000) // 如果闭包太大，逐个添加
-          for (const id of cnode['closure']) closure.push(id)
-        else closure.push(...cnode['closure'])
+        // 始终使用循环方式，避免展开运算符导致的栈溢出
+        for (const id of cnode['closure']) closure.push(id)
       }
 
       //@ts-ignore

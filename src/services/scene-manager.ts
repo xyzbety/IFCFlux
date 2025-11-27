@@ -12,6 +12,7 @@ import { useModelStore, useSceneStore } from '../store';
 import { exportGLB, exportDB, exportJSON } from './model-export';
 import { EffectManager } from './scene-effect';
 import { IfcPropertyUtils } from './model-property';
+import { findClickedSubMesh } from '../utils/ifc/ifcMeshProcess';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -34,7 +35,6 @@ export class SceneManager {
   private hiddenMeshIds: Set<number> = new Set(); // 存储已隐藏的mesh ID
   private isolatedMeshIds: Set<number> = new Set(); // 存储已隔离的mesh ID
   private transparentMeshIds: Set<number> = new Set(); // 存储已半透明的mesh ID
-  private transparentOverlayMeshes: Map<number, BABYLON.Mesh> = new Map(); // 存储半透明覆盖网格
   private sceneStore = useSceneStore();
   private modelStore = useModelStore();
   private ifcPropertyUtils = IfcPropertyUtils.getInstance();
@@ -130,10 +130,9 @@ export class SceneManager {
           // 检查是否是合并网格
           if (clickedMesh.metadata?.isMergedMesh) {
             // 找到点击位置对应的子网格
-            const subMeshInfo = this.findClickedSubMesh(clickedMesh, clickedPoint);
+            const subMeshInfo = findClickedSubMesh(clickedMesh, clickedPoint!);
             if (subMeshInfo) {
               targetExpressID = subMeshInfo.expressID;
-              targetMesh = subMeshInfo.mesh;
               console.log(`成功找到子网格: ${targetExpressID}`);
             } else {
               // 如果找不到子网格，使用合并网格的mergedFrom信息
@@ -463,16 +462,10 @@ export class SceneManager {
       selectedMeshIds.clear();
 
       // 清除所有透明覆盖网格
-      this.clearTransparentOverlayMeshes();
+      this.effectManager?.clearTransparentOverlayMeshes();
 
       this.scene.meshes.forEach(mesh => {
         if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
-          return;
-        }
-
-        // 显示所有高亮网格
-        if (mesh.name.includes('highlight')) {
-          mesh.isVisible = true;
           return;
         }
 
@@ -527,6 +520,9 @@ export class SceneManager {
     }
     console.log("this.hiddenMeshIds", this.hiddenMeshIds)
 
+    // 收集所有需要隐藏的高亮网格
+    const highlightMeshesToHide: BABYLON.Mesh[] = [];
+
     this.scene.meshes.forEach(mesh => {
       if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
         return;
@@ -534,54 +530,14 @@ export class SceneManager {
 
       // 处理高亮网格的可见性
       if (mesh.name.includes('highlight')) {
-        if (mode === 'showAll') {
-          mesh.isVisible = true;
-        } else if (mode === 'hideSelected') {
-          // 隐藏选中模式：隐藏所有高亮网格
-          mesh.isVisible = false;
+        if (mode === 'hideSelected') {
+          // 收集需要隐藏的高亮网格
+          highlightMeshesToHide.push(mesh);
         } else {
-          
-          // isolateSelected 和 transparentSelected 模式：检查是否应该显示高亮网格
-          let shouldShowHighlight = false;
-
-          if (selectedMeshIds && selectedMeshIds.size > 0) {
-            // 如果有选中的mesh，检查高亮网格对应的原始mesh是否在选中集合中
-            const originalMeshId = mesh.metadata?.originalExpressID;
-            if (originalMeshId && selectedMeshIds.has(Number(originalMeshId))) {
-              shouldShowHighlight = true;
-            }
-          } else if (this.selectedMeshId) {
-            // 单个选中元素的情况
-            const originalMeshId = mesh.metadata?.originalExpressID;
-            if (originalMeshId && Number(originalMeshId) === Number(this.selectedMeshId)) {
-              shouldShowHighlight = true;
-            }
-          }
-
           mesh.isVisible = true;
         }
         return; // 高亮网格单独处理，不需要后续逻辑
       }
-
-      let meshVisible = true;
-      let meshTransparent = false;
-
-      // 1. 检查是否被隐藏
-      if (this.hiddenMeshIds.has(mesh.id)) {
-        meshVisible = false;
-      }
-      // 2. 检查隔离模式（只有隔离的mesh才显示）
-      if (this.isolatedMeshIds.size > 0) {
-        meshVisible = this.isolatedMeshIds.has(mesh.id);
-      }
-
-      // 3. 检查透明状态（只在可见时生效）
-      if (meshVisible && this.transparentMeshIds.has(mesh.id)) {
-        meshTransparent = true;
-      }
-
-      // 应用可见性
-      mesh.isVisible = meshVisible;
 
       // 如果是合并网格，处理子网格的隐藏、半透明和隔离效果
       if (mesh.metadata?.isMergedMesh) {
@@ -597,22 +553,11 @@ export class SceneManager {
 
         // 处理隔离模式：只有隔离的子网格可见，其他所有子网格都隐藏
         if (isIsolationMode && hasIsolatedSubMesh) {
-          // 遍历所有子网格
-          mergedFrom.forEach((subMeshInfo: any) => {
-            const expressID = subMeshInfo.originalExpressID;
-
-            if (this.isolatedMeshIds.has(expressID)) {
-              // 隔离的子网格：确保可见
-              if (mesh.metadata.restoreSubMesh) {
-                mesh.metadata.restoreSubMesh(expressID);
-              }
-            } else {
-              // 非隔离的子网格：隐藏
-              if (mesh.metadata.hideSubMesh) {
-                mesh.metadata.hideSubMesh(expressID);
-              }
-            }
-          });
+          if (mesh.name.includes('highlight')) {
+            mesh.isVisible = true;
+          } else {
+            mesh.isVisible = false;
+          }
         } else if (!isIsolationMode) {
           // 非隔离模式：处理隐藏和半透明效果
           mergedFrom.forEach((subMeshInfo: any) => {
@@ -627,25 +572,40 @@ export class SceneManager {
             }
             // 检查子网格的expressID是否在半透明集合中
             else if (this.transparentMeshIds.has(expressID)) {
-              // 创建半透明覆盖网格（不依赖合并网格的材质）
-              this.createTransparentOverlayMesh(mesh, expressID, 0.5);
+              // 记录半透明覆盖网格数据，等待批量创建
+              this.effectManager?.createTransparentOverlayMesh(mesh, expressID, 0.5);
               // 隐藏原始子网格，避免覆盖透明效果
               if (mesh.metadata.hideSubMesh) {
                 mesh.metadata.hideSubMesh(expressID);
               }
-            } else {
-              // 既不在隐藏也不在半透明集合中：确保可见
-              if (mesh.metadata.restoreSubMesh) {
-                mesh.metadata.restoreSubMesh(expressID);
-              }
-              // 移除半透明覆盖网格
-              this.removeTransparentOverlayMesh(expressID);
             }
           });
         }
       }
 
     });
+
+    // 在所有半透明覆盖网格数据记录完成后，批量创建
+    if (this.transparentMeshIds.size > 0) {
+      // setTimeout(() => {
+        // 清除先前的半透明覆盖网格
+        // this.effectManager?.clearTransparentOverlayMeshes();
+        // 创建新的半透明覆盖网格
+        this.effectManager?.createBatchTransparentOverlayMeshes();
+
+        // 给半透明网格添加高亮边框效果
+        this.effectManager?.applyHighlightToTransparentMeshes();
+      // }, 0); // 使用微任务确保所有数据记录完成后再批量创建
+    }
+
+    // 使用定时器延迟隐藏高亮网格，确保子网格隐藏完成后再隐藏高亮网格
+    if ((mode === 'hideSelected' || mode === 'transparentSelected') && highlightMeshesToHide.length > 0) {
+      setTimeout(() => {
+        highlightMeshesToHide.forEach(mesh => {
+          mesh.isVisible = false;
+        });
+      }, 10); // 10ms延迟，确保子网格隐藏操作完成
+    }
   }
 
   /**
@@ -903,7 +863,7 @@ export class SceneManager {
       if (handleSliderY) handleSliderY.val(this.light.direction.y);
       if (handleSliderZ) handleSliderZ.val(this.light.direction.z);
       if (inputIndensity) inputIndensity.value = this.light.intensity.toString();
-      if (checkboxShadow) checkboxShadow.checked = false;
+      if (checkboxShadow) checkboxShadow.checked = true;
     }
     if (data.type === 'indensity')
       this.light.intensity = Number(data.value);
@@ -939,8 +899,8 @@ export class SceneManager {
       await this.ifcPropertyUtils.handleComponentClick(this.selectedMeshId, meshConfig, this.modelStore.modelData.tree);
     }
     if (data.type === 'highlightColor') {
-      this.effectManager!.highlightColor = BABYLON.Color4.FromHexString(rgbToHex(data.value));
-      await this.ifcPropertyUtils.handleComponentClick(this.selectedMeshId, meshConfig, this.modelStore.modelData.tree);
+      const newColor = BABYLON.Color4.FromHexString(rgbToHex(data.value));
+      this.effectManager!.updateHighlightColor(newColor);
     }
     if (data.type === 'edgeMode') {
       this.effectManager!.isEdegeRender = data.value;
@@ -1033,111 +993,6 @@ export class SceneManager {
     }
   }
   /**
-   * 创建半透明覆盖网格
-   * @param mergedMesh 合并网格
-   * @param expressID 子网格的expressID
-   * @param transparency 透明度（0-1）
-   */
-  private createTransparentOverlayMesh(mergedMesh: BABYLON.Mesh, expressID: number, transparency: number = 0.5): void {
-    if (!this.scene) return;
-
-    // 检查是否已经存在相同expressID的透明覆盖网格
-    if (this.transparentOverlayMeshes.has(expressID)) {
-      console.log(`expressID为 ${expressID} 的半透明覆盖网格已存在，跳过创建`);
-      return;
-    }
-
-    // 从合并网格的元数据中获取子网格的几何数据
-    const originalMeshData = mergedMesh.metadata?.originalMeshData || [];
-
-    // 查找匹配的子网格数据
-    const subMeshData = originalMeshData.find((data: any) =>
-      data.metadata?.originalExpressID === expressID
-    );
-
-    if (!subMeshData || !subMeshData.positions || !subMeshData.indices) {
-      console.warn(`未找到expressID为 ${expressID} 的子网格数据`);
-      return;
-    }
-
-    // 创建透明覆盖网格
-    const overlayMesh = new BABYLON.Mesh(`transparent_overlay_${expressID}`, this.scene);
-
-    // 创建顶点数据
-    const vertexData = new BABYLON.VertexData();
-    vertexData.positions = subMeshData.positions;
-    vertexData.normals = subMeshData.normals;
-    vertexData.indices = subMeshData.indices;
-
-    // 应用顶点数据
-    vertexData.applyToMesh(overlayMesh);
-
-    console.log('overlayMesh', subMeshData);
-
-    // 使用子网格的原始材质创建半透明材质
-    let transparentMaterial: BABYLON.StandardMaterial;
-
-    if (subMeshData.metadata?.originalMaterial) {
-      // 如果保存了原始材质，使用它并设置透明度
-      transparentMaterial = subMeshData.metadata.originalMaterial.clone(`transparent_mat_${expressID}`) as BABYLON.StandardMaterial;
-      transparentMaterial.alpha = transparency;
-      transparentMaterial.backFaceCulling = false;
-    } else {
-      // 如果没有保存原始材质，创建默认的绿色半透明材质
-      transparentMaterial = new BABYLON.StandardMaterial(`transparent_mat_${expressID}`, this.scene);
-      transparentMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2); // 绿色高亮
-      transparentMaterial.alpha = transparency;
-      transparentMaterial.backFaceCulling = false;
-    }
-
-    overlayMesh.material = transparentMaterial;
-
-    // 应用子网格的变换矩阵
-    if (subMeshData.transformMatrix) {
-      overlayMesh.setPreTransformMatrix(subMeshData.transformMatrix);
-    }
-
-    // 应用合并网格的变换
-    overlayMesh.parent = mergedMesh;
-
-    // 保存到映射表中
-    this.transparentOverlayMeshes.set(expressID, overlayMesh);
-
-    if (!this.effectManager) {
-      this.effectManager = EffectManager.getInstance(this.scene);
-    }
-
-    // 将合并后的网格添加到效果管理器
-    this.effectManager.simpleTarget?.renderList?.push(overlayMesh);
-    this.effectManager.simpleTarget.setMaterialForRendering(overlayMesh, overlayMesh.material);
-
-    console.log(`创建了expressID为 ${expressID} 的半透明覆盖网格`);
-  }
-
-  /**
-   * 移除半透明覆盖网格
-   * @param expressID 子网格的expressID
-   */
-  private removeTransparentOverlayMesh(expressID: number): void {
-    const overlayMesh = this.transparentOverlayMeshes.get(expressID);
-    if (overlayMesh) {
-      overlayMesh.dispose();
-      this.transparentOverlayMeshes.delete(expressID);
-      console.log(`移除了expressID为 ${expressID} 的半透明覆盖网格`);
-    }
-  }
-
-  /**
-   * 清除所有半透明覆盖网格
-   */
-  private clearTransparentOverlayMeshes(): void {
-    this.transparentOverlayMeshes.forEach((mesh, expressID) => {
-      mesh.dispose();
-    });
-    this.transparentOverlayMeshes.clear();
-  }
-
-  /**
    * 清除场景资源
    */
   public clear() {
@@ -1156,7 +1011,7 @@ export class SceneManager {
     this.originalMaterialProperties.clear();
 
     // 清理透明覆盖网格
-    this.clearTransparentOverlayMeshes();
+    this.effectManager?.clearTransparentOverlayMeshes();
 
     // 清理UI纹理
     this.cleanupMeasurementResources();
@@ -1187,281 +1042,5 @@ export class SceneManager {
    */
   public getCameraHistoryManager(): CameraHistoryManager {
     return this.cameraHistoryManager;
-  }
-
-  /**
-   * 在合并网格中找到点击位置对应的子网格
-   * @param mergedMesh 合并后的父网格
-   * @param clickedPoint 点击的世界坐标点
-   * @returns 子网格信息，包含expressID和虚拟网格对象
-   */
-  private findClickedSubMesh(mergedMesh: BABYLON.Mesh, clickedPoint: BABYLON.Vector3): { expressID: string } | null {
-    const metadata = mergedMesh.metadata || {};
-    const originalMeshData = metadata.originalMeshData || [];
-
-    if (originalMeshData.length === 0) {
-      console.warn('合并网格中没有保存子网格数据');
-      return null;
-    }
-
-    // 将点击点转换到合并网格的局部坐标系
-    const worldMatrix = mergedMesh.getWorldMatrix();
-    const inverseWorldMatrix = worldMatrix.clone().invert();
-    const localPoint = BABYLON.Vector3.TransformCoordinates(clickedPoint, inverseWorldMatrix);
-
-    let closestSubMesh: { expressID: string; distance: number } | null = null;
-
-    // 遍历所有子网格数据，找到距离点击点最近的子网格
-    for (let i = 0; i < originalMeshData.length; i++) {
-      const meshData = originalMeshData[i];
-
-      // 检查几何数据是否有效
-      if (!meshData.positions || !meshData.indices || meshData.positions.length === 0 || meshData.indices.length === 0) {
-        console.warn(`子网格 ${i} 的几何数据无效，跳过`);
-        continue;
-      }
-
-      // 将点击点转换到子网格的局部坐标系
-      const subMeshTransform = meshData.transformMatrix;
-      const inverseSubMeshTransform = subMeshTransform.clone().invert();
-      const subMeshLocalPoint = BABYLON.Vector3.TransformCoordinates(localPoint, inverseSubMeshTransform);
-
-      // 检查点击点是否在子网格的包围盒内
-      if (this.isPointInMeshBounds(subMeshLocalPoint, meshData.positions, meshData.indices)) {
-        // 计算点击点到子网格表面的距离
-        const distance = this.calculateDistanceToMeshSurface(subMeshLocalPoint, meshData.positions, meshData.indices);
-
-        // 放宽距离阈值，确保能匹配到子网格
-        // 如果距离在合理范围内，或者点击点在包围盒内但距离计算失败，都认为是有效的点击
-        if (distance < 5.0 || (distance === Infinity && this.isPointInMeshBounds(subMeshLocalPoint, meshData.positions, meshData.indices))) {
-          const subMeshMetadata = meshData.metadata || {};
-          const expressID = subMeshMetadata.originalExpressID || `${i}`;
-          const guid = subMeshMetadata.originalGuid;
-
-
-          // 如果找到更近的子网格，更新结果
-          if (!closestSubMesh || distance < closestSubMesh.distance) {
-            closestSubMesh = {
-              expressID: expressID,
-              distance: distance
-            };
-          }
-        }
-      }
-    }
-
-    // 如果精确查找失败，使用包围盒中心距离作为回退
-    if (!closestSubMesh) {
-      console.log('精确查找失败，使用包围盒中心距离回退');
-      for (let i = 0; i < originalMeshData.length; i++) {
-        const meshData = originalMeshData[i];
-        if (!meshData.positions || meshData.positions.length === 0) continue;
-
-        const subMeshTransform = meshData.transformMatrix;
-        const inverseSubMeshTransform = subMeshTransform.clone().invert();
-        const subMeshLocalPoint = BABYLON.Vector3.TransformCoordinates(localPoint, inverseSubMeshTransform);
-
-        // 计算包围盒中心距离
-        const bounds = this.calculateMeshBounds(meshData.positions);
-        const center = new BABYLON.Vector3(
-          (bounds.minX + bounds.maxX) / 2,
-          (bounds.minY + bounds.maxY) / 2,
-          (bounds.minZ + bounds.maxZ) / 2
-        );
-        const distance = BABYLON.Vector3.Distance(subMeshLocalPoint, center);
-
-        // 使用较大的阈值
-        if (distance < 10.0) {
-          const subMeshMetadata = meshData.metadata || {};
-          const expressID = subMeshMetadata.originalExpressID || `${i}`;
-          const guid = subMeshMetadata.originalGuid;
-
-          if (!closestSubMesh || distance < closestSubMesh.distance) {
-            closestSubMesh = {
-              expressID: expressID,
-              distance: distance
-            };
-          }
-        }
-      }
-    }
-
-    console.log("找到子网格", closestSubMesh);
-    // 返回距离最近的子网格，如果没有找到则返回null
-    return closestSubMesh ? { expressID: closestSubMesh.expressID } : null;
-  }
-
-  /**
-   * 检查点是否在网格的包围盒内
-   * @param point 局部坐标点
-   * @param positions 顶点位置数据
-   * @param indices 索引数据
-   * @returns 是否在包围盒内
-   */
-  private isPointInMeshBounds(point: BABYLON.Vector3, positions: number[], indices: number[]): boolean {
-    if (!positions || positions.length === 0 || !indices || indices.length === 0) {
-      return false;
-    }
-
-    // 计算网格的包围盒
-    let minX = Infinity, minY = Infinity, minZ = Infinity;
-    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-
-    for (let i = 0; i < positions.length; i += 3) {
-      const x = positions[i];
-      const y = positions[i + 1];
-      const z = positions[i + 2];
-
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      minZ = Math.min(minZ, z);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-      maxZ = Math.max(maxZ, z);
-    }
-
-    // 检查点是否在包围盒内
-    return point.x >= minX && point.x <= maxX &&
-      point.y >= minY && point.y <= maxY &&
-      point.z >= minZ && point.z <= maxZ;
-  }
-
-  /**
-   * 计算点到网格表面的距离
-   * @param point 局部坐标点
-   * @param positions 顶点位置数据
-   * @param indices 索引数据
-   * @returns 到网格表面的距离
-   */
-  private calculateDistanceToMeshSurface(point: BABYLON.Vector3, positions: number[], indices: number[]): number {
-    if (!positions || positions.length === 0 || !indices || indices.length === 0) {
-      return Infinity;
-    }
-
-    let minDistance = Infinity;
-
-    // 遍历所有三角形面片
-    for (let i = 0; i < indices.length; i += 3) {
-      const i1 = indices[i] * 3;
-      const i2 = indices[i + 1] * 3;
-      const i3 = indices[i + 2] * 3;
-
-      // 获取三角形的三个顶点
-      const v1 = new BABYLON.Vector3(positions[i1], positions[i1 + 1], positions[i1 + 2]);
-      const v2 = new BABYLON.Vector3(positions[i2], positions[i2 + 1], positions[i2 + 2]);
-      const v3 = new BABYLON.Vector3(positions[i3], positions[i3 + 1], positions[i3 + 2]);
-
-      // 计算点到三角形平面的距离
-      const distance = this.distancePointToTriangle(point, v1, v2, v3);
-      minDistance = Math.min(minDistance, distance);
-    }
-
-    return minDistance;
-  }
-
-  /**
-   * 计算点到三角形的距离
-   * @param point 点
-   * @param v1 三角形顶点1
-   * @param v2 三角形顶点2
-   * @param v3 三角形顶点3
-   * @returns 点到三角形的距离
-   */
-  private distancePointToTriangle(point: BABYLON.Vector3, v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3): number {
-    // 计算三角形法线
-    const edge1 = v2.subtract(v1);
-    const edge2 = v3.subtract(v1);
-    const normal = BABYLON.Vector3.Cross(edge1, edge2);
-
-    // 计算点到平面的距离
-    const planeDistance = Math.abs(BABYLON.Vector3.Dot(point.subtract(v1), normal)) / normal.length();
-
-    // 检查点是否在三角形内部
-    if (this.isPointInTriangle(point, v1, v2, v3)) {
-      return planeDistance;
-    }
-
-    // 如果不在三角形内部，计算到三条边的距离
-    const distanceToEdge1 = this.distancePointToLineSegment(point, v1, v2);
-    const distanceToEdge2 = this.distancePointToLineSegment(point, v2, v3);
-    const distanceToEdge3 = this.distancePointToLineSegment(point, v3, v1);
-
-    return Math.min(planeDistance, distanceToEdge1, distanceToEdge2, distanceToEdge3);
-  }
-
-  /**
-   * 检查点是否在三角形内部
-   */
-  private isPointInTriangle(point: BABYLON.Vector3, v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3): boolean {
-    const d1 = this.sign(point, v1, v2);
-    const d2 = this.sign(point, v2, v3);
-    const d3 = this.sign(point, v3, v1);
-
-    const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-    const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-    return !(hasNeg && hasPos);
-  }
-
-  /**
-   * 计算点到线段的距离
-   */
-  private distancePointToLineSegment(point: BABYLON.Vector3, lineStart: BABYLON.Vector3, lineEnd: BABYLON.Vector3): number {
-    const lineVec = lineEnd.subtract(lineStart);
-    const lineLength = lineVec.length();
-    const lineDir = lineVec.normalize();
-
-    const pointVec = point.subtract(lineStart);
-    const projection = BABYLON.Vector3.Dot(pointVec, lineDir);
-
-    if (projection <= 0) {
-      return pointVec.length();
-    } else if (projection >= lineLength) {
-      return point.subtract(lineEnd).length();
-    } else {
-      const closestPoint = lineStart.add(lineDir.scale(projection));
-      return point.subtract(closestPoint).length();
-    }
-  }
-
-  /**
-   * 计算点的符号（用于三角形内部检测）
-   */
-  private sign(p1: BABYLON.Vector3, p2: BABYLON.Vector3, p3: BABYLON.Vector3): number {
-    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
-  }
-
-  /**
-   * 计算网格的包围盒边界
-   * @param positions 顶点位置数据
-   * @returns 包围盒边界对象
-   */
-  private calculateMeshBounds(positions: number[]): { minX: number; minY: number; minZ: number; maxX: number; maxY: number; maxZ: number } {
-    if (!positions || positions.length === 0) {
-      return { minX: 0, minY: 0, minZ: 0, maxX: 0, maxY: 0, maxZ: 0 };
-    }
-
-    let minX = Infinity, minY = Infinity, minZ = Infinity;
-    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-
-    for (let i = 0; i < positions.length; i += 3) {
-      const x = positions[i];
-      const y = positions[i + 1];
-      const z = positions[i + 2];
-
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      minZ = Math.min(minZ, z);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-      maxZ = Math.max(maxZ, z);
-    }
-
-    // 如果所有值都是无穷大，返回默认值
-    if (minX === Infinity) {
-      return { minX: 0, minY: 0, minZ: 0, maxX: 0, maxY: 0, maxZ: 0 };
-    }
-
-    return { minX, minY, minZ, maxX, maxY, maxZ };
   }
 }
