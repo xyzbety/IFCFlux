@@ -177,11 +177,11 @@ export class IfcPropertyUtils {
 
       // 处理合并网格的可见性控制
       if (mesh.metadata?.isMergedMesh) {
-        const mergedFrom = mesh.metadata.mergedFrom || [];
+        const originalMeshData = mesh.metadata.originalMeshData || [];
 
         // 遍历所有子网格
-        mergedFrom.forEach((subMeshInfo: any) => {
-          const expressID = subMeshInfo.originalExpressID;
+        originalMeshData.forEach((subMeshInfo: any) => {
+          const expressID = subMeshInfo.metadata.originalExpressID;
 
           // 检查子网格的expressID是否在隐藏集合中
           if (this.hiddenNodeIds.has(Number(expressID))) {
@@ -193,6 +193,7 @@ export class IfcPropertyUtils {
             // 不在隐藏集合中：确保可见
             if (mesh.metadata.restoreSubMesh) {
               mesh.metadata.restoreSubMesh(expressID);
+              mesh.isVisible = true;
             }
           }
         });
@@ -490,24 +491,42 @@ export class IfcPropertyUtils {
         }
       });
 
-      let mergedHighlightMesh = null;
+      let mergedHighlightMeshes: BABYLON.Mesh[] = [];
       if (!this.effectManager) {
         this.effectManager = EffectManager.getInstance(scene);
       }
+      console.log('匹配的网格数据列表:', meshDataList);
       if (meshDataList.length > 0) {
-        // 直接从数据创建合并的网格
-        mergedHighlightMesh = this.createMergedHighlightMesh(meshDataList, scene, expressID);
+        // 直接从数据创建合并的网格（按材质分组）
+        mergedHighlightMeshes = this.createMergedHighlightMesh(meshDataList, scene, expressID);
+        
         // 将合并后的网格添加到效果管理器
-        this.effectManager.simpleTarget?.renderList?.push(mergedHighlightMesh);
-        this.effectManager.simpleTarget.setMaterialForRendering(mergedHighlightMesh, mergedHighlightMesh.material);
-        this.effectManager.applyHighlight([mergedHighlightMesh]);
-        // 自动聚焦
-        if (isFocus) {
+        mergedHighlightMeshes.forEach(mergedMesh => {
+          this.effectManager!.simpleTarget?.renderList?.push(mergedMesh);
+          this.effectManager!.simpleTarget.setMaterialForRendering(mergedMesh, mergedMesh.material);
+        });
+        
+        this.effectManager.applyHighlight(mergedHighlightMeshes);
+        
+        // 自动聚焦（使用所有合并网格的包围盒）
+        if (isFocus && mergedHighlightMeshes.length > 0) {
           try {
-            const bbox = mergedHighlightMesh.getBoundingInfo().boundingBox;
-            const arcRotateCamera = scene.activeCamera as BABYLON.ArcRotateCamera;
-            arcRotateCamera.setTarget(bbox.center);
-            arcRotateCamera.radius = bbox.maximum.subtract(bbox.minimum).length() * 1.8;
+            let combinedBoundingBox: BABYLON.BoundingBox | null = null;
+            
+            mergedHighlightMeshes.forEach(mesh => {
+              const meshBoundingBox = mesh.getBoundingInfo().boundingBox;
+              if (!combinedBoundingBox) {
+                combinedBoundingBox = meshBoundingBox;
+              } else {
+                combinedBoundingBox = combinedBoundingBox.merge(meshBoundingBox);
+              }
+            });
+            
+            if (combinedBoundingBox) {
+              const arcRotateCamera = scene.activeCamera as BABYLON.ArcRotateCamera;
+              arcRotateCamera.setTarget(combinedBoundingBox.center);
+              arcRotateCamera.radius = combinedBoundingBox.maximum.subtract(combinedBoundingBox.minimum).length() * 1.8;
+            }
           } catch (e) {
             console.error("Focus error:", e);
           }
@@ -525,99 +544,119 @@ export class IfcPropertyUtils {
   }
 
   /**
-   * 直接从网格数据创建合并的高亮网格
+   * 按照材质分组创建合并的高亮网格
    * @param meshDataList - 网格数据数组
    * @param scene - 场景对象
    * @param expressID - 构件ID
-   * @returns 合并后的网格
+   * @returns 合并后的网格数组（按材质分组）
    */
-  private createMergedHighlightMesh(meshDataList: any[], scene: BABYLON.Scene, expressID: string): BABYLON.Mesh {
-    // 创建合并后的网格
-    const mergedMesh = new BABYLON.Mesh(`merged_highlight_${expressID}`, scene);
-
-    // 预计算总大小，避免动态扩容和栈溢出
-    let totalPositions = 0;
-    let totalIndices = 0;
-    let totalNormals = 0;
-
+  private createMergedHighlightMesh(meshDataList: any[], scene: BABYLON.Scene, expressID: string): BABYLON.Mesh[] {
+    // 按材质分组
+    const materialGroups = new Map<string, any[]>();
+    
     meshDataList.forEach((meshData) => {
       if (meshData.positions && meshData.indices) {
-        totalPositions += meshData.positions.length;
-        totalIndices += meshData.indices.length;
-        if (meshData.normals) {
-          totalNormals += meshData.normals.length;
+        const materialKey = meshData.material?.id || 'default';
+        if (!materialGroups.has(materialKey)) {
+          materialGroups.set(materialKey, []);
         }
+        materialGroups.get(materialKey)!.push(meshData);
       }
     });
 
-    // 预分配数组，避免动态扩容
-    const allPositions: number[] = new Array(totalPositions);
-    const allIndices: number[] = new Array(totalIndices);
-    const allNormals: number[] = new Array(totalNormals);
+    const mergedMeshes: BABYLON.Mesh[] = [];
 
-    let positionIndex = 0;
-    let indexIndex = 0;
-    let normalIndex = 0;
-    let vertexOffset = 0;
+    // 对每个材质组分别创建合并网格
+    materialGroups.forEach((groupDataList, materialKey) => {
+      // 预计算总大小，避免动态扩容和栈溢出
+      let totalPositions = 0;
+      let totalIndices = 0;
+      let totalNormals = 0;
 
-    meshDataList.forEach((meshData) => {
-      if (meshData.positions && meshData.indices) {
-        // 添加顶点位置数据（使用循环而不是展开运算符）
-        for (let i = 0; i < meshData.positions.length; i++) {
-          allPositions[positionIndex++] = meshData.positions[i];
-        }
-
-        // 添加索引数据（需要偏移，使用循环而不是展开运算符）
-        for (let i = 0; i < meshData.indices.length; i++) {
-          allIndices[indexIndex++] = meshData.indices[i] + vertexOffset;
-        }
-
-        // 添加法线数据（如果有，使用循环而不是展开运算符）
-        if (meshData.normals) {
-          for (let i = 0; i < meshData.normals.length; i++) {
-            allNormals[normalIndex++] = meshData.normals[i];
+      groupDataList.forEach((meshData) => {
+        if (meshData.positions && meshData.indices) {
+          totalPositions += meshData.positions.length;
+          totalIndices += meshData.indices.length;
+          if (meshData.normals) {
+            totalNormals += meshData.normals.length;
           }
         }
+      });
 
-        // 更新顶点偏移量
-        vertexOffset += meshData.positions.length / 3;
+      // 预分配数组，避免动态扩容
+      const allPositions: number[] = new Array(totalPositions);
+      const allIndices: number[] = new Array(totalIndices);
+      const allNormals: number[] = new Array(totalNormals);
+
+      let positionIndex = 0;
+      let indexIndex = 0;
+      let normalIndex = 0;
+      let vertexOffset = 0;
+
+      groupDataList.forEach((meshData) => {
+        if (meshData.positions && meshData.indices) {
+          // 添加顶点位置数据（使用循环而不是展开运算符）
+          for (let i = 0; i < meshData.positions.length; i++) {
+            allPositions[positionIndex++] = meshData.positions[i];
+          }
+
+          // 添加索引数据（需要偏移，使用循环而不是展开运算符）
+          for (let i = 0; i < meshData.indices.length; i++) {
+            allIndices[indexIndex++] = meshData.indices[i] + vertexOffset;
+          }
+
+          // 添加法线数据（如果有，使用循环而不是展开运算符）
+          if (meshData.normals) {
+            for (let i = 0; i < meshData.normals.length; i++) {
+              allNormals[normalIndex++] = meshData.normals[i];
+            }
+          }
+
+          // 更新顶点偏移量
+          vertexOffset += meshData.positions.length / 3;
+        }
+      });
+
+      // 创建合并后的网格
+      const mergedMesh = new BABYLON.Mesh(`merged_highlight_${expressID}_${materialKey}`, scene);
+
+      // 创建顶点数据并应用到合并后的网格
+      const vertexData = new BABYLON.VertexData();
+      vertexData.positions = allPositions;
+      vertexData.indices = allIndices;
+
+      if (allNormals.length > 0) {
+        vertexData.normals = allNormals;
       }
+
+      vertexData.applyToMesh(mergedMesh);
+
+      // 设置材质（使用组内第一个数据的材质）
+      if (groupDataList[0]?.material) {
+        mergedMesh.material = groupDataList[0].material;
+      } else {
+        // 创建默认材质
+        const defaultMaterial = new BABYLON.StandardMaterial(`merged_highlight_default_${expressID}_${materialKey}`, scene);
+        defaultMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        mergedMesh.material = defaultMaterial;
+      }
+
+      // 设置网格属性
+      mergedMesh.isVisible = true;
+      mergedMesh.isPickable = false;
+      mergedMesh.id = `${expressID}_${materialKey}`;
+      mergedMesh.metadata = {
+        isHighlightMesh: true,
+        originalExpressID: expressID,
+        createdFromMergedMesh: true,
+        materialGroup: materialKey
+      };
+
+      mergedMeshes.push(mergedMesh);
     });
 
-    // 创建顶点数据并应用到合并后的网格
-    const vertexData = new BABYLON.VertexData();
-    vertexData.positions = allPositions;
-    vertexData.indices = allIndices;
-
-    if (allNormals.length > 0) {
-      vertexData.normals = allNormals;
-    }
-
-    vertexData.applyToMesh(mergedMesh);
-
-    // 设置材质（使用第一个数据的材质）
-    if (meshDataList[0]?.material) {
-      mergedMesh.material = meshDataList[0].material;
-    } else {
-      // 创建默认材质
-      const defaultMaterial = new BABYLON.StandardMaterial(`merged_highlight_default_${expressID}`, scene);
-      defaultMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
-      mergedMesh.material = defaultMaterial;
-    }
-
-    // 设置网格属性
-    mergedMesh.isVisible = true;
-    mergedMesh.isPickable = false;
-    mergedMesh.id = expressID;
-    mergedMesh.metadata = {
-      isHighlightMesh: true,
-      originalExpressID: expressID,
-      createdFromMergedMesh: true,
-      mergedFrom: meshDataList.length
-    };
-
-    console.log(`成功从 ${meshDataList.length} 个网格数据创建合并高亮网格`);
-    return mergedMesh;
+    console.log(`成功从 ${meshDataList.length} 个网格数据创建 ${materialGroups.size} 个按材质分组的合并高亮网格`);
+    return mergedMeshes;
   }
 
   /**
@@ -659,23 +698,43 @@ export class IfcPropertyUtils {
     });
   }
 
-  public getChildrenExpressIds(node: { children: any; }): any[] {
-    let expressIds: any[] = [];
+  public getChildrenExpressIds(expressId: string | number, treeData: any[]): string[] {
+    let expressIds: string[] = [];
 
-    const traverse = (children: any[]) => {
-      if (children && Array.isArray(children)) {
-        children.forEach(child => {
+    // 查找匹配的节点
+    const findNode = (nodes: any[], targetId: string | number): any => {
+      for (const node of nodes) {
+        if (node.expressId == targetId) {
+          return node;
+        }
+        if (node.children && node.children.length > 0) {
+          const found = findNode(node.children, targetId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    // 收集子节点的expressId
+    const collectChildExpressIds = (node: any): void => {
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
           if (child.expressId) {
             expressIds.push(child.expressId);
           }
-          if (child.children) {
-            traverse(child.children);
-          }
+          // 递归收集子节点的子节点
+          collectChildExpressIds(child);
         });
       }
     };
 
-    traverse(node.children);
+    // 查找目标节点
+    const targetNode = findNode(treeData, expressId);
+    if (targetNode) {
+      collectChildExpressIds(targetNode);
+    }
+
+    expressIds.push(String(expressId));
     return expressIds;
   }
 

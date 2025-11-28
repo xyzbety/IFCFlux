@@ -73,7 +73,6 @@ export function simplifyGeometry(
 /**
  * 合并相同材质的网格
  * 按材质分组几何体，分别合并每个材质组的几何体
- * 修改：保留原始子网格，修复mergedFrom数据重复问题
  */
 export function mergeMeshesByMaterial(materialsMap: Map<number, BABYLON.Mesh[]>, materialCache: Map<number, BABYLON.StandardMaterial>, scene: BABYLON.Scene, model: BABYLON.Mesh): void {
   // 创建按材质分组的几何体映射表（类似Three.js的geometriesByMaterials）
@@ -206,22 +205,12 @@ export function mergeMeshesByMaterial(materialsMap: Map<number, BABYLON.Mesh[]>,
           }
         }
 
-        // 使用Set来去重，避免重复的mergedFrom数据
-        const uniqueMeshData = new Map<string, any>();
 
         // 保存原始网格的几何数据用于后续clone，然后销毁网格以节省内存
         const originalMeshData: any[] = [];
         originalMeshes.forEach(mesh => {
           if (!mesh.isDisposed()) {
             const metadata = mesh.metadata || {};
-            const key = `${metadata.originalExpressID}_${metadata.instanceIndex}`;
-            if (!uniqueMeshData.has(key)) {
-              uniqueMeshData.set(key, {
-                originalExpressID: metadata.originalExpressID,
-                originalGuid: metadata.originalGuid,
-                instanceIndex: metadata.instanceIndex
-              });
-            }
 
             // 提取网格的几何数据用于后续clone，确保完整保留GUID和材质信息
             const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
@@ -258,7 +247,6 @@ export function mergeMeshesByMaterial(materialsMap: Map<number, BABYLON.Mesh[]>,
         mergedMesh.metadata = {
           isMergedMesh: true,
           originalMaterialId: colorID,
-          mergedFrom: Array.from(uniqueMeshData.values()),
           originalMeshData: originalMeshData, // 保留原始网格的几何数据
           mergedGeometryCount: geometries.length,
           // 确保合并网格本身也有正确的ID信息
@@ -629,7 +617,7 @@ function rebuildMergedMesh(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): v
     }
 
     // 确保网格设置为可更新
-    mergedMesh.isVisible = true;
+    // mergedMesh.isVisible = true;
 
     // 使用updateVerticesData更新现有网格数据
     mergedMesh.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions, true);
@@ -669,6 +657,11 @@ export function findClickedSubMesh(mergedMesh: BABYLON.AbstractMesh, clickedPoin
   for (let i = 0; i < originalMeshData.length; i++) {
     const meshData = originalMeshData[i];
 
+    // 跳过隐藏的子网格
+    if (meshData.isVisible === false) {
+      continue;
+    }
+
     // 检查几何数据是否有效
     if (!meshData.positions || !meshData.indices || meshData.positions.length === 0 || meshData.indices.length === 0) {
       console.warn(`子网格 ${i} 的几何数据无效，跳过`);
@@ -707,6 +700,12 @@ export function findClickedSubMesh(mergedMesh: BABYLON.AbstractMesh, clickedPoin
     console.log('精确查找失败，使用包围盒中心距离回退');
     for (let i = 0; i < originalMeshData.length; i++) {
       const meshData = originalMeshData[i];
+      
+      // 跳过隐藏的子网格
+      if (meshData.isVisible === false) {
+        continue;
+      }
+      
       if (!meshData.positions || meshData.positions.length === 0) continue;
 
       const subMeshTransform = meshData.transformMatrix;
@@ -916,3 +915,210 @@ function calculateMeshBounds(positions: number[]): { minX: number; minY: number;
   return { minX, minY, minZ, maxX, maxY, maxZ };
 }
 
+export function findClosestSubMeshWithFallback(
+  mergedMesh: BABYLON.AbstractMesh,
+  clickedPoint: BABYLON.Vector3,
+  originalMeshData: any[]
+): any {
+  if (!originalMeshData.length) {
+    throw new Error('没有可用的子网格信息');
+  }
+
+  const worldMatrix = mergedMesh.getWorldMatrix();
+  const inverseWorldMatrix = worldMatrix.clone().invert();
+  const localPoint = BABYLON.Vector3.TransformCoordinates(clickedPoint, inverseWorldMatrix);
+
+  // 存储所有可见子网格的距离信息
+  const subMeshDistances: Array<{ subMesh: any; distance: number }> = [];
+
+  // 遍历所有子网格，计算距离（只考虑可见的子网格）
+  for (const subMesh of originalMeshData) {
+    // 跳过隐藏的子网格
+    if (subMesh.isVisible === false) {
+      continue;
+    }
+
+    if (!subMesh.metadata.originalExpressID) continue;
+
+    // 计算子网格的包围盒中心
+    if (subMesh.transformMatrix && subMesh.positions && subMesh.positions.length > 0) {
+      const inverseSubMeshTransform = subMesh.transformMatrix.clone().invert();
+      const subMeshLocalPoint = BABYLON.Vector3.TransformCoordinates(localPoint, inverseSubMeshTransform);
+
+      const bounds = calculateMeshBounds(subMesh.positions);
+      const center = new BABYLON.Vector3(
+        (bounds.minX + bounds.maxX) / 2,
+        (bounds.minY + bounds.maxY) / 2,
+        (bounds.minZ + bounds.maxZ) / 2
+      );
+      const distance = BABYLON.Vector3.Distance(subMeshLocalPoint, center);
+
+      subMeshDistances.push({ subMesh, distance });
+    }
+  }
+
+  // 按距离排序，从近到远
+  subMeshDistances.sort((a, b) => a.distance - b.distance);
+
+  // 总能返回一个可见的子网格
+  if (subMeshDistances.length > 0) {
+    console.log(`找到 ${subMeshDistances.length} 个候选子网格，距离范围: ${subMeshDistances[0].distance.toFixed(2)} - ${subMeshDistances[subMeshDistances.length - 1].distance.toFixed(2)}`);
+    return subMeshDistances[0].subMesh;
+  }
+
+  // 如果没有找到可见的子网格，尝试查找第一个可见的有效子网格
+  for (const subMesh of originalMeshData) {
+    if (subMesh.isVisible !== false && subMesh.originalExpressID) {
+      console.log('使用第一个可见的有效子网格作为回退');
+      return subMesh;
+    }
+  }
+
+  // 如果连一个可见的子网格都没有，返回null
+  console.log('没有找到可见的子网格');
+  return null;
+}
+
+export function collectTransparentMeshData(selectedMeshIds: Set<number>, scene: BABYLON.Scene): Map<string, any[]> {
+  const materialGroups = new Map<string, any[]>();
+
+  scene!.meshes.forEach(mesh => {
+    if (mesh.name.includes('highlight')) {
+      mesh.isVisible = false;
+    }
+
+    if (mesh.metadata?.isMergedMesh) {
+      const originalMeshData = mesh.metadata.originalMeshData || [];
+
+      originalMeshData.forEach((subMeshInfo: any) => {
+        const expressID = subMeshInfo.metadata.originalExpressID;
+        if (selectedMeshIds.has(expressID)) {
+          mesh.metadata.hideSubMesh(expressID);
+
+          // 检查是否已经存在相同expressID的透明网格
+          const existingTransparentMesh = scene!.meshes.find(m =>
+            m.name === `transparentMesh${expressID}`
+          );
+
+          if (!existingTransparentMesh) {
+            // 按材质分组收集数据
+            const materialKey = subMeshInfo.material?.id || 'default';
+            if (!materialGroups.has(materialKey)) {
+              materialGroups.set(materialKey, []);
+            }
+            materialGroups.get(materialKey)!.push({
+              expressID,
+              subMeshInfo
+            });
+          }
+        }
+      });
+    }
+  });
+
+  return materialGroups;
+}
+
+/**
+ * 创建合并的半透明网格
+ */
+export function createMergedTransparentMesh(groupDataList: any[], materialKey: string, scene: BABYLON.Scene): BABYLON.Mesh {
+  // 预计算总大小
+  let totalPositions = 0;
+  let totalIndices = 0;
+  let totalNormals = 0;
+
+  groupDataList.forEach(({ subMeshInfo }) => {
+    if (subMeshInfo.positions && subMeshInfo.indices) {
+      totalPositions += subMeshInfo.positions.length;
+      totalIndices += subMeshInfo.indices.length;
+      if (subMeshInfo.normals) {
+        totalNormals += subMeshInfo.normals.length;
+      }
+    }
+  });
+
+  // 预分配数组
+  const allPositions: number[] = new Array(totalPositions);
+  const allIndices: number[] = new Array(totalIndices);
+  const allNormals: number[] = new Array(totalNormals);
+
+  let positionIndex = 0;
+  let indexIndex = 0;
+  let normalIndex = 0;
+  let vertexOffset = 0;
+
+  groupDataList.forEach(({ subMeshInfo }) => {
+    if (subMeshInfo.positions && subMeshInfo.indices) {
+      // 添加顶点位置数据
+      for (let i = 0; i < subMeshInfo.positions.length; i++) {
+        allPositions[positionIndex++] = subMeshInfo.positions[i];
+      }
+
+      // 添加索引数据（需要偏移）
+      for (let i = 0; i < subMeshInfo.indices.length; i++) {
+        allIndices[indexIndex++] = subMeshInfo.indices[i] + vertexOffset;
+      }
+
+      // 添加法线数据
+      if (subMeshInfo.normals) {
+        for (let i = 0; i < subMeshInfo.normals.length; i++) {
+          allNormals[normalIndex++] = subMeshInfo.normals[i];
+        }
+      }
+
+      // 更新顶点偏移量
+      vertexOffset += subMeshInfo.positions.length / 3;
+    }
+  });
+
+  // 创建合并的半透明网格
+  const transparentMesh = new BABYLON.Mesh(`transparentMesh_${materialKey}`, scene!);
+  const vertexData = new BABYLON.VertexData();
+  vertexData.positions = allPositions;
+  vertexData.indices = allIndices;
+
+  if (allNormals.length > 0) {
+    vertexData.normals = allNormals;
+  }
+
+  vertexData.applyToMesh(transparentMesh);
+
+  // 创建半透明材质
+  const firstSubMesh = groupDataList[0].subMeshInfo;
+  const transparentMaterial = firstSubMesh.material.clone('transparentMaterial');
+  transparentMaterial.alpha = 0.5;
+  transparentMesh.material = transparentMaterial;
+
+  // 设置网格属性
+  transparentMesh.isVisible = true;
+  transparentMesh.isPickable = false;
+  transparentMesh.metadata = {
+    isTransparentMesh: true,
+    materialGroup: materialKey,
+    expressIDs: groupDataList.map(item => item.expressID)
+  };
+
+  console.log(`按材质 ${materialKey} 合并创建了包含 ${groupDataList.length} 个网格的半透明网格`);
+  return transparentMesh;
+}
+
+export function cleanupTransparentResources(scene: BABYLON.Scene) {
+  // 清除所有半透明覆盖网格
+  const transparentMeshes = scene!.meshes.filter(mesh =>
+    mesh.name.includes('transparentMesh') || mesh.metadata?.isTransparentMesh
+  );
+  transparentMeshes.forEach(mesh => mesh.dispose());
+
+  // 清除半透明覆盖材质
+  const transparentMaterials = scene!.materials.filter(material =>
+    material.name.includes('transparentMaterial') || (material as any)._isClonedForTransparent
+  );
+  transparentMaterials.forEach(material => material.dispose());
+
+  // 清除共享的高亮半透明覆盖材质
+  const highlightTransparentMaterials = scene!.materials.filter(material =>
+    material.name.includes('highlight') && material.name.includes('transparent')
+  );
+  highlightTransparentMaterials.forEach(material => material.dispose());
+}

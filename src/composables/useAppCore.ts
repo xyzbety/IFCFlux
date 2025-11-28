@@ -26,10 +26,10 @@ function createAppCore() {
     let isSidebarVisible = ref(false);
     let isFocus = false;
 
+    let expressID: string;
     let selectedMeshIds = new Set<number>();
-    let isClickVisible = ref(true);
     let inspectType = ref('');
-    let lastClickedMeshId: string | null  = null;
+    let lastClickedMeshId: string | null = null;
 
     const sceneStore = useSceneStore();
     const modelStore = useModelStore();
@@ -145,7 +145,7 @@ function createAppCore() {
         sceneManager.handleSlice(action);
     };
     const handleVisibility = (mode: any) => {
-        sceneManager.handleVisibility(mode, selectedMeshIds, isClickVisible);
+        sceneManager.handleVisibility(mode, selectedMeshIds,expressID);
     };
     const handleMeasure = (type: any) => {
         sceneManager.clear();
@@ -166,7 +166,6 @@ function createAppCore() {
 
     function resetGlobalVariables() {
         selectedMeshIds.clear();
-        isClickVisible.value = true;
         lastClickedMeshId = null;
         sceneManager.clear();
     }
@@ -233,17 +232,19 @@ function createAppCore() {
         if (!sceneManager.scene || !modelStore.modelData) return;
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
-        let expressID: string | null  = null;
 
         if (event[0]?.originData?.expressId) {
             expressID = event[0]?.originData?.type === 'ifcSiteNode' ? event[0]?.originData?.expressId.replace('ifcSiteNode_', '') : event[0]?.originData?.expressId;
-            selectedMeshIds = ifcPropertyUtils.processYourData(new Set(ifcPropertyUtils.getChildrenExpressIds(event[0]?.originData)));
+            selectedMeshIds = ifcPropertyUtils.processYourData(new Set(ifcPropertyUtils.getChildrenExpressIds(expressID, pageState.treeData)));
+            console.log('点击表格的expressID:', expressID, selectedMeshIds, event[0]?.originData);
             lastClickedMeshId = expressID;
         } else if (event?.detail?.expressID !== undefined) {
             expressID = event.detail.expressID;
             if (expressID) {
                 lastClickedMeshId = expressID;
                 let node = ifcPropertyUtils.findNodeByExpressId(tree, expressID);
+                selectedMeshIds = ifcPropertyUtils.processYourData(new Set(ifcPropertyUtils.getChildrenExpressIds(expressID, pageState.treeData)));
+                console.log('点击场景的expressID:', expressID, selectedMeshIds);
                 eventManager.emit('scroll-to-node', node);
             } else {
                 eventManager.emit('clear-selection');
@@ -252,7 +253,6 @@ function createAppCore() {
             return;
         }
         if (expressID === 'slicePlane') return
-        if (!isClickVisible.value) expressID = lastClickedMeshId;
         if (!expressID) {
             lastClickedMeshId = null;
             selectedMeshIds.clear();

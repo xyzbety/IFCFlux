@@ -12,7 +12,7 @@ import { useModelStore, useSceneStore } from '../store';
 import { exportGLB, exportDB, exportJSON } from './model-export';
 import { EffectManager } from './scene-effect';
 import { IfcPropertyUtils } from './model-property';
-import { findClickedSubMesh } from '../utils/ifc/ifcMeshProcess';
+import { findClickedSubMesh, collectTransparentMeshData, createMergedTransparentMesh, cleanupTransparentResources,findClosestSubMeshWithFallback } from '../utils/ifc/ifcMeshProcess';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -123,6 +123,7 @@ export class SceneManager {
           // 检测是否为合并网格，如果是则找到对应的子网格
           const clickedMesh = pointerInfo.pickInfo.pickedMesh;
           const clickedPoint = pointerInfo.pickInfo.pickedPoint;
+          console.log(`点击的网格ID: ${clickedMesh.id}`,clickedMesh);
 
           let targetExpressID = clickedMesh.id;
           let targetMesh = clickedMesh;
@@ -135,13 +136,19 @@ export class SceneManager {
               targetExpressID = subMeshInfo.expressID;
               console.log(`成功找到子网格: ${targetExpressID}`);
             } else {
-              // 如果找不到子网格，使用合并网格的mergedFrom信息
-              const mergedFrom = clickedMesh.metadata?.mergedFrom || [];
-              if (mergedFrom.length > 0) {
-                // 使用第一个子网格的信息作为回退
-                const firstSubMesh = mergedFrom[0];
-                targetExpressID = firstSubMesh.originalExpressID || clickedMesh.id;
-                console.log(`未找到精确子网格，使用第一个子网格: ${targetExpressID}`);
+              // 如果找不到精确子网格，持续查找距离点击点最近的子网格
+              const originalMeshData = clickedMesh.metadata?.originalMeshData || [];
+              if (originalMeshData.length > 0) {
+                // 使用改进的距离查找算法，只考虑可见的子网格
+                const closestMesh = findClosestSubMeshWithFallback(clickedMesh, clickedPoint!, originalMeshData);
+                if (closestMesh) {
+                  targetExpressID = closestMesh.metadata.originalExpressID || clickedMesh.id;
+                  console.log(`使用距离最近子网格: ${targetExpressID}`);
+                } else {
+                  // 如果没有找到可见的子网格，使用父网格的ID
+                  targetExpressID = clickedMesh.id;
+                  console.log(`没有找到可见的子网格，使用父网格ID: ${targetExpressID}`);
+                }
               }
             }
           }
@@ -440,188 +447,141 @@ export class SceneManager {
    * 处理模型可见性控制
    * @param mode 可见性模式
    * @param selectedMeshIds 选中的网格ID集合
-   * @param selectedMeshId 当前选中的网格ID
-   * @param isClickVisibleRef 是否通过点击选择可见的引用
+   * @param expressID 当前选中的网格ID
    */
   public handleVisibility(
     mode: 'showAll' | 'hideSelected' | 'isolateSelected' | 'transparentSelected',
     selectedMeshIds: Set<number>,
-    isClickVisibleRef: { value: boolean }
+    expressID: string
   ) {
     if (!this.scene) return;
 
-    // 恢复所有材质
-    this.restoreMaterials();
-
-    if (mode === 'showAll') {
-      isClickVisibleRef.value = true;
-      // 显示所有mesh并清空所有集合
-      this.hiddenMeshIds.clear();
-      this.isolatedMeshIds.clear();
-      this.transparentMeshIds.clear();
-      selectedMeshIds.clear();
-
-      // 清除所有透明覆盖网格
-      this.effectManager?.clearTransparentOverlayMeshes();
-
-      this.scene.meshes.forEach(mesh => {
-        if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
-          return;
-        }
-
-        // 如果是合并网格，恢复所有子网格
-        if (mesh.metadata?.isMergedMesh && mesh.metadata.restoreSubMesh) {
-          mesh.metadata.restoreSubMesh(); // 恢复所有子网格
-        }
-
-        mesh.isVisible = true;
-        // 还原透明度到原始值
-        if (mesh.material) {
-          this.effectManager?.simpleTarget?.setMaterialForRendering(mesh, mesh.material);
-          const originalProps = this.originalMaterialProperties.get(mesh.id);
-          if (originalProps) {
-            if (mesh.material.name === 'highlightMat') {
-              mesh.material.alpha = 0.5;
-            } else
-              mesh.material.alpha = originalProps.alpha;
-          } else {
-            mesh.material.alpha = 1;
-          }
-        }
-      });
-      return;
-    } else {
-      isClickVisibleRef.value = false;
-    }
-
     // 根据模式将选中的mesh添加到对应的集合中
     if (mode === 'hideSelected' || mode === 'isolateSelected' || mode === 'transparentSelected') {
-      let targetSet: Set<number>;
-
-      if (mode === 'hideSelected') {
-        targetSet = this.hiddenMeshIds;
-      } else if (mode === 'isolateSelected') {
-        targetSet = this.isolatedMeshIds;
-      } else {
-        targetSet = this.transparentMeshIds;
-      }
-
-      // 添加选中的mesh到对应集合
-      if (selectedMeshIds && selectedMeshIds.size > 0) {
-        selectedMeshIds.forEach(id => {
-          targetSet.add(id);
-        });
-      } else if (this.selectedMeshId) {
-        // 保持原有的单个元素处理逻辑
-        targetSet.add(Number(this.selectedMeshId));
-      }
-
-      console.log(`已${mode === 'hideSelected' ? '隐藏' : mode === 'isolateSelected' ? '隔离' : '半透明'}的mesh IDs:`, Array.from(targetSet));
+      this.addSelectedMeshesToTargetSet(mode, selectedMeshIds);
     }
-    console.log("this.hiddenMeshIds", this.hiddenMeshIds)
 
-    // 收集所有需要隐藏的高亮网格
-    const highlightMeshesToHide: BABYLON.Mesh[] = [];
+    switch (mode) {
+      case 'hideSelected':
+        this.handleHideSelected(selectedMeshIds);
+        break;
+      case 'isolateSelected':
+        this.handleIsolateSelected();
+        break;
+      case 'transparentSelected':
+        this.handleTransparentSelected(selectedMeshIds);
+        break;
+      case 'showAll':
+        this.handleShowAll(selectedMeshIds, expressID);
+        break;
+    }
+  }
+  /**
+   * 处理隐藏选中网格
+   */
+  private handleHideSelected(selectedMeshIds: Set<number>) {
+    this.scene!.meshes.forEach(mesh => {
+      if (mesh.name.includes('highlight')) {
+        mesh.isVisible = false;
+      }
+      if (mesh.metadata?.isMergedMesh) {
+        const originalMeshData = mesh.metadata.originalMeshData || [];
+        originalMeshData.forEach((subMeshInfo: any) => {
+          const expressID = subMeshInfo.metadata.originalExpressID;
+          if (selectedMeshIds.has(expressID)) {
+            mesh.metadata.hideSubMesh(expressID);
+          }
+        });
+      }
+    });
+  }
 
-    this.scene.meshes.forEach(mesh => {
+  /**
+   * 处理隔离选中网格
+   */
+  private handleIsolateSelected() {
+    this.scene!.meshes.forEach(mesh => {
+      if (mesh.name.includes('highlight')) {
+        mesh.isVisible = true;
+      } else {
+        mesh.isVisible = false;
+      }
+    });
+  }
+
+  /**
+   * 处理半透明选中网格
+   */
+  private handleTransparentSelected(selectedMeshIds: Set<number>) {
+    const transparentMeshes: BABYLON.AbstractMesh[] = [];
+    const materialGroups = collectTransparentMeshData(selectedMeshIds, this.scene!);
+
+    materialGroups.forEach((groupDataList, materialKey) => {
+      if (groupDataList.length > 0) {
+        const transparentMesh = createMergedTransparentMesh(groupDataList, materialKey, this.scene!);
+        this.effectManager?.simpleTarget?.renderList.push(transparentMesh);
+        this.effectManager?.simpleTarget?.setMaterialForRendering(transparentMesh, transparentMesh.material);
+        transparentMeshes.push(transparentMesh);
+      }
+    });
+
+    this.effectManager?.applyHighlight(transparentMeshes);
+  }
+
+
+  /**
+   * 处理显示所有网格
+   */
+  private handleShowAll(selectedMeshIds: Set<number>, expressID: string) {
+    // 清空所有集合
+    this.hiddenMeshIds.clear();
+    this.isolatedMeshIds.clear();
+    this.transparentMeshIds.clear();
+
+    // 清理半透明相关资源
+    cleanupTransparentResources(this.scene!);
+
+    // 恢复所有网格可见性
+    this.scene!.meshes.forEach(mesh => {
       if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
         return;
       }
 
-      // 处理高亮网格的可见性
-      if (mesh.name.includes('highlight')) {
-        if (mode === 'hideSelected') {
-          // 收集需要隐藏的高亮网格
-          highlightMeshesToHide.push(mesh);
-        } else {
-          mesh.isVisible = true;
-        }
-        return; // 高亮网格单独处理，不需要后续逻辑
+      if (mesh.metadata?.isMergedMesh && mesh.metadata.restoreSubMesh) {
+        mesh.metadata.restoreSubMesh();
       }
 
-      // 如果是合并网格，处理子网格的隐藏、半透明和隔离效果
-      if (mesh.metadata?.isMergedMesh) {
-        const mergedFrom = mesh.metadata.mergedFrom || [];
-
-        // 检查是否处于隔离模式
-        const isIsolationMode = this.isolatedMeshIds.size > 0;
-
-        // 检查当前合并网格是否有子网格在隔离集合中
-        const hasIsolatedSubMesh = mergedFrom.some((subMeshInfo: any) =>
-          this.isolatedMeshIds.has(subMeshInfo.originalExpressID)
-        );
-
-        // 处理隔离模式：只有隔离的子网格可见，其他所有子网格都隐藏
-        if (isIsolationMode && hasIsolatedSubMesh) {
-          if (mesh.name.includes('highlight')) {
-            mesh.isVisible = true;
-          } else {
-            mesh.isVisible = false;
-          }
-        } else if (!isIsolationMode) {
-          // 非隔离模式：处理隐藏和半透明效果
-          mergedFrom.forEach((subMeshInfo: any) => {
-            const expressID = subMeshInfo.originalExpressID;
-
-            // 检查子网格的expressID是否在隐藏集合中
-            if (this.hiddenMeshIds.has(expressID)) {
-              // 隐藏子网格
-              if (mesh.metadata.hideSubMesh) {
-                mesh.metadata.hideSubMesh(expressID);
-              }
-            }
-            // 检查子网格的expressID是否在半透明集合中
-            else if (this.transparentMeshIds.has(expressID)) {
-              // 记录半透明覆盖网格数据，等待批量创建
-              this.effectManager?.createTransparentOverlayMesh(mesh, expressID, 0.5);
-              // 隐藏原始子网格，避免覆盖透明效果
-              if (mesh.metadata.hideSubMesh) {
-                mesh.metadata.hideSubMesh(expressID);
-              }
-            }
-          });
-        }
-      }
-
+      mesh.isVisible = true;
     });
 
-    // 在所有半透明覆盖网格数据记录完成后，批量创建
-    if (this.transparentMeshIds.size > 0) {
-      // setTimeout(() => {
-        // 清除先前的半透明覆盖网格
-        // this.effectManager?.clearTransparentOverlayMeshes();
-        // 创建新的半透明覆盖网格
-        this.effectManager?.createBatchTransparentOverlayMeshes();
-
-        // 给半透明网格添加高亮边框效果
-        this.effectManager?.applyHighlightToTransparentMeshes();
-      // }, 0); // 使用微任务确保所有数据记录完成后再批量创建
-    }
-
-    // 使用定时器延迟隐藏高亮网格，确保子网格隐藏完成后再隐藏高亮网格
-    if ((mode === 'hideSelected' || mode === 'transparentSelected') && highlightMeshesToHide.length > 0) {
-      setTimeout(() => {
-        highlightMeshesToHide.forEach(mesh => {
-          mesh.isVisible = false;
-        });
-      }, 10); // 10ms延迟，确保子网格隐藏操作完成
+    // 重新高亮选中的网格
+    if (selectedMeshIds && selectedMeshIds.size > 0) {
+      const meshConfig = { scene: this.scene!, isFocus: false };
+      this.ifcPropertyUtils.handleComponentClick(expressID, meshConfig, this.modelStore.modelData.tree);
     }
   }
 
   /**
-   * 恢复所有网格的材质
+   * 将选中的网格添加到对应的目标集合
    */
-  public restoreMaterials() {
-    if (!this.scene) return;
-    this.scene.meshes.forEach(mesh => {
-      if (mesh.material && (mesh.material as any)._isClonedForTransparent) {
-        const originalMaterialName = mesh.material.name.replace("_transparent", "");
-        const originalMaterial = this.scene!.materials.find(mat => mat.name === originalMaterialName);
-        if (originalMaterial) {
-          mesh.material = originalMaterial;
-        }
-      }
-    });
+  private addSelectedMeshesToTargetSet(
+    mode: 'hideSelected' | 'isolateSelected' | 'transparentSelected',
+    selectedMeshIds: Set<number>
+  ) {
+    // 根据模式获取对应的目标集合
+    let targetSet: Set<number>;
+    switch (mode) {
+      case 'hideSelected': targetSet = this.hiddenMeshIds; break;
+      case 'isolateSelected': targetSet = this.isolatedMeshIds; break;
+      case 'transparentSelected': targetSet = this.transparentMeshIds; break;
+      default: targetSet = new Set();
+    }
+
+    if (selectedMeshIds && selectedMeshIds.size > 0) {
+      selectedMeshIds.forEach(id => targetSet.add(id));
+    } else if (this.selectedMeshId) {
+      targetSet.add(Number(this.selectedMeshId));
+    }
   }
 
   /**
@@ -1010,9 +970,6 @@ export class SceneManager {
     this.selectedMeshId = '';
     this.originalMaterialProperties.clear();
 
-    // 清理透明覆盖网格
-    this.effectManager?.clearTransparentOverlayMeshes();
-
     // 清理UI纹理
     this.cleanupMeasurementResources();
     if (this.measure) {
@@ -1043,4 +1000,6 @@ export class SceneManager {
   public getCameraHistoryManager(): CameraHistoryManager {
     return this.cameraHistoryManager;
   }
+
+
 }
