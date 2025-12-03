@@ -15,6 +15,7 @@ interface IfcProperties {
 }
 
 
+
 export class IfcParser {
 
   // 已加载数量
@@ -22,6 +23,9 @@ export class IfcParser {
 
   /** WebIFC API实例 */
   private readonly webIfc = null;
+
+  /** 当前处理的模型ID */
+  private currentModelID: number | null = null;
 
   /** 是否递归地获取空间项的属性 */
   recursiveSpatial = true;
@@ -130,7 +134,10 @@ export class IfcParser {
     this.generateModelData(model);
     this.groupByEntityType(model);
 
-    const { properties, psetLines, psetRelations, total } = await this.getModelProperties(model.modelID);
+    // 直接在主线程中处理属性
+    const result = await this.getModelProperties(model.modelID);
+    // console.log('属性处理结果:', result);
+    const { properties, psetLines, psetRelations, total } = result;
 
     model.properties = properties;
     this.psetRelations = psetRelations;
@@ -156,72 +163,86 @@ export class IfcParser {
 
   async readIfcFile(data: Uint8Array) {
     await this.webIfc.Init();
-    return this.webIfc.OpenModel(data);
+    this.currentModelID = this.webIfc.OpenModel(data);
+    return this.currentModelID;
   }
 
-  private getStructure(
-    type: number,
-    result: Set<number>,
-    webIfc: WEBIFC.IfcAPI
-  ) {
-    const found = webIfc.GetLineIDsWithType(0, type);
+  private getStructure(modelID: number, type: number, result: { [key: number]: boolean }, webIfc: WEBIFC.IfcAPI) {
+    const found = webIfc.GetLineIDsWithType(modelID, type);
     const size = found.size();
     for (let i = 0; i < size; i++) {
       const id = found.get(i);
-      result.add(id);
+      result[id] = true;
     }
   }
-  private async getAllGeometriesIDs(modelID: number, webIfc: WEBIFC.IfcAPI) {
-    const placementIDs = new Set<number>();
-    const structures = new Set<number>();
-    this.getStructure(WEBIFC.IFCPROJECT, structures, webIfc);
-    this.getStructure(WEBIFC.IFCSITE, structures, webIfc);
-    this.getStructure(WEBIFC.IFCBUILDING, structures, webIfc);
-    this.getStructure(WEBIFC.IFCBUILDINGSTOREY, structures, webIfc);
-    this.getStructure(WEBIFC.IFCSPACE, structures, webIfc);
 
-    for (const id of structures) {
-      const properties = webIfc.GetLine(0, id);
+  private async getAllGeometriesIDs(modelID: number, webIfc: WEBIFC.IfcAPI): Promise<number[]> {
+    // 使用对象来避免Set大小限制
+    const placementIDs: { [key: number]: boolean } = {};
+    const structures: { [key: number]: boolean } = {};
 
-      const placementRef = properties.ObjectPlacement;
-      if (!placementRef || placementRef.value === null) {
-        continue;
-      }
-      const placementID = placementRef.value;
-      placementIDs.add(placementID);
+    // 使用正确的modelID
+    this.getStructure(modelID, WEBIFC.IFCPROJECT, structures, webIfc);
+    this.getStructure(modelID, WEBIFC.IFCSITE, structures, webIfc);
+    this.getStructure(modelID, WEBIFC.IFCBUILDING, structures, webIfc);
+    this.getStructure(modelID, WEBIFC.IFCBUILDINGSTOREY, structures, webIfc);
+    this.getStructure(modelID, WEBIFC.IFCSPACE, structures, webIfc);
 
-      const placementProps = webIfc.GetLine(0, placementID);
+    for (const id of Object.keys(structures).map(Number)) {
+      try {
+        const properties = webIfc.GetLine(modelID, id);
+        if (!properties) continue;
 
-      const relPlacementID = placementProps.RelativePlacement;
-      if (!relPlacementID || relPlacementID.value === null) {
-        continue;
-      }
-
-      placementIDs.add(relPlacementID.value);
-      const relPlacement = webIfc.GetLine(0, relPlacementID.value);
-
-      const location = relPlacement.Location;
-
-      if (location && location.value !== null) {
-        placementIDs.add(location.value);
-      }
-    }
-
-    const geometriesIDs = new Set<number>();
-    const geomTypesArray = Array.from(GeometryTypes);
-    for (let i = 0; i < geomTypesArray.length; i++) {
-      const category = geomTypesArray[i];
-      // eslint-disable-next-line no-await-in-loop
-      const ids = await webIfc.GetLineIDsWithType(modelID, category);
-      const idsSize = ids.size();
-      for (let j = 0; j < idsSize; j++) {
-        const id = ids.get(j);
-        if (placementIDs.has(id)) {
+        const placementRef = properties.ObjectPlacement;
+        if (!placementRef || placementRef.value === null) {
           continue;
         }
-        geometriesIDs.add(id);
+        const placementID = placementRef.value;
+        placementIDs[placementID] = true;
+
+        const placementProps = webIfc.GetLine(modelID, placementID);
+        if (!placementProps) continue;
+
+        const relPlacementID = placementProps.RelativePlacement;
+        if (!relPlacementID || relPlacementID.value === null) {
+          continue;
+        }
+
+        placementIDs[relPlacementID.value] = true;
+        const relPlacement = webIfc.GetLine(modelID, relPlacementID.value);
+        if (!relPlacement) continue;
+
+        const location = relPlacement.Location;
+        if (location && location.value !== null) {
+          placementIDs[location.value] = true;
+        }
+      } catch (error) {
+        console.warn(`处理结构元素 ${id} 时出错:`, error);
       }
     }
+
+    // 使用数组来避免Set大小限制
+    const geometriesIDs: number[] = [];
+    const geomTypesArray = Array.from(GeometryTypes);
+
+    for (let i = 0; i < geomTypesArray.length; i++) {
+      const category = geomTypesArray[i];
+      try {
+        const ids = webIfc.GetLineIDsWithType(modelID, category);
+        const idsSize = ids.size();
+        for (let j = 0; j < idsSize; j++) {
+          const id = ids.get(j);
+          if (placementIDs[id]) {
+            continue;
+          }
+          geometriesIDs.push(id);
+        }
+      } catch (error) {
+        console.warn(`获取几何类型 ${category} 时出错:`, error);
+      }
+    }
+
+    // console.log(`找到 ${geometriesIDs.length} 个几何体元素`);
     return geometriesIDs;
   }
   /**
@@ -229,7 +250,7 @@ export class IfcParser {
    * @param modelID 
    */
   /**
-   * 获取模型属性数据
+   * 获取模型属性数据，使用智能并行处理优化大类型性能
    * @param modelID 模型ID
    * @returns 包含所有非几何元素属性的对象
    */
@@ -237,43 +258,264 @@ export class IfcParser {
     const psetLines = this.webIfc.GetLineIDsWithType(
       modelID as number,
       WEBIFC.IFCRELDEFINESBYPROPERTIES
-    )
-    const psetRelations = []
-    const geometriesIDs = await this.getAllGeometriesIDs(modelID, this.webIfc)
-    const properties = {} as { [key: string]: any }
+    );
+    const psetRelations = [];
+    const properties = {} as { [key: string]: any };
     properties.coordinationMatrix = this.webIfc.GetCoordinationMatrix(modelID);
-    const allLinesIDs = await this.webIfc.GetAllLines(modelID);
-    const linesCount = allLinesIDs.size();
+    const types = this.webIfc.GetAllTypesOfModel(modelID);
+    // console.log(`模型类型:`, types);
 
+    // 使用流式处理，避免一次性加载所有几何ID
+    const geometriesIDs = await this.getAllGeometriesIDs(modelID, this.webIfc);
+    // 使用对象作为集合，避免Set的大小限制
+    const geometriesSet: { [key: number]: boolean } = {};
+    for (const id of geometriesIDs) {
+      geometriesSet[id] = true;
+    }
 
-    let counter = 0;
-    for (let i = 0; i < linesCount; i++) {
-      const id = allLinesIDs.get(i);
-      let props;
-      if (!geometriesIDs.has(id)) {
-        try {
-          props = await this.webIfc.GetLine(modelID, id);
-        } catch (e) {
-          console.log(`Properties of the element ${id} could not be processed`);
-        }
-        if (props) {
-          if(props.GlobalId){
-            props.GlobalId.value = ifcGuidToUuid(props.GlobalId.value);
-          }
-          if (props.type === 4186316022 && props.RelatedObjects) {
-            psetRelations.push(props.RelatedObjects.map((item) => {
-              if (item && item.value) return item.value
-              return item
-            }));
-          }
-        }
-        properties[id] = props;
+    // console.log(`找到 ${geometriesIDs.length} 个几何体元素`);
 
-        counter++;
+    let totalProcessed = 0;
+    const startTime = Date.now();
+
+    // 智能类型处理策略：先处理小类型，大类型采用更优化的并行策略
+    const typeEntries = Object.values(types);
+
+    // 分析类型大小，区分大小类型
+    const smallTypes = [];
+    const largeTypes = [];
+
+    for (const type of typeEntries) {
+      const ids = this.webIfc.GetLineIDsWithType(modelID, type.typeID);
+      const idsSize = ids.size();
+
+      if (idsSize === 0) continue;
+
+      // 超过1000个元素的类型视为大类型
+      if (idsSize > 1000) {
+        largeTypes.push({ type, idsSize, ids });
+      } else {
+        smallTypes.push({ type, idsSize, ids });
       }
     }
-    return { properties, psetLines, psetRelations }
+
+    // console.log(`小类型数量: ${smallTypes.length}, 大类型数量: ${largeTypes.length}`);
+
+    // 先并行处理所有小类型
+    const smallTypePromises = smallTypes.map(async ({ type, idsSize, ids }) => {
+      try {
+        // console.log(`处理小类型 ${type.typeID}: 共 ${idsSize} 个元素`);
+
+        // 收集非几何元素ID
+        const nonGeometryIds: number[] = [];
+        for (let i = 0; i < idsSize; i++) {
+          const id = ids.get(i);
+          if (!geometriesSet[id]) {
+            nonGeometryIds.push(id);
+          }
+        }
+
+        if (nonGeometryIds.length === 0) return 0;
+
+        // 对小类型使用较大的批次大小
+        const batchSize = Math.min(100, Math.max(20, nonGeometryIds.length));
+        let typeProcessed = 0;
+
+        // 批量并行处理
+        for (let i = 0; i < nonGeometryIds.length; i += batchSize) {
+          const batchIds = nonGeometryIds.slice(i, i + batchSize);
+
+          // 并行处理当前批次
+          const batchPromises = batchIds.map(async (id) => {
+            try {
+              const props = await this.webIfc.GetLine(modelID, id);
+              if (props) {
+                if (props.GlobalId) {
+                  props.GlobalId.value = ifcGuidToUuid(props.GlobalId.value);
+                }
+                if (props.type === 4186316022 && props.RelatedObjects) {
+                  psetRelations.push(props.RelatedObjects.map((item) => {
+                    if (item && item.value) return item.value;
+                    return item;
+                  }));
+                }
+                properties[id] = props;
+                return 1;
+              }
+            } catch (e) {
+              // 静默处理错误
+            }
+            return 0;
+          });
+
+          const batchResults = await Promise.allSettled(batchPromises);
+          const successfulCount = batchResults.reduce((count, result) => {
+            if (result.status === 'fulfilled' && result.value === 1) {
+              return count + 1;
+            }
+            return count;
+          }, 0);
+
+          typeProcessed += successfulCount;
+          totalProcessed += successfulCount;
+
+          // 小类型日志频率更高
+          if (typeProcessed % 100 === 0 || i + batchSize >= nonGeometryIds.length) {
+            const elapsed = Date.now() - startTime;
+            // console.log(`小类型 ${type.typeID} 进度: ${typeProcessed}/${nonGeometryIds.length} (总: ${totalProcessed}, 耗时: ${elapsed}ms)`);
+          }
+        }
+
+        // console.log(`小类型 ${type.typeID} 完成: ${typeProcessed} 个属性`);
+        return typeProcessed;
+
+      } catch (error) {
+        console.warn(`处理小类型 ${type.typeID} 时出错:`, error);
+        return 0;
+      }
+    });
+
+    // 等待小类型处理完成
+    const smallTypeResults = await Promise.allSettled(smallTypePromises);
+    const smallTypeTotal = smallTypeResults.reduce((sum, result) => {
+      if (result.status === 'fulfilled') {
+        return sum + result.value;
+      }
+      return sum;
+    }, 0);
+
+    // console.log(`所有小类型处理完成，共处理 ${smallTypeTotal} 个属性`);
+
+    // 优化大类型处理：使用更智能的并行策略
+    const largeTypePromises = largeTypes.map(async ({ type, idsSize, ids }) => {
+      try {
+        // console.log(`开始处理大类型 ${type.typeID}: 共 ${idsSize} 个元素`);
+
+        // 收集非几何元素ID
+        const nonGeometryIds: number[] = [];
+        for (let i = 0; i < idsSize; i++) {
+          const id = ids.get(i);
+          if (!geometriesSet[id]) {
+            nonGeometryIds.push(id);
+          }
+        }
+
+        if (nonGeometryIds.length === 0) return 0;
+
+        // 对大类型使用更优化的批次策略
+        // 基于元素数量动态调整批次大小和并发数
+        const elementCount = nonGeometryIds.length;
+        let batchSize = 50; // 默认批次大小
+        let concurrency = 5; // 默认并发数
+
+        if (elementCount > 100000) {
+          batchSize = 100;
+          concurrency = 3; // 超大型类型减少并发数
+        } else if (elementCount > 10000) {
+          batchSize = 75;
+          concurrency = 4;
+        }
+
+        // console.log(`大类型 ${type.typeID} 配置: 批次大小=${batchSize}, 并发数=${concurrency}`);
+
+        let typeProcessed = 0;
+        let batchIndex = 0;
+
+        // 使用并发控制处理大类型
+        while (batchIndex < nonGeometryIds.length) {
+          // 准备当前批次
+          const currentBatch = [];
+          for (let i = 0; i < concurrency && batchIndex < nonGeometryIds.length; i++) {
+            const batchStart = batchIndex;
+            const batchEnd = Math.min(batchIndex + batchSize, nonGeometryIds.length);
+            const batchIds = nonGeometryIds.slice(batchStart, batchEnd);
+            currentBatch.push(batchIds);
+            batchIndex = batchEnd;
+          }
+
+          // 并行处理当前批次组
+          const batchGroupPromises = currentBatch.map(async (batchIds, index) => {
+            const batchPromises = batchIds.map(async (id) => {
+              try {
+                const props = await this.webIfc.GetLine(modelID, id);
+                if (props) {
+                  if (props.GlobalId) {
+                    props.GlobalId.value = ifcGuidToUuid(props.GlobalId.value);
+                  }
+                  if (props.type === 4186316022 && props.RelatedObjects) {
+                    psetRelations.push(props.RelatedObjects.map((item) => {
+                      if (item && item.value) return item.value;
+                      return item;
+                    }));
+                  }
+                  properties[id] = props;
+                  return 1;
+                }
+              } catch (e) {
+                // 静默处理错误
+              }
+              return 0;
+            });
+
+            const batchResults = await Promise.allSettled(batchPromises);
+            return batchResults.reduce((count, result) => {
+              if (result.status === 'fulfilled' && result.value === 1) {
+                return count + 1;
+              }
+              return count;
+            }, 0);
+          });
+
+          const batchGroupResults = await Promise.allSettled(batchGroupPromises);
+          const successfulCount = batchGroupResults.reduce((count, result) => {
+            if (result.status === 'fulfilled') {
+              return count + result.value;
+            }
+            return count;
+          }, 0);
+
+          typeProcessed += successfulCount;
+          totalProcessed += successfulCount;
+
+          // 大类型进度报告更频繁
+          const progress = Math.round((typeProcessed / nonGeometryIds.length) * 100);
+          const elapsed = Date.now() - startTime;
+          const estimatedRemaining = elapsed / (typeProcessed / nonGeometryIds.length) - elapsed;
+
+          // console.log(`大类型 ${type.typeID} 进度: ${typeProcessed}/${nonGeometryIds.length} (${progress}%), 耗时: ${elapsed}ms, 预计剩余: ${Math.round(estimatedRemaining / 1000)}s`);
+
+          // 定期给GC时间，避免内存堆积
+          if (typeProcessed % 1000 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        }
+
+        // console.log(`大类型 ${type.typeID} 完成: ${typeProcessed} 个属性`);
+        return typeProcessed;
+
+      } catch (error) {
+        console.warn(`处理大类型 ${type.typeID} 时出错:`, error);
+        return 0;
+      }
+    });
+
+    // 等待所有大类型处理完成
+    const largeTypeResults = await Promise.allSettled(largeTypePromises);
+    const largeTypeTotal = largeTypeResults.reduce((sum, result) => {
+      if (result.status === 'fulfilled') {
+        return sum + result.value;
+      }
+      return sum;
+    }, 0);
+
+    const totalTime = Date.now() - startTime;
+    console.log(`属性获取完成，小类型: ${smallTypeTotal} 个, 大类型: ${largeTypeTotal} 个, 总耗时: ${totalTime}ms`);
+
+    return { properties, psetLines, psetRelations };
   }
+
+
+
   /**
    * 保存元素ID到片段键的映射关系
    * @param expressID 元素ID
@@ -371,6 +613,7 @@ export class IfcParser {
         return;
       }
       this.streamMesh(mesh);
+      // 立即释放WebAssembly内存
       mesh.delete;
     });
 
@@ -498,5 +741,48 @@ export class IfcParser {
   private isExcluded(id: number): boolean {
     const category = this.categories[id];
     return this.settings.excludedCategories.has(category);
+  }
+
+  /**
+   * 清理内存和资源
+   * 在解析完成后调用此方法释放WebAssembly内存和其他资源
+   */
+  public dispose(): void {
+    try {
+      // 清理WebAssembly相关资源
+      if (this.currentModelID !== null && this.webIfc && this.webIfc.CloseModel) {
+        this.webIfc.CloseModel(this.currentModelID);
+        this.currentModelID = null;
+      }
+
+      // 清理属性集相关数据
+      if (this.psetLines && this.psetLines.delete) {
+        this.psetLines.delete();
+        this.psetLines = undefined;
+      }
+
+      // 清理所有缓存数据
+      this.categories = {};
+      this.elementToFragmentKeysMap = {};
+      this.fragmentKeyToIdMap = {};
+      this.items = {};
+      this.psetRelations = undefined;
+
+      // 清理配置和缓存
+      this.settings.excludedCategories.clear();
+      this.settings.includedCategories.clear();
+      this.settings.optionalCategories = [WEBIFC.IFCSPACE];
+
+      // 清理已访问的片段缓存
+      this.visitedFragments.clear();
+
+      // 重置计数器
+      this.fragmentKeyCounter = 0;
+      this.loadedCount = 0;
+
+      console.log('IFC解析器内存清理完成');
+    } catch (error) {
+      console.warn('清理IFC解析器内存时出错:', error);
+    }
   }
 }

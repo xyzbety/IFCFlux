@@ -129,30 +129,34 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         type: IfcCategoryMap[property.type].en,
         typeShow: IfcCategoryMap[property.type].cn || IfcCategoryMap[property.type].en,
       }
-      dataMap[expressId] = item
-      //当时构件时，把ifc element type 相同的放在一起
-      if (isc) {
-        // TODO  这个层级是人为创建的,所以ExpressID是人为创建的
-        const categoryEid = `Category_${IfcCategoryMap[property.type].en}_${id}`
-        if (!categoryNodeCode.includes(categoryEid)) {
-          tempTreeData.push({
-            name: '',
-            typeZH: '',
-            description: '',
-            parentId: id,
-            // TODO  这个层级是人为创建的,所以ExpressID是人为创建的
-            expressId: categoryEid,
-            guid: guid,
-            objectType: property.ObjectType,
-            type: 'category',
-            typeShow: IfcCategoryMap[property.type].cn,
+      
+      // 检查是否已存在相同expressId的节点，避免重复
+      if (!dataMap[expressId]) {
+        dataMap[expressId] = item
+        //当时构件时，把ifc element type 相同的放在一起
+        if (isc) {
+          // TODO  这个层级是人为创建的,所以ExpressID是人为创建的
+          const categoryEid = `Category_${IfcCategoryMap[property.type].en}_${id}`
+          if (!categoryNodeCode.includes(categoryEid)) {
+            tempTreeData.push({
+              name: '',
+              typeZH: '',
+              description: '',
+              parentId: id,
+              // TODO  这个层级是人为创建的,所以ExpressID是人为创建的
+              expressId: categoryEid,
+              guid: guid,
+              objectType: property.ObjectType,
+              type: 'category',
+              typeShow: IfcCategoryMap[property.type].cn,
 
-          })
-          categoryNodeCode.push(categoryEid)
+            })
+            categoryNodeCode.push(categoryEid)
+          }
+          dataMap[expressId].parentId = categoryEid
         }
-        dataMap[expressId].parentId = categoryEid
+        tempTreeData.push(item)
       }
-      tempTreeData.push(item)
     })
     // 默认展开的节点
     if (properties[id].type && [103090709, 4031249490, 4097777520].includes(properties[id].type)) {

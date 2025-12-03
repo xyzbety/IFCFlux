@@ -158,6 +158,7 @@ export class IfcLoader {
             this.ifcExpressIds = parsedData.ifcExpressIds;
             this.psetLines = parsedData.psetLines;
             this.psetRelations = parsedData.psetRelations;
+            this.ifcParser.dispose();
             console.log('IFC树已加载,解析完成');
         }
 
@@ -165,7 +166,7 @@ export class IfcLoader {
             try {
                 this.model.setEnabled(false);
 
-                const flatMeshes = this.ifcApi.LoadAllGeometry(this.modelID!);
+                               const flatMeshes = this.ifcApi.LoadAllGeometry(this.modelID!);
                 const geometryCount = flatMeshes.size();
                 let loadedGeometries = 0;
 
@@ -306,7 +307,7 @@ export class IfcLoader {
 
         if (this.modelID === null || this.modelID < 0) {
             console.error("IFC模型打开失败");
-            this.ifcApi.CloseModel(this.modelID || 0);
+            // 不在这里关闭模型，避免重复释放
         }
 
         return null;
