@@ -3,7 +3,7 @@ import * as BABYLON from "@babylonjs/core";
 import { cacheDB } from './CacheDB';
 import { IfcParser } from "./IfcParser";
 import { ifcGuidToUuid } from '../ifc/ifcGuidConverter'
-import { mergeMeshesByMaterial ,simplifyGeometry } from '../ifc/ifcMeshProcess';
+import { mergeMeshesByMaterial, simplifyGeometry } from '../ifc/ifcMeshProcess';
 
 // 定义进度回调函数类型
 type ProgressCallback = (percent: number, message: string, loaded: number, total: number) => void;
@@ -51,11 +51,18 @@ interface IGeometryOptimizationConfig {
     simplificationThreshold: number;
 }
 
+// 定义合并用几何数据接口
+interface IMergeGeometryData {
+    vertexData: BABYLON.VertexData;
+    material: BABYLON.StandardMaterial;
+    metadata: any;
+}
+
 /**
  * IFC模型加载器，用于加载和解析IFC文件并在Babylon.js场景中渲染
  */
 export class IfcLoader {
-    private materialsMap: Map<number, BABYLON.Mesh[]>; // 材质映射表（按颜色ID分组存储网格）
+    private materialsMap: Map<number, IMergeGeometryData[]>; // 材质映射表（直接存储合并数据）
     private materialCache: Map<number, BABYLON.StandardMaterial>; // 材质缓存（避免重复创建）
     private geometryCache: Map<string, BABYLON.Mesh[]>;
 
@@ -100,7 +107,7 @@ export class IfcLoader {
      * @param scene Babylon.js场景实例
      */
     constructor(url: string | File, scene: BABYLON.Scene) {
-        this.materialsMap = new Map(); // 材质映射表（按颜色ID分组存储网格）
+        this.materialsMap = new Map(); // 材质映射表（直接存储合并数据）
         this.materialCache = new Map(); // 材质缓存（避免重复创建）
         this.geometryCache = new Map();
 
@@ -129,7 +136,7 @@ export class IfcLoader {
             detailLevel: 8,
             useFastBooleans: true,
             optimizeProfiles: true,
-            simplificationThreshold: 5000
+            simplificationThreshold: 1000
         };
 
         this.ifcTree = null; // 用于存储解析后的IFC树
@@ -149,6 +156,7 @@ export class IfcLoader {
      */
     public async load(onProgress: ProgressCallback | null = null, detail_level: number = 12): Promise<void> {
         await this.loadFileToArrayBuffer(detail_level);
+        console.log('IFC文件已加载,开始解析IFC模型');
         this.ifcParser = new IfcParser(this.ifcApi);
         if (this.isParser) {
             // Pass null for onProgress to make property parsing silent
@@ -156,7 +164,17 @@ export class IfcLoader {
             this.ifcTree = parsedData.tree;
             this.properties = parsedData.properties;
             this.ifcExpressIds = parsedData.ifcExpressIds;
-            this.psetLines = parsedData.psetLines;
+
+            // 将 psetLines 从 web-ifc Vector 转换为普通数组，避免对象被删除后无法访问
+            if (parsedData.psetLines && parsedData.psetLines.size) {
+                this.psetLines = [];
+                for (let i = 0; i < parsedData.psetLines.size(); i++) {
+                    this.psetLines.push(parsedData.psetLines.get(i));
+                }
+            } else {
+                this.psetLines = parsedData.psetLines;
+            }
+
             this.psetRelations = parsedData.psetRelations;
             this.ifcParser.dispose();
             console.log('IFC树已加载,解析完成');
@@ -166,71 +184,106 @@ export class IfcLoader {
             try {
                 this.model.setEnabled(false);
 
-                               const flatMeshes = this.ifcApi.LoadAllGeometry(this.modelID!);
-                const geometryCount = flatMeshes.size();
-                let loadedGeometries = 0;
+                // 收集所有几何数据，按材质分组，不直接渲染
+                let geometryCount = 0;
 
-                const processMeshes = async (): Promise<void> => {
-                    // Start progress from 0 for geometry loading
-                    if (onProgress) {
-                        onProgress(0, "正在创建图元", 0, geometryCount);
-                    }
+                console.log('开始流式处理几何数据...');
+                let processedCount = 0;
 
-                    for (let i = 0; i < geometryCount; i++) {
-                        const mesh = flatMeshes.get(i);
-                        this.processGeometryData(mesh);
+                this.ifcApi.StreamAllMeshes(this.modelID!, (flatMesh: any) => {
+                    const placedGeometries = flatMesh.geometries;
 
-                        loadedGeometries++;
-                        if (onProgress) {
-                            const percent = (loadedGeometries / geometryCount) * 100;
-                            onProgress(percent, "正在创建图元", loadedGeometries, geometryCount);
-                        }
+                    for (let i = 0; i < placedGeometries.size(); i++) {
+                        const placedGeometry = placedGeometries.get(i);
+                        const vertexData = this.createMergedVertexData(placedGeometry);
 
-                        (mesh as any).delete;
-                        const batchSize = Math.max(50, Math.min(1000, Math.floor(geometryCount / 100)));
-                        if (i % batchSize === 0) await new Promise(r => setTimeout(r, 0));
-                    }
-                    (flatMeshes as any).delete();
-                };
+                        if (vertexData) {
+                            // 获取IFC实体的GlobalId并转换为UUID
+                            const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, flatMesh.expressID) as IIfcEntity;
+                            const baseGuid = ifcGuidToUuid(entity.GlobalId.value);
+                            // 跳过处理不存在空间结构关系的元素
+                            if (!this.ifcExpressIds.includes(String(flatMesh.expressID))) {
+                                return
+                            }
 
-                await processMeshes();
+                            // 计算颜色ID并获取/创建材质
+                            const colorID = this.calculateColorID(placedGeometry.color);
+                            if (!this.materialCache.has(colorID)) {
+                                const material = this.createBabylonMaterial(placedGeometry.color);
+                                this.materialCache.set(colorID, material);
+                            }
+                            const material = this.materialCache.get(colorID)!;
 
-                if (this.useInstancing) {
-                    this.geometryCache.forEach((meshes) => {
-                        if (meshes.length >= this.instanceThreshold) {
-                            const rootMesh = meshes[0];
-                            rootMesh.isVisible = false;
-                            meshes.forEach((mesh) => {
-                                const instance = rootMesh.createInstance(mesh.name);
-                                instance.id = mesh.id;
-                                this.processInstancedMeshTransform(mesh.metadata, instance);
-                                instance.parent = this.model;
-                                instance.metadata = mesh.metadata;
-                                if (mesh.name !== rootMesh.name) {
-                                    mesh.dispose();
+                            // 直接存储合并用的几何数据，不创建任何网格对象
+                            const mergeData: IMergeGeometryData = {
+                                vertexData: vertexData,
+                                material: material,
+                                metadata: {
+                                    originalExpressID: flatMesh.expressID,
+                                    geometryExpressID: placedGeometry.geometryExpressID,
+                                    globalId: entity.GlobalId.value,
+                                    guid: baseGuid,
+                                    color: placedGeometry.color,
+                                    transformation: placedGeometry.flatTransformation
                                 }
-                            });
-                            rootMesh.name = `inst_${rootMesh.name}`;
-                        } else {
-                            const mesh = meshes[0];
-                            this.processMeshTransform(mesh);
-                            mesh.isVisible = true;
-                            if (this.isFreezeTransformMatrix) {
-                                mesh.freezeWorldMatrix();
+                            };
+
+                            // 按材质分组存储合并数据
+                            if (!this.materialsMap.has(colorID)) {
+                                this.materialsMap.set(colorID, []);
+                            }
+                            this.materialsMap.get(colorID)!.push(mergeData);
+
+                            geometryCount++;
+
+                            // 调试信息
+                            if (geometryCount % 1000 === 0) {
+                                console.log(`收集几何体 ${geometryCount} [ID:${flatMesh.expressID}] [GUID:${baseGuid}] 颜色:`, placedGeometry.color);
                             }
                         }
-                    });
+                    }
+
+                    processedCount++;
+                    if (onProgress && processedCount % 100 === 0) {
+                        const progress = Math.min((processedCount / 1000) * 100, 95);
+                        onProgress(progress, `已处理 ${processedCount} 个几何体`, processedCount, 1000);
+                    }
+                });
+
+                console.log(`收集了 ${geometryCount} 个几何体，按 ${this.materialsMap.size} 种材质分组`);
+
+                console.log('IFC模型已加载,流式处理完成');
+
+                // 关闭模型并清理API
+                if (this.modelID !== null) {
+                    console.log('关闭模型...', this.ifcApi);
+                    this.ifcApi.CloseModel(this.modelID);
+                    this.modelID = null;
+                    this.ifcApi.Dispose();
+                }
+
+                if (window.gc) {
+                    window.gc();
+                }
+                mergeMeshesByMaterial(this.materialsMap, this.materialCache, this.scene, this.model);
+                // 清理材质映射表以释放内存
+                this.materialsMap.clear();
+
+                // 清理几何缓存
+                if (this.geometryCache) {
                     this.geometryCache.clear();
                 }
 
-                mergeMeshesByMaterial(this.materialsMap, this.materialCache, this.scene, this.model);
-
                 this.isComplete = true;
                 this.model.setEnabled(true);
+                this.model.isVisible = true;
 
-                console.log('模型加载完成');
 
-                this.ifcApi.CloseModel(this.modelID!);
+                // 最终垃圾回收
+                if (window.gc) {
+                    window.gc();
+                }
+
                 resolve();
             } catch (error) {
                 console.error("IFC加载过程中发生错误:", error);
@@ -313,188 +366,93 @@ export class IfcLoader {
         return null;
     }
 
-    private processGeometryData(flatMesh: IFlatGeometry): void {
-        const placedGeometries = flatMesh.geometries;
-        const size = placedGeometries.size();
-        const baseExpressID = flatMesh.expressID;
-        const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, baseExpressID);
-        const baseGuid = ifcGuidToUuid(entity.GlobalId.value)
-        // 跳过处理不存在空间结构关系的元素
-        if (!this.ifcExpressIds.includes(String(baseExpressID))) {
-            return
-        }
-
-        for (let i = 0; i < size; i++) {
-            const placedGeometry = placedGeometries.get(i);
-
-            // 使用原始的expressID和GUID，不创建新的标识
-            const mesh = this.createGeometryMesh(placedGeometry, baseExpressID);
-            if (mesh) {
-                this.processMeshTransform(mesh);
-                this.assignMeshMaterial(placedGeometry, mesh);
-
-                // 获取材质ID
-                const colorID = this.calculateColorID(placedGeometry.color);
-
-                // 保存原始网格信息到元数据
-                if (!mesh.metadata) {
-                    mesh.metadata = {};
-                }
-                // 直接保存原始的expressID和GUID，不修改
-                mesh.metadata.originalExpressID = baseExpressID;
-                mesh.metadata.originalGuid = baseGuid;
-                mesh.metadata.instanceIndex = i; // 保存实例索引
-                mesh.metadata.colorID = colorID;
-
-                // 设置网格的ID和名称：GUID作为ID，expressID作为name
-                mesh.id = baseGuid;
-                mesh.name = `${baseExpressID}`;
-
-                // 将网格添加到对应的材质组
-                if (!this.materialsMap.has(colorID)) {
-                    this.materialsMap.set(colorID, []);
-                }
-                this.materialsMap.get(colorID)!.push(mesh);
-
-                // 设置网格可见性
-                mesh.isVisible = false; // 先隐藏，等待合并
-                if (this.isFreezeTransformMatrix) {
-                    mesh.freezeWorldMatrix();
-                }
-            }
-        }
-    }
-
-    private createGeometryMesh(geometry: IGeometryData, expressID: number): BABYLON.Mesh | null {
+    /**
+     * 创建合并用的顶点数据（参照Three.js实现）
+     * @param placedGeometry 放置的几何数据
+     */
+    private createMergedVertexData(placedGeometry: IGeometryData): BABYLON.VertexData | null {
+        let meshData: any = null;
         try {
-            const geometryExpressID = geometry.geometryExpressID;
-            const geometryKey = `${geometryExpressID}`;
-            const expressIDKey = `${expressID}`;
+            const geometryExpressID = placedGeometry.geometryExpressID;
 
-            // 创建新几何并加入缓存
-            const meshData = this.ifcApi.GetGeometry(this.modelID!, geometryExpressID);
+            // 获取几何数据
+            meshData = this.ifcApi.GetGeometry(this.modelID!, geometryExpressID);
             if (!meshData || meshData.GetVertexDataSize() === 0) {
+                if (meshData) {
+                    // @ts-ignore
+                    meshData.delete();
+                }
                 return null;
             }
 
-            const mesh = new BABYLON.Mesh(expressIDKey, this.scene);
-            mesh.parent = this.model;
-            mesh.isVisible = false;
+            // 获取顶点和索引数据
+            const vertexArray = this.ifcApi.GetVertexArray(
+                meshData.GetVertexData(),
+                meshData.GetVertexDataSize()
+            );
+            const indexArray = this.ifcApi.GetIndexArray(
+                meshData.GetIndexData(),
+                meshData.GetIndexDataSize()
+            );
 
-            const vertexData = this.createVertexData(meshData);
-            if (vertexData) {
-                vertexData.applyToMesh(mesh, true);
-                mesh.metadata = {
-                    geometryKey: geometryKey,
-                    flatTransformation: geometry.flatTransformation,
-                };
+            // 创建顶点数据
+            const vertexData = new BABYLON.VertexData();
+            const { positions, normals } = this.extractPositionAndNormals(vertexArray);
 
-                return mesh;
-            }
+            // 应用变换矩阵到顶点和法线
+            const transformedData = this.applyTransformationToVertices(positions, normals, placedGeometry.flatTransformation);
+
+            vertexData.positions = transformedData.positions;
+            vertexData.normals = transformedData.normals;
+            vertexData.indices = indexArray;
+
+            return vertexData;
+        } catch (error) {
+            console.warn("创建合并顶点数据失败:", error);
             return null;
-        } catch (error) {
-            console.warn("几何网格创建失败:", error);
-            return null;
-        }
-    }
-
-    private processMeshTransform(mesh: BABYLON.Mesh): void {
-        try {
-            // 动态保留有效数字，避免直接截断
-            // const adjustedTransformation = mesh.metadata.flatTransformation.map(num => {
-            //   if (Math.abs(num) < 1e-5) return 0;  // 极小值视为0
-            //   return parseFloat(num.toExponential(10));  // 科学记数法保留10位有效数字
-            // });
-            const transformMatrix = BABYLON.Matrix.FromArray(mesh.metadata.flatTransformation);
-            // const transformMatrix = BABYLON.Matrix.FromArray(adjustedTransformation);
-
-            if (!transformMatrix.isIdentity()) {
-                mesh.metadata.originalTransform = transformMatrix.clone();
-                mesh.bakeTransformIntoVertices(transformMatrix);
-                mesh.refreshBoundingInfo();
+        } finally {
+            if (meshData) {
+                try {
+                    // @ts-ignore
+                    meshData.delete();
+                } catch (e) {
+                    // 忽略删除错误
+                }
             }
-        } catch (error) {
-            console.warn("mesh网格变换处理失败:", error);
-        }
-    }
-
-    private processInstancedMeshTransform(geometry: any, instance: BABYLON.InstancedMesh): void {
-        try {
-            // 从几何数据获取变换矩阵
-            // const adjustedTransformation = geometry.flatTransformation.map(num => {
-            //     if (Math.abs(num) < 1e-5) return 0;  // 极小值视为0
-            //     return parseFloat(num.toExponential(10));  // 科学记数法保留10位有效数字
-            // });
-            const transformMatrix = BABYLON.Matrix.FromArray(geometry.flatTransformation);
-            // const transformMatrix = BABYLON.Matrix.FromArray(adjustedTransformation);
-
-            const scale = new BABYLON.Vector3();
-            const rotation = new BABYLON.Quaternion();
-            const translation = new BABYLON.Vector3();
-
-            // 分解矩阵为平移、旋转和缩放
-            if (transformMatrix.decompose(scale, rotation, translation)) {
-                // 将分解结果应用到实例网格
-                instance.position = translation;
-                instance.rotationQuaternion = rotation;
-                instance.scaling = scale;
-                instance.computeWorldMatrix(true); // 强制更新世界矩阵
-                instance.refreshBoundingInfo(true);
-            } else {
-                console.warn("Matrix decomposition failed for mesh:", instance.name);
-            }
-        } catch (error) {
-            console.warn("instancedMesh网格变换处理失败:", error);
         }
     }
 
     /**
-     * 创建顶点数据
-     * @param geometry 几何数据
+     * 应用变换矩阵到顶点位置和法线
+     * @param positions 原始顶点位置
+     * @param normals 原始法线
+     * @param transformation 变换矩阵
      */
-    private createVertexData(geometry: any): BABYLON.VertexData | null {
-        try {
-            const vertexArray = this.ifcApi.GetVertexArray(
-                geometry.GetVertexData(),
-                geometry.GetVertexDataSize()
-            );
-            const indexArray = this.ifcApi.GetIndexArray(
-                geometry.GetIndexData(),
-                geometry.GetIndexDataSize()
-            );
+    private applyTransformationToVertices(positions: Float32Array, normals: Float32Array, transformation: number[]): { positions: Float32Array; normals: Float32Array } {
+        const matrix = BABYLON.Matrix.FromArray(transformation);
+        const transformedPositions = new Float32Array(positions.length);
+        const transformedNormals = new Float32Array(normals.length);
 
-            // 创建Babylon顶点数据
-            const vertexData = new BABYLON.VertexData();
-            const { positions, normals } = this.extractPositionAndNormals(vertexArray);
+        for (let i = 0; i < positions.length; i += 3) {
+            // 变换顶点位置
+            const vertex = new BABYLON.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+            const transformed = BABYLON.Vector3.TransformCoordinates(vertex, matrix);
+            transformedPositions[i] = transformed.x;
+            transformedPositions[i + 1] = transformed.y;
+            transformedPositions[i + 2] = transformed.z;
 
-            // 应用几何简化（如果启用）
-            let simplifiedPositions = positions;
-            let simplifiedNormals = normals;
-            let simplifiedIndices = indexArray;
-
-            const vertexCount = positions.length / 3;
-
-            const shouldSimplify = vertexCount > this.geometryOptimization.simplificationThreshold ? true : false;
-
-            if (shouldSimplify) {
-                const simplified = simplifyGeometry(positions, normals, indexArray);
-                simplifiedPositions = simplified.positions;
-                simplifiedNormals = simplified.normals;
-                simplifiedIndices = simplified.indices;
-            }
-
-            vertexData.positions = simplifiedPositions;
-            vertexData.normals = simplifiedNormals;
-            vertexData.indices = simplifiedIndices;
-
-            // @ts-ignore
-            geometry.delete();
-            return vertexData;
-        } catch (error) {
-            console.warn("顶点数据创建失败:", error);
-            return null;
+            // 变换法线（只应用旋转和缩放，不应用平移）
+            const normal = new BABYLON.Vector3(normals[i], normals[i + 1], normals[i + 2]);
+            const transformedNormal = BABYLON.Vector3.TransformNormal(normal, matrix).normalize();
+            transformedNormals[i] = transformedNormal.x;
+            transformedNormals[i + 1] = transformedNormal.y;
+            transformedNormals[i + 2] = transformedNormal.z;
         }
+
+        return { positions: transformedPositions, normals: transformedNormals };
     }
+
+
 
     /**
      * 从顶点数组中提取位置和法线数据
@@ -518,35 +476,6 @@ export class IfcLoader {
     }
 
     /**
-     * 分配网格材质
-     * @param geometry 几何数据
-     * @param mesh 目标网格
-     */
-    private assignMeshMaterial(geometry: IGeometryData, mesh: BABYLON.Mesh): void {
-        const color = geometry.color;
-        const colorID = this.calculateColorID(color);
-
-        if (this.isLineModel) {
-            // mesh.material.wireframe = true; // 启用线框模式但是有对角线
-            mesh.enableEdgesRendering();
-            mesh.edgesColor = new BABYLON.Color4(color.x, color.y, color.z, color.w);
-        } else {
-            // 获取或创建材质
-            if (!this.materialCache.has(colorID)) {
-                const material = this.createBabylonMaterial(color);
-                this.materialCache.set(colorID, material);
-            }
-            mesh.material = this.materialCache.get(colorID)!;
-        }
-
-        // 添加网格到材质分组
-        if (!this.materialsMap.has(colorID)) {
-            this.materialsMap.set(colorID, []);
-        }
-        this.materialsMap.get(colorID)!.push(mesh);
-    }
-
-    /**
      * 创建Babylon材质
      * @param color 颜色数据
      */
@@ -557,14 +486,23 @@ export class IfcLoader {
 
         // 设置基础颜色和透明度
         material.diffuseColor = new BABYLON.Color3(r, g, b);
-        material.alpha = a;
+        material.specularColor = new BABYLON.Color3(0, 0, 0); // 移除高光
+        material.emissiveColor = new BABYLON.Color3(0, 0, 0); // 移除自发光
 
-        // 禁用背面剔除
+        // 处理透明度
+        if (a < 1.0) {
+            material.alpha = a;
+            material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        } else {
+            material.alpha = 1.0;
+        }
+
+        // 禁用背面剔除，确保双面渲染
         material.backFaceCulling = false;
-        material.reflectionTexture = null;
-
-        // 设置双面渲染
         material.sideOrientation = BABYLON.Mesh.DOUBLESIDE;
+
+        // 确保光照正确
+        material.disableLighting = false;
 
         return material;
     }

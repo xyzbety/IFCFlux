@@ -74,35 +74,54 @@ export function simplifyGeometry(
  * 合并相同材质的网格
  * 按材质分组几何体，分别合并每个材质组的几何体
  */
-export function mergeMeshesByMaterial(materialsMap: Map<number, BABYLON.Mesh[]>, materialCache: Map<number, BABYLON.StandardMaterial>, scene: BABYLON.Scene, model: BABYLON.Mesh): void {
+export function mergeMeshesByMaterial(materialsMap: Map<number, any[]>, materialCache: Map<number, BABYLON.StandardMaterial>, scene: BABYLON.Scene, model: BABYLON.Mesh): void {
   // 创建按材质分组的几何体映射表（类似Three.js的geometriesByMaterials）
   const geometriesByMaterials = new Map<number, BABYLON.VertexData[]>();
   const originalMeshesByMaterial = new Map<number, BABYLON.Mesh[]>();
 
-  // 第一步：收集所有网格的几何数据，按材质分组（类似Three.js的storeGeometryByMaterial）
-  materialsMap.forEach((meshes, colorID) => {
-    if (meshes.length > 0) {
-      const validMeshes = meshes.filter(mesh =>
-        mesh && !mesh.isDisposed() && mesh.geometry
-      );
+  // 第一步：收集所有几何数据，按材质分组
+  materialsMap.forEach((dataArray, colorID) => {
+    if (dataArray.length > 0) {
+      const geometries: BABYLON.VertexData[] = [];
+      const originalMeshData: any[] = [];
 
-      if (validMeshes.length > 0) {
-        const geometries: BABYLON.VertexData[] = [];
-        const originalMeshes: BABYLON.Mesh[] = [];
+      // 检查数据类型并处理
+      dataArray.forEach(data => {
+        if (data) {
+          let vertexData: BABYLON.VertexData | null = null;
+          let metadata: any = null;
 
-        // 收集每个网格的几何数据
-        validMeshes.forEach(mesh => {
-          if (mesh.geometry) {
-            const vertexData = BABYLON.VertexData.ExtractFromMesh(mesh);
-            geometries.push(vertexData);
-            originalMeshes.push(mesh as BABYLON.Mesh);
+          // 如果是Mesh对象（兼容旧版本）
+          if (data instanceof BABYLON.Mesh) {
+            const mesh = data as BABYLON.Mesh;
+            if (!mesh.isDisposed()) {
+              vertexData = BABYLON.VertexData.ExtractFromMesh(mesh);
+              metadata = mesh.metadata || {};
+              originalMeshData.push({
+                vertexData: vertexData,
+                metadata: metadata
+              });
+            }
+          } 
+          // 如果是新的IMergeGeometryData结构
+          else if (data.vertexData && data.material && data.metadata) {
+            vertexData = data.vertexData;
+            metadata = data.metadata;
+            originalMeshData.push({
+              vertexData: vertexData,
+              metadata: metadata
+            });
           }
-        });
 
-        if (geometries.length > 0) {
-          geometriesByMaterials.set(colorID, geometries);
-          originalMeshesByMaterial.set(colorID, originalMeshes);
+          if (vertexData) {
+            geometries.push(vertexData);
+          }
         }
+      });
+
+      if (geometries.length > 0) {
+        geometriesByMaterials.set(colorID, geometries);
+        originalMeshesByMaterial.set(colorID, originalMeshData);
       }
     }
   });
@@ -191,55 +210,53 @@ export function mergeMeshesByMaterial(materialsMap: Map<number, BABYLON.Mesh[]>,
 
         // 保存合并信息到元数据，保留所有原始网格的expressID、GUID等数据
         const originalMeshes = originalMeshesByMaterial.get(colorID) || [];
-
+        
+        // 保存原始几何数据用于后续操作
+        const originalMeshData: any[] = [];
+        const meshDataArray = originalMeshesByMaterial.get(colorID) || [];
+        
         // 设置合并网格的ID和name：使用第一个子网格的GUID作为ID，expressID作为name
-        const firstOriginalMesh = originalMeshes[0];
-        if (firstOriginalMesh && firstOriginalMesh.metadata) {
-          const baseGuid = firstOriginalMesh.metadata.originalGuid;
-          const baseExpressID = firstOriginalMesh.metadata.originalExpressID;
-          if (baseGuid) {
+        const firstOriginalData = meshDataArray[0];
+        if (firstOriginalData && firstOriginalData.metadata) {
+          const baseGuid = firstOriginalData.metadata.guid;
+          const baseExpressID = firstOriginalData.metadata.originalExpressID;
+          if (baseExpressID !== undefined) {
             mergedMesh.id = baseExpressID;
           }
-          if (baseExpressID) {
+          if (baseGuid) {
             mergedMesh.name = `${baseGuid}`;
           }
         }
-
-
-        // 保存原始网格的几何数据用于后续clone，然后销毁网格以节省内存
-        const originalMeshData: any[] = [];
-        originalMeshes.forEach(mesh => {
-          if (!mesh.isDisposed()) {
-            const metadata = mesh.metadata || {};
-
-            // 提取网格的几何数据用于后续clone，确保完整保留GUID和材质信息
-            const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-            const normals = mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind);
-            const indices = mesh.getIndices();
+        
+        meshDataArray.forEach(meshData => {
+          if (meshData.vertexData && meshData.metadata) {
+            // 从VertexData提取positions、normals、indices
+            const positions = meshData.vertexData.positions;
+            const normals = meshData.vertexData.normals;
+            const indices = meshData.vertexData.indices;
 
             // 确保几何数据存在且有效
             if (positions && positions.length > 0 && indices && indices.length > 0) {
-              const meshData = {
+              const data = {
                 positions: positions,
-                normals: normals,
+                normals: normals || new Float32Array(positions.length), // 如果没有法线，创建默认法线
                 indices: indices,
                 metadata: {
-                  ...mesh.metadata, // 完整保留所有元数据，包括GUID
-                  originalExpressID: metadata.originalExpressID,
-                  originalGuid: metadata.originalGuid,
-                  instanceIndex: metadata.instanceIndex,
-                  colorID: metadata.colorID, // 确保保留材质ID
+                  ...meshData.metadata, // 完整保留所有元数据，包括GUID
+                  originalExpressID: meshData.metadata.ifcExpressID || meshData.metadata.originalExpressID,
+                  originalGuid: meshData.metadata.guid || meshData.metadata.originalGuid,
+                  geometryExpressID: meshData.metadata.geometryExpressID,
+                  globalId: meshData.metadata.globalId,
+                  color: meshData.metadata.color,
+                  transformation: meshData.metadata.transformation
                 },
-                transformMatrix: mesh.getWorldMatrix().clone(),
-                material: mesh.material
+                transformMatrix: BABYLON.Matrix.Identity(), // 变换已经预应用到顶点数据中
+                material: materialCache.get(colorID)
               };
-              originalMeshData.push(meshData);
+              originalMeshData.push(data);
             } else {
-              console.warn(`网格 ${mesh.name} 的几何数据无效，跳过保存`);
+              console.warn(`几何数据无效，跳过保存`);
             }
-
-            // 销毁原始网格以节省内存
-            mesh.dispose();
           }
         });
 
@@ -250,8 +267,8 @@ export function mergeMeshesByMaterial(materialsMap: Map<number, BABYLON.Mesh[]>,
           originalMeshData: originalMeshData, // 保留原始网格的几何数据
           mergedGeometryCount: geometries.length,
           // 确保合并网格本身也有正确的ID信息
-          originalExpressID: firstOriginalMesh?.metadata?.originalExpressID,
-          originalGuid: firstOriginalMesh?.metadata?.originalGuid,
+          originalExpressID: firstOriginalData?.metadata?.originalExpressID,
+          originalGuid: firstOriginalData?.metadata?.originalGuid,
           // 子网格操作功能
           hideSubMesh: createHideSubMeshFunction(mergedMesh, originalMeshData),
           restoreSubMesh: createRestoreSubMeshFunction(mergedMesh, originalMeshData)
@@ -273,39 +290,42 @@ export function mergeMeshesByMaterial(materialsMap: Map<number, BABYLON.Mesh[]>,
         });
       }
     } else if (geometries.length === 1) {
-      // 单个几何体，不需要合并，直接使用原始网格
-      const originalMeshes = originalMeshesByMaterial.get(colorID) || [];
-      if (originalMeshes.length > 0) {
-        const mesh = originalMeshes[0];
-        if (mesh && !mesh.isDisposed()) {
+      // 单个几何体，直接创建网格
+      const meshDataArray = originalMeshesByMaterial.get(colorID) || [];
+      if (meshDataArray.length > 0) {
+        const meshData = meshDataArray[0];
+        const vertexData = meshData.vertexData;
+        
+        if (vertexData) {
+          // 创建单个网格
+          const mesh = new BABYLON.Mesh(`single_material_${colorID}`, scene);
+          vertexData.applyToMesh(mesh);
+          mesh.material = materialCache.get(colorID);
+          mesh.parent = model;
           mesh.isVisible = true;
 
-          // 为单个网格也添加子网格操作功能
-          if (mesh.metadata) {
-            // 保存原始网格的几何数据
-            const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-            const normals = mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind);
-            const indices = mesh.getIndices();
+          // 设置网格ID和元数据
+          if (meshData.metadata) {
+            mesh.id = meshData.metadata.originalExpressID || 0;
+            mesh.name = meshData.metadata.guid || 'unnamed';
+            
+            // 保存几何数据用于子网格操作
+            const originalMeshData = [{
+              positions: vertexData.positions || new Float32Array(0),
+              normals: vertexData.normals || new Float32Array(0),
+              indices: vertexData.indices || new Uint32Array(0),
+              metadata: { ...meshData.metadata },
+              transformMatrix: BABYLON.Matrix.Identity(),
+              material: mesh.material
+            }];
 
-            if (positions && positions.length > 0 && indices && indices.length > 0) {
-              const originalMeshData = [{
-                positions: positions,
-                normals: normals,
-                indices: indices,
-                metadata: { ...mesh.metadata },
-                isVisible: true,
-                material: mesh.material,
-              }];
-
-              // 更新网格的元数据，添加子网格操作功能
-              mesh.metadata = {
-                ...mesh.metadata,
-                isMergedMesh: false, // 标记为未合并的网格
-                originalMeshData: originalMeshData,
-                hideSubMesh: createHideSubMeshFunction(mesh, originalMeshData),
-                restoreSubMesh: createRestoreSubMeshFunction(mesh, originalMeshData)
-              };
-            }
+            mesh.metadata = {
+              ...meshData.metadata,
+              isMergedMesh: true,
+              originalMeshData: originalMeshData,
+              hideSubMesh: createHideSubMeshFunction(mesh, originalMeshData),
+              restoreSubMesh: createRestoreSubMeshFunction(mesh, originalMeshData)
+            };
           }
 
           mergedMeshes.push(mesh);

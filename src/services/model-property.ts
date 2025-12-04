@@ -327,7 +327,12 @@ export class IfcPropertyUtils {
       if (psetRelations && psetLines) {
         for (let i = 0; i < psetRelations.length; i++) {
           if (psetRelations[i].includes(Number(processedExpressID))) {
-            psetIds.push(psetLines.get(i))
+            // 兼容数组和Vector对象
+            if (Array.isArray(psetLines)) {
+              psetIds.push(psetLines[i])
+            } else if (psetLines.get) {
+              psetIds.push(psetLines.get(i))
+            }
           }
         }
       }

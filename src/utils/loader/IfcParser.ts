@@ -129,10 +129,10 @@ export class IfcParser {
     }
 
 
-    await this.readAllGeometries();
-    this.getAllElementCategories(model.modelID);
-    this.generateModelData(model);
-    this.groupByEntityType(model);
+    // await this.readAllGeometries();
+    // this.getAllElementCategories(model.modelID);
+    // this.generateModelData(model);
+    // this.groupByEntityType(model);
 
     // 直接在主线程中处理属性
     const result = await this.getModelProperties(model.modelID);
@@ -145,7 +145,7 @@ export class IfcParser {
     const spatialTree = getSpatialTree({
       expandedIds: [],
       properties: model.properties,
-      entities: [...Object.keys(model._groupSystems.entities), "IFCPROJECT", "IFCBUILDING", "IFCBUILDINGSTOREY"]
+      entities: [ "IFCPROJECT", "IFCBUILDING", "IFCBUILDINGSTOREY"]
     })
 
     return {
@@ -255,6 +255,7 @@ export class IfcParser {
    * @returns 包含所有非几何元素属性的对象
    */
   async getModelProperties(modelID: number): Promise<IfcProperties> {
+    console.log(`开始获取模型属性，模型ID: ${modelID}`);
     const psetLines = this.webIfc.GetLineIDsWithType(
       modelID as number,
       WEBIFC.IFCRELDEFINESBYPROPERTIES
