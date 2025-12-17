@@ -876,8 +876,9 @@ export class SceneManager {
     if (!this.scene) return;
 
     const fileName = this.modelStore.file?.name ?? "untitled";
-    const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.') || fileName;
-    const exportFileName = `${fileNameWithoutExtension}.${type}`;
+    const fileNameWithoutExtension = fileName.split('.')[0] || fileName;
+    const fileNameWithExt = fileName.split('.').slice(0, -1).join('.') || fileName;
+    const exportFileName = `${fileNameWithExt}.${type}`;
 
     const saveDialogConfig = {
       title: `请选择 ${type} 文件导出路径`,

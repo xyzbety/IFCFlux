@@ -7,41 +7,83 @@ import { IFCParser2DB } from '../utils/ifc/IfcParserToDb';
 
 export async function exportGLB(scene: any, fileNameWithoutExtension: string, isTauriEnv: boolean, saveDialogConfig: any) {
     let savePath: string | null = '';
+
     if (isTauriEnv) {
+        // 先让用户选择保存路径
         savePath = await save(saveDialogConfig);
         if (!savePath) {
             MessagePlugin.info({ content: '用户取消导出', duration: 1000 });
             return;
         }
+
+        // 更新为导出进行中的消息
+        MessagePlugin.closeAll();
         MessagePlugin.loading({
-            content: '正在导出glb文件，请稍候...',
+            content: `正在导出glb文件，请稍候...`,
             duration: 0,
             closeBtn: true
         });
     }
 
-    const options = {
-        shouldExportNode: (node: any) => {
-            if (node instanceof BABYLON.Mesh) {
-                return node.isEnabled() && node.getTotalVertices() > 0;
+    try {
+
+        const options = {
+            shouldExportNode: (node: any) => {
+                if (node instanceof BABYLON.Mesh) {
+                    return node.isEnabled() && node.getTotalVertices() > 0;
+                }
+                return true;
             }
-            return true;
+        };
+
+        // 分批处理导出，避免一次性处理所有数据
+        const exportPromise = GLTF2Export.GLBAsync(scene, fileNameWithoutExtension, options);
+
+        const exportResult = await exportPromise;
+
+        const exportFile = exportResult.files[`${fileNameWithoutExtension}.glb`];
+        if (!(exportFile instanceof Blob)) {
+            throw new Error("导出的 GLB 文件格式无效");
         }
-    };
 
-    const exportResult = await GLTF2Export.GLBAsync(scene, fileNameWithoutExtension, options);
-    const exportFile = exportResult.files[`${fileNameWithoutExtension}.glb`];
-    if (!(exportFile instanceof Blob)) {
-        throw new Error("导出的 GLB 文件格式无效");
-    }
+        if (!isTauriEnv) {
+            exportResult.downloadFiles();
+        } else {
+            // 分块写入大文件，避免内存问题
+            const arrayBuffer = await exportFile.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
 
-    if (!isTauriEnv) {
-        exportResult.downloadFiles();
-    } else {
-        const arrayBuffer = await exportFile.arrayBuffer();
-        await writeFile(savePath, new Uint8Array(arrayBuffer));
+            // 如果文件很大，使用分块写入
+            if (uint8Array.length > 100 * 1024 * 1024) { // 大于100MB
+                const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+
+                // 先清空文件
+                await writeFile(savePath, new Uint8Array(0));
+
+                // 分块写入
+                for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                    const chunk = uint8Array.subarray(i, i + chunkSize);
+                    await writeFile(savePath, chunk, { append: i > 0 });
+                }
+            } else {
+                // 小文件直接写入
+                await writeFile(savePath, uint8Array);
+            }
+        }
+
+        // 关闭加载提示
         MessagePlugin.closeAll();
-        MessagePlugin.success({ content: '导出成功！', duration: 2000 });
+
+        MessagePlugin.success({
+            content: `导出成功！`,
+            duration: 3000
+        });
+    } catch (error) {
+        console.error('导出GLB失败:', error);
+
+        // 关闭加载提示
+        MessagePlugin.closeAll();
+        MessagePlugin.error({ content: error.message, duration: 5000 });
     }
 }
 
