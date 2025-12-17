@@ -12,7 +12,7 @@ import { useModelStore, useSceneStore } from '../store';
 import { exportGLB, exportDB, exportJSON } from './model-export';
 import { EffectManager } from './scene-effect';
 import { IfcPropertyUtils } from './model-property';
-import { findClickedSubMesh, collectTransparentMeshData, createMergedTransparentMesh, cleanupTransparentResources,findClosestSubMeshWithFallback } from '../utils/ifc/ifcMeshProcess';
+import { findClickedSubMesh, collectTransparentMeshData, createMergedTransparentMesh, cleanupTransparentResources, findClosestSubMeshWithFallback } from '../utils/ifc/ifcMeshProcess';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -72,7 +72,7 @@ export class SceneManager {
     this.scene.useRightHandedSystem = true;
     this.scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 0);
     this.scene.autoClear = true;
-    this.scene.debugLayer.show();
+    // this.scene.debugLayer.show();
 
     // --- Camera Creation ---
     const canvas = scene.getEngine().getRenderingCanvas();
@@ -123,7 +123,7 @@ export class SceneManager {
           // 检测是否为合并网格，如果是则找到对应的子网格
           const clickedMesh = pointerInfo.pickInfo.pickedMesh;
           const clickedPoint = pointerInfo.pickInfo.pickedPoint;
-          console.log(`点击的网格ID: ${clickedMesh.id}`,clickedMesh);
+          console.log(`点击的网格ID: ${clickedMesh.id}`, clickedMesh);
 
           let targetExpressID = clickedMesh.id;
           let targetMesh = clickedMesh;

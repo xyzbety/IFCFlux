@@ -93,50 +93,32 @@ export class IfcParser {
     this.categories = elementsCategories;
   }
   /**
-   * 加载IFC文件并解析模型数据
-   * @param data IFC文件数据
+   * 带进度回调的模型加载方法
+   * @param onProgress 进度回调函数
+   * @param modelID 模型ID
    * @returns 解析后的模型对象
    */
-  async load(data: Uint8Array | null = null, modelID: number | null = null): Promise<{
+  async loadWithProgress(onProgress: (percent: number) => void, modelID: number): Promise<{
     modelID: number;
     data: Record<number, [number[], number[]]>;
     keyFragments: Record<number, string>;
     _groupSystems: Record<string, any>;
     properties: Record<string, any>;
     psetRelations: number[][];
-    psetLines: WEBIFC.Vector<number>
+    psetLines: WEBIFC.Vector<number>;
+    tree: any;
+    ifcExpressIds: any;
   }> {
-    if (data === null && modelID === null) {
-      throw new Error('Either data or modelID must be provided');
-    }
-    let model: any;
-    if (data) {
-      model = {
-        modelID: await this.readIfcFile(data),
-        data: {},
-        keyFragments: {},
-        _groupSystems: {},
-        properties: {}
-      };
-    } else {
-      model = {
-        modelID: modelID,
-        data: {},
-        keyFragments: {},
-        _groupSystems: {},
-        properties: {}
-      };
-    }
+    const model = {
+      modelID: modelID,
+      data: {},
+      keyFragments: {},
+      _groupSystems: {},
+      properties: {}
+    };
 
-
-    // await this.readAllGeometries();
-    // this.getAllElementCategories(model.modelID);
-    // this.generateModelData(model);
-    // this.groupByEntityType(model);
-
-    // 直接在主线程中处理属性
-    const result = await this.getModelProperties(model.modelID);
-    // console.log('属性处理结果:', result);
+    // 直接在主线程中处理属性，带进度回调
+    const result = await this.getModelPropertiesWithProgress(modelID, onProgress);
     const { properties, psetLines, psetRelations, total } = result;
 
     model.properties = properties;
@@ -145,8 +127,8 @@ export class IfcParser {
     const spatialTree = getSpatialTree({
       expandedIds: [],
       properties: model.properties,
-      entities: [ "IFCPROJECT", "IFCBUILDING", "IFCBUILDINGSTOREY"]
-    })
+      entities: ["IFCPROJECT", "IFCBUILDING", "IFCBUILDINGSTOREY"]
+    });
 
     return {
       modelID: model.modelID,
@@ -159,6 +141,7 @@ export class IfcParser {
       ...spatialTree
     };
   }
+
 
 
   async readIfcFile(data: Uint8Array) {
@@ -249,13 +232,19 @@ export class IfcParser {
    * 
    * @param modelID 
    */
+
   /**
-   * 获取模型属性数据，使用智能并行处理优化大类型性能
+   * 带进度回调的模型属性获取方法
    * @param modelID 模型ID
+   * @param onProgress 进度回调函数
    * @returns 包含所有非几何元素属性的对象
    */
-  async getModelProperties(modelID: number): Promise<IfcProperties> {
+  async getModelPropertiesWithProgress(modelID: number, onProgress: (percent: number) => void): Promise<IfcProperties> {
     console.log(`开始获取模型属性，模型ID: ${modelID}`);
+
+    // 立即更新进度到1%
+    onProgress(1);
+
     const psetLines = this.webIfc.GetLineIDsWithType(
       modelID as number,
       WEBIFC.IFCRELDEFINESBYPROPERTIES
@@ -263,8 +252,14 @@ export class IfcParser {
     const psetRelations = [];
     const properties = {} as { [key: string]: any };
     properties.coordinationMatrix = this.webIfc.GetCoordinationMatrix(modelID);
+
+    // 更新进度到5%
+    onProgress(5);
+
     const types = this.webIfc.GetAllTypesOfModel(modelID);
-    // console.log(`模型类型:`, types);
+
+    // 更新进度到8%
+    onProgress(8);
 
     // 使用流式处理，避免一次性加载所有几何ID
     const geometriesIDs = await this.getAllGeometriesIDs(modelID, this.webIfc);
@@ -274,15 +269,38 @@ export class IfcParser {
       geometriesSet[id] = true;
     }
 
-    // console.log(`找到 ${geometriesIDs.length} 个几何体元素`);
+    // 更新进度到10%
+    onProgress(10);
 
     let totalProcessed = 0;
     const startTime = Date.now();
 
-    // 智能类型处理策略：先处理小类型，大类型采用更优化的并行策略
+    // 计算总非几何元素数量（实际要处理的元素）
+    let totalNonGeometryElements = 0;
     const typeEntries = Object.values(types);
+    for (const type of typeEntries) {
+      const ids = this.webIfc.GetLineIDsWithType(modelID, type.typeID);
+      const idsSize = ids.size();
+      if (idsSize > 0) {
+        // 统计非几何元素数量
+        for (let i = 0; i < idsSize; i++) {
+          const id = ids.get(i);
+          if (!geometriesSet[id]) {
+            totalNonGeometryElements++;
+          }
+        }
+      }
+    }
 
-    // 分析类型大小，区分大小类型
+    console.log(`总元素数量: ${totalNonGeometryElements} (非几何元素)`);
+
+    // 如果没有元素要处理，直接返回
+    if (totalNonGeometryElements === 0) {
+      onProgress(100);
+      return { properties, psetLines, psetRelations, total: 0 };
+    }
+
+    // 智能类型处理策略：先处理小类型，大类型采用更优化的并行策略
     const smallTypes = [];
     const largeTypes = [];
 
@@ -300,13 +318,9 @@ export class IfcParser {
       }
     }
 
-    // console.log(`小类型数量: ${smallTypes.length}, 大类型数量: ${largeTypes.length}`);
-
     // 先并行处理所有小类型
     const smallTypePromises = smallTypes.map(async ({ type, idsSize, ids }) => {
       try {
-        // console.log(`处理小类型 ${type.typeID}: 共 ${idsSize} 个元素`);
-
         // 收集非几何元素ID
         const nonGeometryIds: number[] = [];
         for (let i = 0; i < idsSize; i++) {
@@ -360,14 +374,17 @@ export class IfcParser {
           typeProcessed += successfulCount;
           totalProcessed += successfulCount;
 
-          // 小类型日志频率更高
-          if (typeProcessed % 100 === 0 || i + batchSize >= nonGeometryIds.length) {
-            const elapsed = Date.now() - startTime;
-            // console.log(`小类型 ${type.typeID} 进度: ${typeProcessed}/${nonGeometryIds.length} (总: ${totalProcessed}, 耗时: ${elapsed}ms)`);
+          // 更新进度 - 更频繁地更新，确保进度条平滑
+          if (totalNonGeometryElements > 0) {
+            const progress = Math.min(100, Math.round((totalProcessed / totalNonGeometryElements) * 100));
+            // 确保进度有实际变化才回调，避免频繁无意义的更新
+            onProgress(progress);
+            // console.log(`属性解析进度: ${progress}% (${totalProcessed}/${totalNonGeometryElements})`);
           }
+          // 定期给UI时间更新
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
 
-        // console.log(`小类型 ${type.typeID} 完成: ${typeProcessed} 个属性`);
         return typeProcessed;
 
       } catch (error) {
@@ -385,13 +402,9 @@ export class IfcParser {
       return sum;
     }, 0);
 
-    // console.log(`所有小类型处理完成，共处理 ${smallTypeTotal} 个属性`);
-
     // 优化大类型处理：使用更智能的并行策略
     const largeTypePromises = largeTypes.map(async ({ type, idsSize, ids }) => {
       try {
-        // console.log(`开始处理大类型 ${type.typeID}: 共 ${idsSize} 个元素`);
-
         // 收集非几何元素ID
         const nonGeometryIds: number[] = [];
         for (let i = 0; i < idsSize; i++) {
@@ -404,7 +417,6 @@ export class IfcParser {
         if (nonGeometryIds.length === 0) return 0;
 
         // 对大类型使用更优化的批次策略
-        // 基于元素数量动态调整批次大小和并发数
         const elementCount = nonGeometryIds.length;
         let batchSize = 50; // 默认批次大小
         let concurrency = 5; // 默认并发数
@@ -416,8 +428,6 @@ export class IfcParser {
           batchSize = 75;
           concurrency = 4;
         }
-
-        // console.log(`大类型 ${type.typeID} 配置: 批次大小=${batchSize}, 并发数=${concurrency}`);
 
         let typeProcessed = 0;
         let batchIndex = 0;
@@ -435,7 +445,7 @@ export class IfcParser {
           }
 
           // 并行处理当前批次组
-          const batchGroupPromises = currentBatch.map(async (batchIds, index) => {
+          const batchGroupPromises = currentBatch.map(async (batchIds) => {
             const batchPromises = batchIds.map(async (id) => {
               try {
                 const props = await this.webIfc.GetLine(modelID, id);
@@ -478,20 +488,18 @@ export class IfcParser {
           typeProcessed += successfulCount;
           totalProcessed += successfulCount;
 
-          // 大类型进度报告更频繁
-          const progress = Math.round((typeProcessed / nonGeometryIds.length) * 100);
-          const elapsed = Date.now() - startTime;
-          const estimatedRemaining = elapsed / (typeProcessed / nonGeometryIds.length) - elapsed;
-
-          // console.log(`大类型 ${type.typeID} 进度: ${typeProcessed}/${nonGeometryIds.length} (${progress}%), 耗时: ${elapsed}ms, 预计剩余: ${Math.round(estimatedRemaining / 1000)}s`);
-
-          // 定期给GC时间，避免内存堆积
-          if (typeProcessed % 1000 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 10));
+          // 更新进度 - 更频繁地更新，确保进度条平滑
+          if (totalNonGeometryElements > 0) {
+            const progress = Math.min(100, Math.round((totalProcessed / totalNonGeometryElements) * 100));
+            // 确保进度有实际变化才回调，避免频繁无意义的更新
+            onProgress(progress);
+            console.log(`属性解析进度: ${progress}% (${totalProcessed}/${totalNonGeometryElements})`);
           }
+
+          // 定期给UI时间更新
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
 
-        // console.log(`大类型 ${type.typeID} 完成: ${typeProcessed} 个属性`);
         return typeProcessed;
 
       } catch (error) {
@@ -512,26 +520,14 @@ export class IfcParser {
     const totalTime = Date.now() - startTime;
     console.log(`属性获取完成，小类型: ${smallTypeTotal} 个, 大类型: ${largeTypeTotal} 个, 总耗时: ${totalTime}ms`);
 
-    return { properties, psetLines, psetRelations };
+    return { properties, psetLines, psetRelations, total: totalNonGeometryElements };
   }
 
 
-
   /**
-   * 保存元素ID到片段键的映射关系
-   * @param expressID 元素ID
-   */
-  private saveElementToFragmentMapping(expressID: string): void {
-    if (!this.elementToFragmentKeysMap[expressID]) {
-      this.elementToFragmentKeysMap[expressID] = [];
-    }
-    this.elementToFragmentKeysMap[expressID].push(this.fragmentKeyCounter);
-  }
-
-  /**
-   * 生成模型数据结构
-   * @param model 模型对象
-   */
+    * 生成模型数据结构
+    * @param model 模型对象
+    */
   private async generateModelData(model: {
     data: Record<number, [number[], number[]]>;
     keyFragments: Record<number, string>;
@@ -578,6 +574,17 @@ export class IfcParser {
     // model.keyFragments = this.fragmentKeyToIdMap;
 
   }
+  /**
+   * 保存元素ID到片段键的映射关系
+   * @param expressID 元素ID
+   */
+  private saveElementToFragmentMapping(expressID: string): void {
+    if (!this.elementToFragmentKeysMap[expressID]) {
+      this.elementToFragmentKeysMap[expressID] = [];
+    }
+    this.elementToFragmentKeysMap[expressID].push(this.fragmentKeyCounter);
+  }
+
   private async readAllGeometries() {
 
 

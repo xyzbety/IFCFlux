@@ -473,14 +473,14 @@ export class IfcPropertyUtils {
       const { scene, isFocus } = meshConfig;
       const result = this.findAllChildExpressIds(treeData ?? [], expressID);
       result.push(String(expressID));
-      // const isRootNode = treeData && treeData.length > 0 ? this.isRootNode(treeData[0], expressID) : false;
-      // if (isRootNode) {
-      //   if (!this.effectManager) {
-      //     this.effectManager = EffectManager.getInstance(scene);
-      //   }
-      //   this.effectManager.applyHighlight(scene.meshes)
-      //   return;
-      // }
+      const isRootNode = treeData && treeData.length > 0 ? this.isRootNode(treeData[0], expressID) : false;
+      if (isRootNode) {
+        if (!this.effectManager) {
+          this.effectManager = EffectManager.getInstance(scene);
+        }
+        this.effectManager.applyHighlight(scene.meshes)
+        return;
+      }
       const expressIdSet = this.processYourData(new Set(result));
 
       // 收集所有匹配的网格数据
@@ -501,23 +501,77 @@ export class IfcPropertyUtils {
         this.effectManager = EffectManager.getInstance(scene);
       }
       console.log('匹配的网格数据列表:', meshDataList);
+      
       if (meshDataList.length > 0) {
-        // 直接从数据创建合并的网格（按材质分组）
-        mergedHighlightMeshes = this.createMergedHighlightMesh(meshDataList, scene, expressID);
+        // 创建需要高亮的expressID集合
+        const targetExpressIds = new Set<string>();
+        meshDataList.forEach(item => {
+          if (item.metadata && item.metadata.originalExpressID) {
+            targetExpressIds.add(item.metadata.originalExpressID);
+          }
+        });
         
+        // 检查场景中是否存在匹配的合并网格
+        let existingMergedMeshes: BABYLON.Mesh[] = [];
+        let needCreateNewMesh = true;
+        
+        // 遍历场景中的所有网格，查找已存在的合并网格
+        scene.meshes.forEach(mesh => {
+          // 跳过特殊网格和高亮网格
+          if (this.isSpecialMesh(mesh.id) || mesh.metadata?.isHighlightMesh) {
+            return;
+          }
+          
+          // 只检查合并网格
+          if (mesh.metadata?.isMergedMesh && mesh.metadata?.originalMeshData) {
+            const meshExpressIds = new Set<string>();
+            let allMeshDataIncluded = true;
+            
+            // 收集当前合并网格的所有expressID
+            mesh.metadata.originalMeshData.forEach((item: any) => {
+              if (item.metadata && item.metadata.originalExpressID) {
+                meshExpressIds.add(item.metadata.originalExpressID);
+              }
+            });
+            
+            // 检查是否所有需要高亮的expressID都包含在当前合并网格中
+            for (const expressId of targetExpressIds) {
+              if (!meshExpressIds.has(expressId)) {
+                allMeshDataIncluded = false;
+                break;
+              }
+            }
+            
+            // 如果当前合并网格包含所有需要高亮的expressID，且没有多余的内容
+            if (allMeshDataIncluded && meshExpressIds.size === targetExpressIds.size) {
+              existingMergedMeshes.push(mesh);
+              needCreateNewMesh = false;
+            }
+          }
+        });
+        
+        // 如果不需要创建新网格，直接使用现有网格
+        if (!needCreateNewMesh && existingMergedMeshes.length > 0) {
+          console.log('使用已存在的合并网格进行高亮:', existingMergedMeshes);
+          mergedHighlightMeshes = existingMergedMeshes;
+        } else {
+          // 创建新的合并网格
+          mergedHighlightMeshes = this.createMergedHighlightMesh(meshDataList, scene, expressID);
+        }
+
         // 将合并后的网格添加到效果管理器
         mergedHighlightMeshes.forEach(mergedMesh => {
           this.effectManager!.simpleTarget?.renderList?.push(mergedMesh);
           this.effectManager!.simpleTarget.setMaterialForRendering(mergedMesh, mergedMesh.material);
         });
-        
+
         this.effectManager.applyHighlight(mergedHighlightMeshes);
-        
+
         // 自动聚焦（使用所有合并网格的包围盒）
         if (isFocus && mergedHighlightMeshes.length > 0) {
           try {
             let combinedBoundingBox: BABYLON.BoundingBox | null = null;
-            
+
             mergedHighlightMeshes.forEach(mesh => {
               const meshBoundingBox = mesh.getBoundingInfo().boundingBox;
               if (!combinedBoundingBox) {
@@ -526,7 +580,7 @@ export class IfcPropertyUtils {
                 combinedBoundingBox = combinedBoundingBox.merge(meshBoundingBox);
               }
             });
-            
+
             if (combinedBoundingBox) {
               const arcRotateCamera = scene.activeCamera as BABYLON.ArcRotateCamera;
               arcRotateCamera.setTarget(combinedBoundingBox.center);
@@ -558,7 +612,7 @@ export class IfcPropertyUtils {
   private createMergedHighlightMesh(meshDataList: any[], scene: BABYLON.Scene, expressID: string): BABYLON.Mesh[] {
     // 按材质分组
     const materialGroups = new Map<string, any[]>();
-    
+
     meshDataList.forEach((meshData) => {
       if (meshData.positions && meshData.indices) {
         const materialKey = meshData.material?.id || 'default';

@@ -68,12 +68,12 @@ export class ModelManager {
         this.updateProgress(0, "打开文件");
         const ifcLoader = new IfcLoader(file, this.scene);
 
-        const onProgressCallback = (progress: number, text: string, current?: number, total?: number) => {
-          this.updateProgress(progress, text, current, total);
+        const onProgressCallback = (progress: number, text: string) => {
+          this.updateProgress(progress, text);
         };
 
         await ifcLoader.load(onProgressCallback);
-        console.log("IFC模型加载完成,模型数据为", ifcLoader); 
+        console.log("IFC模型加载完成,模型数据为", ifcLoader);
         this.modelStore.setModel(file, {
           tree: ifcLoader.ifcTree,
           properties: ifcLoader.properties,
