@@ -1,5 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 
+
 /* 几何简化算法（基于顶点合并）
      * @param positions 原始顶点位置
      * @param normals 原始法线
@@ -11,7 +12,21 @@ export function simplifyGeometry(
   indices: Uint32Array
 ): { positions: Float32Array; normals: Float32Array; indices: Uint32Array } {
   const tolerance = 0.01; // 合并容差
-  const vertexCount = positions.length / 3;
+  const originalVertexCount = positions.length / 3;
+  const originalTriangleCount = indices.length / 3;
+
+  // 设置简化阈值：只有当顶点数量超过1000时才进行简化
+  const SIMPLIFY_THRESHOLD = 1000;
+
+  if (originalVertexCount <= SIMPLIFY_THRESHOLD) {
+    // 顶点数量较少，直接返回原始数据
+    console.log(`几何简化跳过：顶点数量 ${originalVertexCount} 低于阈值 ${SIMPLIFY_THRESHOLD}，保持原样`);
+    return {
+      positions: positions,
+      normals: normals,
+      indices: indices
+    };
+  }
 
   // 创建顶点映射表
   const vertexMap = new Map<string, number>();
@@ -19,7 +34,7 @@ export function simplifyGeometry(
   const newNormals: number[] = [];
 
   // 合并相近顶点
-  for (let i = 0; i < vertexCount; i++) {
+  for (let i = 0; i < originalVertexCount; i++) {
     const x = positions[i * 3];
     const y = positions[i * 3 + 1];
     const z = positions[i * 3 + 2];
@@ -63,6 +78,13 @@ export function simplifyGeometry(
     }
   }
 
+  const simplifiedVertexCount = newPositions.length / 3;
+
+  // 计算简化率
+  const vertexReduction = ((originalVertexCount - simplifiedVertexCount) / originalVertexCount * 100).toFixed(2);
+
+  console.log(`几何简化结果：顶点 ${originalVertexCount} → ${simplifiedVertexCount} (减少${vertexReduction}%)`);
+
   return {
     positions: new Float32Array(newPositions),
     normals: new Float32Array(newNormals),
@@ -81,9 +103,9 @@ export async function mergeMeshesByMaterial(
   model: BABYLON.Mesh,
   onProgress?: (percent: number, message: string, loaded: number, total: number) => void
 ): Promise<void> {
-  // 创建按材质分组的几何体映射表（类似Three.js的geometriesByMaterials）
-  const geometriesByMaterials = new Map<number, BABYLON.VertexData[]>();
-  const originalMeshesByMaterial = new Map<number, BABYLON.Mesh[]>();
+  // 创建按材质分组的几何体映射表（使用新的数据结构）
+  const geometriesByMaterials = new Map<number, any[]>();
+  const originalMeshesByMaterial = new Map<number, any[]>();
 
   // 第一步：收集所有几何数据，按材质分组
   const totalMaterials = materialsMap.size;
@@ -92,39 +114,30 @@ export async function mergeMeshesByMaterial(
   // 使用 for...of 循环替代 forEach，以便在异步函数中使用 await
   for (const [colorID, dataArray] of materialsMap) {
     if (dataArray.length > 0) {
-      const geometries: BABYLON.VertexData[] = [];
+      const geometries: any[] = [];
       const originalMeshData: any[] = [];
 
       // 检查数据类型并处理
       for (const data of dataArray) {
         if (data) {
-          let vertexData: BABYLON.VertexData | null = null;
+          let geometryData: any = null;
           let metadata: any = null;
 
-          // 如果是Mesh对象（兼容旧版本）
-          if (data instanceof BABYLON.Mesh) {
-            const mesh = data as BABYLON.Mesh;
-            if (!mesh.isDisposed()) {
-              vertexData = BABYLON.VertexData.ExtractFromMesh(mesh);
-              metadata = mesh.metadata || {};
-              originalMeshData.push({
-                vertexData: vertexData,
-                metadata: metadata
-              });
-            }
-          }
-          // 如果是新的IMergeGeometryData结构
-          else if (data.vertexData && data.material && data.metadata) {
-            vertexData = data.vertexData;
+          if (data.positions && data.indices && data.material && data.metadata) {
+            geometryData = {
+              positions: data.positions,
+              normals: data.normals,
+              indices: data.indices
+            };
             metadata = data.metadata;
             originalMeshData.push({
-              vertexData: vertexData,
+              geometryData: geometryData,
               metadata: metadata
             });
           }
 
-          if (vertexData) {
-            geometries.push(vertexData);
+          if (geometryData) {
+            geometries.push(geometryData);
           }
         }
       }
@@ -138,12 +151,12 @@ export async function mergeMeshesByMaterial(
     // 更新收集阶段的进度（收集阶段占总进度的30%）
     processedMaterials++;
     if (onProgress) {
-      const collectProgress = 85 + (processedMaterials / totalMaterials) * 3; // 85%-88%
+      const collectProgress = 80 + (processedMaterials / totalMaterials) * 3; // 80%-83%
       onProgress(collectProgress, "正在收集网格数据...", Math.floor(collectProgress), 100);
       console.log(`合并网格阶段 - 收集进度: ${processedMaterials}/${totalMaterials} -> ${collectProgress}%`);
 
       // 添加微小延迟，让进度条有足够时间显示
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
 
@@ -164,86 +177,71 @@ export async function mergeMeshesByMaterial(
         let totalNormals = 0;
         let totalIndices = 0;
 
-        for (const vertexData of geometries) {
-          if (vertexData.positions) {
-            totalPositions += vertexData.positions.length;
+        // 使用简化后的几何体进行合并，确保渲染和子网格操作的一致性
+        const simplifiedGeometries: any[] = [];
+
+        for (const geometryData of geometries) {
+          // 应用几何简化算法
+          const simplified = simplifyGeometry(
+            geometryData.positions,
+            geometryData.normals || new Float32Array(geometryData.positions.length),
+            geometryData.indices
+          );
+          simplifiedGeometries.push(simplified);
+
+          // 累计总大小
+          if (geometryData.positions) {
+            totalPositions += geometryData.positions.length;
           }
-          if (vertexData.normals) {
-            totalNormals += vertexData.normals.length;
+          if (geometryData.normals) {
+            totalNormals += geometryData.normals.length;
           }
-          if (vertexData.indices) {
-            totalIndices += vertexData.indices.length;
+          if (geometryData.indices) {
+            totalIndices += geometryData.indices.length;
           }
         }
 
-        // 预分配数组
-        const positions: number[] = new Array(totalPositions);
-        const normals: number[] = new Array(totalNormals);
-        const indices: number[] = new Array(totalIndices);
+        // 预分配数组 - 优化：使用TypedArray提高性能
+        const positions: Float32Array = new Float32Array(totalPositions);
+        const normals: Float32Array = new Float32Array(totalNormals);
+        const indices: Uint32Array = new Uint32Array(totalIndices);
 
         let positionIndex = 0;
         let normalIndex = 0;
         let indexIndex = 0;
         let vertexOffset = 0;
 
-        for (const vertexData of geometries) {
-          // 对几何体进行简化处理
-          let simplifiedVertexData = vertexData;
-          
-          if (vertexData.positions && vertexData.normals && vertexData.indices) {
-            // 检查是否需要简化（顶点数量超过阈值）
-            const vertexCount = vertexData.positions.length / 3;
-            if (vertexCount > 1000) {
-              try {
-                const simplified = simplifyGeometry(
-                  new Float32Array(vertexData.positions),
-                  new Float32Array(vertexData.normals),
-                  new Uint32Array(vertexData.indices)
-                );
-                
-                simplifiedVertexData = new BABYLON.VertexData();
-                simplifiedVertexData.positions = Array.from(simplified.positions);
-                simplifiedVertexData.normals = Array.from(simplified.normals);
-                simplifiedVertexData.indices = Array.from(simplified.indices);
-                
-                console.log(`几何体简化: ${vertexCount} -> ${simplified.positions.length / 3} 个顶点`);
-              } catch (error) {
-                console.warn('几何体简化失败，使用原始数据:', error);
-              }
-            }
+        // 优化：使用更高效的数据复制方式
+        for (const simplifiedGeometry of simplifiedGeometries) {
+          // 使用set方法批量复制数组数据，比循环更快
+          if (simplifiedGeometry.positions) {
+            positions.set(simplifiedGeometry.positions, positionIndex);
+            positionIndex += simplifiedGeometry.positions.length;
           }
 
-          // 添加位置数据（使用循环而不是展开运算符）
-          if (simplifiedVertexData.positions) {
-            for (let i = 0; i < simplifiedVertexData.positions.length; i++) {
-              positions[positionIndex++] = simplifiedVertexData.positions[i];
-            }
+          if (simplifiedGeometry.normals) {
+            normals.set(simplifiedGeometry.normals, normalIndex);
+            normalIndex += simplifiedGeometry.normals.length;
           }
 
-          // 添加法线数据（使用循环而不是展开运算符）
-          if (simplifiedVertexData.normals) {
-            for (let i = 0; i < simplifiedVertexData.normals.length; i++) {
-              normals[normalIndex++] = simplifiedVertexData.normals[i];
-            }
-          }
-
-          // 添加索引数据（需要偏移）
-          if (simplifiedVertexData.indices) {
-            for (let i = 0; i < simplifiedVertexData.indices.length; i++) {
-              indices[indexIndex++] = simplifiedVertexData.indices[i] + vertexOffset;
+          // 索引需要偏移，使用循环处理
+          if (simplifiedGeometry.indices) {
+            const indicesArray = simplifiedGeometry.indices;
+            for (let i = 0; i < indicesArray.length; i++) {
+              indices[indexIndex++] = indicesArray[i] + vertexOffset;
             }
           }
 
           // 更新顶点偏移量
-          if (simplifiedVertexData.positions) {
-            vertexOffset += simplifiedVertexData.positions.length / 3;
+          if (simplifiedGeometry.positions) {
+            vertexOffset += simplifiedGeometry.positions.length / 3;
           }
         }
 
         // 设置合并后的顶点数据
-        mergedVertexData.positions = positions;
-        mergedVertexData.normals = normals;
-        mergedVertexData.indices = indices;
+        mergedVertexData.positions = Array.from(positions);
+        mergedVertexData.normals = Array.from(normals);
+        mergedVertexData.indices = Array.from(indices);
 
         // 创建合并后的网格
         const mergedMesh = new BABYLON.Mesh(`merged_material_${colorID}`, scene);
@@ -278,11 +276,16 @@ export async function mergeMeshesByMaterial(
         }
 
         for (const meshData of meshDataArray) {
-          if (meshData.vertexData && meshData.metadata) {
-            // 从VertexData提取positions、normals、indices
-            const positions = meshData.vertexData.positions;
-            const normals = meshData.vertexData.normals;
-            const indices = meshData.vertexData.indices;
+          if (meshData.geometryData && meshData.metadata) {
+            // 使用简化后的几何数据，确保与渲染数据一致
+            const simplified = simplifyGeometry(
+              meshData.geometryData.positions,
+              meshData.geometryData.normals || new Float32Array(meshData.geometryData.positions.length),
+              meshData.geometryData.indices
+            );
+            const positions = simplified.positions;
+            const normals = simplified.normals;
+            const indices = simplified.indices;
 
             // 确保几何数据存在且有效
             if (positions && positions.length > 0 && indices && indices.length > 0) {
@@ -343,32 +346,21 @@ export async function mergeMeshesByMaterial(
       const meshDataArray = originalMeshesByMaterial.get(colorID) || [];
       if (meshDataArray.length > 0) {
         const meshData = meshDataArray[0];
-        let vertexData = meshData.vertexData;
+        let geometryData = meshData.geometryData;
 
-        if (vertexData) {
-          // 对单个几何体进行简化处理
-          if (vertexData.positions && vertexData.normals && vertexData.indices) {
-            const vertexCount = vertexData.positions.length / 3;
-            if (vertexCount > 1000) {
-              try {
-                const simplified = simplifyGeometry(
-                  new Float32Array(vertexData.positions),
-                  new Float32Array(vertexData.normals),
-                  new Uint32Array(vertexData.indices)
-                );
-                
-                const simplifiedVertexData = new BABYLON.VertexData();
-                simplifiedVertexData.positions = Array.from(simplified.positions);
-                simplifiedVertexData.normals = Array.from(simplified.normals);
-                simplifiedVertexData.indices = Array.from(simplified.indices);
-                
-                vertexData = simplifiedVertexData;
-                console.log(`单个几何体简化: ${vertexCount} -> ${simplified.positions.length / 3} 个顶点`);
-              } catch (error) {
-                console.warn('单个几何体简化失败，使用原始数据:', error);
-              }
-            }
-          }
+        if (geometryData) {
+          // 使用简化后的几何体，确保渲染和子网格操作的一致性
+          const simplified = simplifyGeometry(
+            geometryData.positions,
+            geometryData.normals || new Float32Array(geometryData.positions.length),
+            geometryData.indices
+          );
+
+          // 创建顶点数据并应用到网格 - 优化：直接使用TypedArray
+          const vertexData = new BABYLON.VertexData();
+          vertexData.positions = simplified.positions;
+          vertexData.normals = simplified.normals;
+          vertexData.indices = simplified.indices;
 
           // 创建单个网格
           const mesh = new BABYLON.Mesh(`single_material_${colorID}`, scene);
@@ -382,11 +374,11 @@ export async function mergeMeshesByMaterial(
             mesh.id = meshData.metadata.originalExpressID || 0;
             mesh.name = meshData.metadata.guid || 'unnamed';
 
-            // 保存几何数据用于子网格操作
+            // 保存几何数据用于子网格操作（使用简化后的数据）
             const originalMeshData = [{
-              positions: vertexData.positions || new Float32Array(0),
-              normals: vertexData.normals || new Float32Array(0),
-              indices: vertexData.indices || new Uint32Array(0),
+              positions: simplified.positions,
+              normals: simplified.normals,
+              indices: simplified.indices,
               metadata: { ...meshData.metadata },
               transformMatrix: BABYLON.Matrix.Identity(),
               material: mesh.material
@@ -406,15 +398,15 @@ export async function mergeMeshesByMaterial(
       }
     }
 
-    // 更新合并阶段的进度（合并阶段占总进度的60%）
+    // 更新合并阶段的进度（合并阶段占总进度的16%）
     processedMergeGroups++;
     if (onProgress) {
-      const mergeProgress = 88 + (processedMergeGroups / totalMergeGroups) * 7; // 88%-94%
+      const mergeProgress = 83 + (processedMergeGroups / totalMergeGroups) * 16; // 83%-99%
       onProgress(mergeProgress, "正在合并网格...", Math.floor(mergeProgress), 100);
       console.log(`合并网格阶段 - 合并进度: ${processedMergeGroups}/${totalMergeGroups} -> ${mergeProgress}%`);
 
       // 添加微小延迟，让进度条有足够时间显示
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
 
@@ -432,6 +424,11 @@ export async function mergeMeshesByMaterial(
     materialsMap.get(colorID)!.push(mesh);
   });
 
+  if (onProgress) {
+    onProgress(100, "加载完成！", 100, 100);
+    // 让加载完成的文字显示足够时间
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
   console.log(`网格合并完成，共创建了 ${mergedMeshes.length} 个合并后的网格，保留了所有原始子网格`);
 }
 
@@ -746,7 +743,7 @@ export function findClickedSubMesh(mergedMesh: BABYLON.AbstractMesh, clickedPoin
   const originalMeshData = metadata.originalMeshData || [];
 
   if (originalMeshData.length === 0) {
-    console.warn('合并网格中没有保存子网格数据');
+    console.warn('合并网格中没有保存子网格数据，网格ID:', mergedMesh.id, '网格名称:', mergedMesh.name);
     return null;
   }
 

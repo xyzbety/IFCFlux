@@ -234,16 +234,13 @@ export class IfcParser {
    */
 
   /**
-   * 带进度回调的模型属性获取方法
+   * 带进度回调的模型属性获取方法（性能优化版）
    * @param modelID 模型ID
    * @param onProgress 进度回调函数
    * @returns 包含所有非几何元素属性的对象
    */
   async getModelPropertiesWithProgress(modelID: number, onProgress: (percent: number) => void): Promise<IfcProperties> {
     console.log(`开始获取模型属性，模型ID: ${modelID}`);
-
-    // 立即更新进度到1%
-    onProgress(1);
 
     const psetLines = this.webIfc.GetLineIDsWithType(
       modelID as number,
@@ -253,13 +250,7 @@ export class IfcParser {
     const properties = {} as { [key: string]: any };
     properties.coordinationMatrix = this.webIfc.GetCoordinationMatrix(modelID);
 
-    // 更新进度到5%
-    onProgress(5);
-
     const types = this.webIfc.GetAllTypesOfModel(modelID);
-
-    // 更新进度到8%
-    onProgress(8);
 
     // 使用流式处理，避免一次性加载所有几何ID
     const geometriesIDs = await this.getAllGeometriesIDs(modelID, this.webIfc);
@@ -269,26 +260,39 @@ export class IfcParser {
       geometriesSet[id] = true;
     }
 
-    // 更新进度到10%
-    onProgress(10);
-
     let totalProcessed = 0;
     const startTime = Date.now();
 
-    // 计算总非几何元素数量（实际要处理的元素）
+    // 智能类型处理策略：先处理小类型，大类型采用更优化的并行策略
+    const smallTypes = [];
+    const largeTypes = [];
+
+    // 计算总非几何元素数量（实际要处理的元素）- 优化版：避免重复遍历
     let totalNonGeometryElements = 0;
     const typeEntries = Object.values(types);
+
     for (const type of typeEntries) {
       const ids = this.webIfc.GetLineIDsWithType(modelID, type.typeID);
       const idsSize = ids.size();
-      if (idsSize > 0) {
-        // 统计非几何元素数量
-        for (let i = 0; i < idsSize; i++) {
-          const id = ids.get(i);
-          if (!geometriesSet[id]) {
-            totalNonGeometryElements++;
-          }
+
+      if (idsSize === 0) continue;
+
+      // 统计非几何元素数量
+      let typeNonGeometryCount = 0;
+      for (let i = 0; i < idsSize; i++) {
+        const id = ids.get(i);
+        if (!geometriesSet[id]) {
+          typeNonGeometryCount++;
         }
+      }
+
+      totalNonGeometryElements += typeNonGeometryCount;
+
+      // 超过1000个元素的类型视为大类型
+      if (idsSize > 1000) {
+        largeTypes.push({ type, idsSize, ids, nonGeometryCount: typeNonGeometryCount });
+      } else {
+        smallTypes.push({ type, idsSize, ids, nonGeometryCount: typeNonGeometryCount });
       }
     }
 
@@ -300,26 +304,19 @@ export class IfcParser {
       return { properties, psetLines, psetRelations, total: 0 };
     }
 
-    // 智能类型处理策略：先处理小类型，大类型采用更优化的并行策略
-    const smallTypes = [];
-    const largeTypes = [];
-
-    for (const type of typeEntries) {
-      const ids = this.webIfc.GetLineIDsWithType(modelID, type.typeID);
-      const idsSize = ids.size();
-
-      if (idsSize === 0) continue;
-
-      // 超过1000个元素的类型视为大类型
-      if (idsSize > 1000) {
-        largeTypes.push({ type, idsSize, ids });
-      } else {
-        smallTypes.push({ type, idsSize, ids });
+    // 进度更新优化：使用防抖和阈值控制
+    let lastProgress = 0;
+    const updateProgress = (processed: number) => {
+      const progress = Math.min(100, Math.round((processed / totalNonGeometryElements) * 100));
+      // 只有当进度变化超过1%时才更新，避免频繁回调
+      if (progress > lastProgress + 1 || progress === 100) {
+        onProgress(progress);
+        lastProgress = progress;
       }
-    }
+    };
 
     // 先并行处理所有小类型
-    const smallTypePromises = smallTypes.map(async ({ type, idsSize, ids }) => {
+    const smallTypePromises = smallTypes.map(async ({ type, idsSize, ids, nonGeometryCount }) => {
       try {
         // 收集非几何元素ID
         const nonGeometryIds: number[] = [];
@@ -374,15 +371,8 @@ export class IfcParser {
           typeProcessed += successfulCount;
           totalProcessed += successfulCount;
 
-          // 更新进度 - 更频繁地更新，确保进度条平滑
-          if (totalNonGeometryElements > 0) {
-            const progress = Math.min(100, Math.round((totalProcessed / totalNonGeometryElements) * 100));
-            // 确保进度有实际变化才回调，避免频繁无意义的更新
-            onProgress(progress);
-            // console.log(`属性解析进度: ${progress}% (${totalProcessed}/${totalNonGeometryElements})`);
-          }
-          // 定期给UI时间更新
-          await new Promise(resolve => setTimeout(resolve, 0));
+          // 优化进度更新：只在批次结束时更新，避免频繁回调
+          updateProgress(totalProcessed);
         }
 
         return typeProcessed;
@@ -403,7 +393,7 @@ export class IfcParser {
     }, 0);
 
     // 优化大类型处理：使用更智能的并行策略
-    const largeTypePromises = largeTypes.map(async ({ type, idsSize, ids }) => {
+    const largeTypePromises = largeTypes.map(async ({ type, idsSize, ids, nonGeometryCount }) => {
       try {
         // 收集非几何元素ID
         const nonGeometryIds: number[] = [];
@@ -488,16 +478,13 @@ export class IfcParser {
           typeProcessed += successfulCount;
           totalProcessed += successfulCount;
 
-          // 更新进度 - 更频繁地更新，确保进度条平滑
-          if (totalNonGeometryElements > 0) {
-            const progress = Math.min(100, Math.round((totalProcessed / totalNonGeometryElements) * 100));
-            // 确保进度有实际变化才回调，避免频繁无意义的更新
-            onProgress(progress);
-            console.log(`属性解析进度: ${progress}% (${totalProcessed}/${totalNonGeometryElements})`);
-          }
+          // 优化进度更新：只在批次组结束时更新
+          updateProgress(totalProcessed);
 
-          // 定期给UI时间更新
-          await new Promise(resolve => setTimeout(resolve, 0));
+          // 定期给GC时间，但只在处理大量数据时
+          if (typeProcessed % 5000 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 1));
+          }
         }
 
         return typeProcessed;
@@ -516,6 +503,9 @@ export class IfcParser {
       }
       return sum;
     }, 0);
+
+    // 确保最终进度显示100%
+    onProgress(100);
 
     const totalTime = Date.now() - startTime;
     console.log(`属性获取完成，小类型: ${smallTypeTotal} 个, 大类型: ${largeTypeTotal} 个, 总耗时: ${totalTime}ms`);

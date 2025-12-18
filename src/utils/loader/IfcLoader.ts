@@ -39,7 +39,9 @@ interface IGeometryOptimizationConfig {
 
 // 定义合并用几何数据接口
 interface IMergeGeometryData {
-    vertexData: BABYLON.VertexData;
+    positions: Float32Array;
+    normals: Float32Array;
+    indices: Uint32Array;
     material: BABYLON.StandardMaterial;
     metadata: any;
 }
@@ -142,20 +144,17 @@ export class IfcLoader {
      */
     public async load(onProgress: ProgressCallback | null = null, detail_level: number = 12): Promise<void> {
 
-        // 阶段1：准备文件 (0% - 10%)
-        await this.smoothProgress(onProgress, 0, 10, "正在准备文件...");
-        await this.loadFileToArrayBuffer(detail_level);
+        await this.loadFileToArrayBuffer(detail_level, onProgress);
         console.log('IFC文件已加载,开始解析IFC模型');
 
         this.ifcParser = new IfcParser(this.ifcApi);
 
         if (this.isParser) {
-            // 阶段2：解析属性 (10% - 60%)
-            // 使用带实时进度的解析方法
+            // 阶段2：解析属性 (0% - 50%)
             const parsedData: any = await this.ifcParser.loadWithProgress(
                 (percent) => {
-                    // 将解析进度映射到10%-60%的范围
-                    const mappedPercent = 10 + percent * 0.5;
+                    // 将解析进度映射到0%-50%的范围
+                    const mappedPercent = percent * 0.5;
 
                     if (onProgress) {
                         onProgress(mappedPercent, "正在解析模型...", Math.floor(mappedPercent), 100);
@@ -193,11 +192,11 @@ export class IfcLoader {
 
                 console.log('IFC模型已加载,流式处理完成');
 
-                // 阶段3：处理几何数据 (60% - 85%)
+                // 阶段3：处理几何数据 (50% - 80%)
                 await this.processGeometryDataWithProgress(onProgress)
 
                 // 清理临时数据
-                this.geometryCache.delete('completeGeometries');
+                this.geometryCache.delete('rawGeometries');
 
                 console.log('IFC模型已加载,分批处理完成');
 
@@ -223,9 +222,6 @@ export class IfcLoader {
                     }
                 });
 
-                // 阶段5：完成 (95% - 100%)
-                await this.smoothProgress(onProgress, 95, 100, "加载完成");
-
                 // 清理材质映射表以释放内存
                 this.materialCache.clear();
                 this.materialsMap.clear();
@@ -249,51 +245,6 @@ export class IfcLoader {
                 console.error("IFC加载过程中发生错误:", error);
                 reject(error);
             }
-        });
-    }
-
-    /**
-     * 平滑进度更新方法
-     * @param onProgress 进度回调函数
-     * @param startPercent 起始进度百分比
-     * @param endPercent 结束进度百分比
-     * @param message 进度消息
-     */
-    private async smoothProgress(onProgress: ProgressCallback | null, startPercent: number, endPercent: number, message: string): Promise<void> {
-        if (!onProgress) return;
-
-        const range = endPercent - startPercent;
-        if (range <= 0) {
-            onProgress(endPercent, message, Math.floor(endPercent), 100);
-            return;
-        }
-
-        // 简化动画时长计算，固定为1秒
-        const duration = 100;
-        const updateInterval = 50;
-
-        return new Promise<void>((resolve) => {
-            const startTime = Date.now();
-
-            const updateProgress = () => {
-                const elapsed = Date.now() - startTime;
-                const progressRatio = Math.min(elapsed / duration, 1);
-
-                // 简化缓动函数
-                const easeProgress = progressRatio * progressRatio; // 二次缓动
-                const currentProgress = Math.floor(startPercent + easeProgress * range);
-
-                onProgress(currentProgress, message, currentProgress, 100);
-
-                if (progressRatio < 1) {
-                    setTimeout(updateProgress, updateInterval);
-                } else {
-                    resolve();
-                }
-            };
-
-            onProgress(startPercent, message, Math.floor(startPercent), 100);
-            setTimeout(updateProgress, updateInterval);
         });
     }
 
@@ -331,7 +282,7 @@ export class IfcLoader {
         }
     }
 
-    private async loadFileToArrayBuffer(detail_level: number): Promise<null> {
+    private async loadFileToArrayBuffer(detail_level: number, onProgress: ProgressCallback | null): Promise<null> {
         // 初始化web-ifc API
         await this.ifcApi.Init();
 
@@ -355,12 +306,39 @@ export class IfcLoader {
                 OPTIMIZE_PROFILES: this.geometryOptimization.optimizeProfiles, // 优化轮廓
                 USE_FAST_BOOLS: this.geometryOptimization.useFastBooleans, // 启用快速布尔运算
                 CIRCLE_SEGMENTS: this.geometryOptimization.detailLevel, // 设置圆的线段数，影响几何精细度
-                // MEMORY_LIMIT: 8294967296, // 内存限制
+                MEMORY_LIMIT: 8294967296, // 内存限制
                 // TAPE_SIZE: 6, // 磁带大小
                 // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
             };
 
             this.modelID = this.ifcApi.OpenModel(new Uint8Array(buffer), config);
+            // const worker = new Worker(new URL('/stream.worker.js', import.meta.url), { type: 'module' });
+
+            // // 等待Web Worker执行完成
+            // await new Promise<void>((resolve, reject) => {
+            //     worker.postMessage({ command: 'init', ifcData: buffer });
+
+            //     worker.onmessage = (event) => {
+            //         console.log("Web Worker返回数据", event.data);
+
+            //         if (event.data.command === 'progress') {
+            //             // 处理进度更新
+            //             console.log(`Web Worker进度更新: ${event.data.progress}%`);
+            //             if (onProgress)
+            //                 onProgress(event.data.progress, event.data.message, event.data.loaded, event.data.total);
+            //         } else if (event.data.command === 'init_complete') {
+            //             worker.terminate(); // 清理Worker
+            //             resolve();
+            //         }
+            //     };
+
+            //     worker.onerror = (error) => {
+            //         console.error('Web Worker发生错误:', error);
+            //         worker.terminate(); // 清理Worker
+            //         reject(error);
+            //     };
+            // });
+
         } else {
             console.error("无法获取IFC文件数据");
         }
@@ -375,53 +353,130 @@ export class IfcLoader {
 
 
     /**
-     * 应用变换矩阵到顶点位置和法线
+     * 应用变换矩阵到顶点位置和法线（优化版本）
      * @param positions 原始顶点位置
      * @param normals 原始法线
      * @param transformation 变换矩阵
      */
     private applyTransformationToVertices(positions: Float32Array, normals: Float32Array, transformation: number[]): { positions: Float32Array; normals: Float32Array } {
+        // 优化：避免频繁创建Vector3对象，使用直接数组操作
         const matrix = BABYLON.Matrix.FromArray(transformation);
         const transformedPositions = new Float32Array(positions.length);
         const transformedNormals = new Float32Array(normals.length);
 
-        for (let i = 0; i < positions.length; i += 3) {
-            // 变换顶点位置
-            const vertex = new BABYLON.Vector3(positions[i], positions[i + 1], positions[i + 2]);
-            const transformed = BABYLON.Vector3.TransformCoordinates(vertex, matrix);
-            transformedPositions[i] = transformed.x;
-            transformedPositions[i + 1] = transformed.y;
-            transformedPositions[i + 2] = transformed.z;
+        // 检查是否是单位矩阵（无变换）
+        const isIdentityMatrix = this.isIdentityMatrix(transformation);
 
-            // 变换法线（只应用旋转和缩放，不应用平移）
-            const normal = new BABYLON.Vector3(normals[i], normals[i + 1], normals[i + 2]);
-            const transformedNormal = BABYLON.Vector3.TransformNormal(normal, matrix).normalize();
-            transformedNormals[i] = transformedNormal.x;
-            transformedNormals[i + 1] = transformedNormal.y;
-            transformedNormals[i + 2] = transformedNormal.z;
+        if (isIdentityMatrix) {
+            // 如果是单位矩阵，直接复制数据，避免复杂的变换计算
+            transformedPositions.set(positions);
+            transformedNormals.set(normals);
+            return { positions: transformedPositions, normals: transformedNormals };
+        }
+
+        // 预计算矩阵的旋转部分（用于法线变换）
+        const rotationMatrix = this.extractRotationMatrix(matrix);
+
+        // 使用批量处理，避免频繁的对象创建
+        const vertexCount = positions.length / 3;
+
+        for (let i = 0; i < vertexCount; i++) {
+            const baseIndex = i * 3;
+
+            // 变换顶点位置（直接数组操作）
+            const x = positions[baseIndex];
+            const y = positions[baseIndex + 1];
+            const z = positions[baseIndex + 2];
+
+            // 手动计算变换后的坐标（避免Vector3对象创建）
+            const transformedX = transformation[0] * x + transformation[4] * y + transformation[8] * z + transformation[12];
+            const transformedY = transformation[1] * x + transformation[5] * y + transformation[9] * z + transformation[13];
+            const transformedZ = transformation[2] * x + transformation[6] * y + transformation[10] * z + transformation[14];
+
+            transformedPositions[baseIndex] = transformedX;
+            transformedPositions[baseIndex + 1] = transformedY;
+            transformedPositions[baseIndex + 2] = transformedZ;
+
+            // 变换法线（只应用旋转和缩放）
+            const nx = normals[baseIndex];
+            const ny = normals[baseIndex + 1];
+            const nz = normals[baseIndex + 2];
+
+            // 手动计算变换后的法线
+            const transformedNx = rotationMatrix[0] * nx + rotationMatrix[3] * ny + rotationMatrix[6] * nz;
+            const transformedNy = rotationMatrix[1] * nx + rotationMatrix[4] * ny + rotationMatrix[7] * nz;
+            const transformedNz = rotationMatrix[2] * nx + rotationMatrix[5] * ny + rotationMatrix[8] * nz;
+
+            // 归一化法线
+            const length = Math.sqrt(transformedNx * transformedNx + transformedNy * transformedNy + transformedNz * transformedNz);
+            if (length > 0) {
+                transformedNormals[baseIndex] = transformedNx / length;
+                transformedNormals[baseIndex + 1] = transformedNy / length;
+                transformedNormals[baseIndex + 2] = transformedNz / length;
+            } else {
+                transformedNormals[baseIndex] = nx;
+                transformedNormals[baseIndex + 1] = ny;
+                transformedNormals[baseIndex + 2] = nz;
+            }
         }
 
         return { positions: transformedPositions, normals: transformedNormals };
     }
 
+    /**
+     * 检查是否是单位矩阵
+     */
+    private isIdentityMatrix(matrix: number[]): boolean {
+        // 检查变换矩阵是否接近单位矩阵（无变换）
+        return (
+            Math.abs(matrix[0] - 1) < 1e-6 && Math.abs(matrix[5] - 1) < 1e-6 && Math.abs(matrix[10] - 1) < 1e-6 &&
+            Math.abs(matrix[15] - 1) < 1e-6 &&
+            Math.abs(matrix[1]) < 1e-6 && Math.abs(matrix[2]) < 1e-6 && Math.abs(matrix[3]) < 1e-6 &&
+            Math.abs(matrix[4]) < 1e-6 && Math.abs(matrix[6]) < 1e-6 && Math.abs(matrix[7]) < 1e-6 &&
+            Math.abs(matrix[8]) < 1e-6 && Math.abs(matrix[9]) < 1e-6 && Math.abs(matrix[11]) < 1e-6 &&
+            Math.abs(matrix[12]) < 1e-6 && Math.abs(matrix[13]) < 1e-6 && Math.abs(matrix[14]) < 1e-6
+        );
+    }
+
+    /**
+     * 提取矩阵的旋转部分（3x3子矩阵）
+     */
+    private extractRotationMatrix(matrix: BABYLON.Matrix): number[] {
+        return [
+            matrix.m[0], matrix.m[1], matrix.m[2],
+            matrix.m[4], matrix.m[5], matrix.m[6],
+            matrix.m[8], matrix.m[9], matrix.m[10]
+        ];
+    }
+
 
 
     /**
-     * 从顶点数组中提取位置和法线数据
+     * 从顶点数组中提取位置和法线数据（优化版本）
      * @param vertices 原始顶点数据数组
      */
     private extractPositionAndNormals(vertices: Float32Array): {
         positions: Float32Array;
         normals: Float32Array;
     } {
-        const count = vertices.length / 6;
-        const positions = new Float32Array(count * 3);
-        const normals = new Float32Array(count * 3);
+        const vertexCount = vertices.length / 6;
+        const positions = new Float32Array(vertexCount * 3);
+        const normals = new Float32Array(vertexCount * 3);
 
-        for (let i = 0; i < count; i++) {
-            const base = i * 6;
-            positions.set(vertices.subarray(base, base + 3), i * 3);
-            normals.set(vertices.subarray(base + 3, base + 6), i * 3);
+        // 优化：使用直接数组索引操作，避免频繁的subarray调用
+        for (let i = 0; i < vertexCount; i++) {
+            const vertexIndex = i * 6;
+            const positionIndex = i * 3;
+
+            // 直接复制位置数据
+            positions[positionIndex] = vertices[vertexIndex];
+            positions[positionIndex + 1] = vertices[vertexIndex + 1];
+            positions[positionIndex + 2] = vertices[vertexIndex + 2];
+
+            // 直接复制法线数据
+            normals[positionIndex] = vertices[vertexIndex + 3];
+            normals[positionIndex + 1] = vertices[vertexIndex + 4];
+            normals[positionIndex + 2] = vertices[vertexIndex + 5];
         }
 
         return { positions, normals };
@@ -479,16 +534,15 @@ export class IfcLoader {
             for (let i = 0; i < placedGeometries.size(); i++) {
                 const placedGeometry = placedGeometries.get(i);
 
-                let vertexData = null;
                 let meshData = null;
 
                 try {
-                    // 在收集阶段就获取几何数据
+                    // 在收集阶段只获取原始几何数据
                     const geometryExpressID = placedGeometry.geometryExpressID;
                     meshData = this.ifcApi.GetGeometry(this.modelID!, geometryExpressID);
 
                     if (meshData && meshData.GetVertexDataSize() > 0) {
-                        // 获取顶点和索引数据
+                        // 只获取顶点和索引数组，不创建VertexData对象
                         const vertexArray = this.ifcApi.GetVertexArray(
                             meshData.GetVertexData(),
                             meshData.GetVertexDataSize()
@@ -498,16 +552,19 @@ export class IfcLoader {
                             meshData.GetIndexDataSize()
                         );
 
-                        // 创建顶点数据
-                        vertexData = new BABYLON.VertexData();
-                        const { positions, normals } = this.extractPositionAndNormals(vertexArray);
+                        // 存储原始几何数据，延迟创建顶点数据
+                        const rawGeometryData = {
+                            expressID: flatMesh.expressID,
+                            placedGeometry: placedGeometry,
+                            vertexArray: vertexArray,
+                            indexArray: indexArray
+                        };
 
-                        // 应用变换矩阵到顶点和法线
-                        const transformedData = this.applyTransformationToVertices(positions, normals, placedGeometry.flatTransformation);
-
-                        vertexData.positions = transformedData.positions;
-                        vertexData.normals = transformedData.normals;
-                        vertexData.indices = indexArray;
+                        // 临时存储原始数据
+                        if (!this.geometryCache.has('rawGeometries')) {
+                            this.geometryCache.set('rawGeometries', []);
+                        }
+                        this.geometryCache.get('rawGeometries').push(rawGeometryData);
                     } else {
                         if (meshData) {
                             meshData.delete();
@@ -530,118 +587,139 @@ export class IfcLoader {
                         } catch (e) { }
                     }
                 }
-
-                // 存储完整的几何数据
-                const completeGeometryData = {
-                    expressID: flatMesh.expressID,
-                    placedGeometry: placedGeometry,
-                    vertexData: vertexData
-                };
-
-                // 临时存储完整数据
-                if (!this.geometryCache.has('completeGeometries')) {
-                    this.geometryCache.set('completeGeometries', []);
-                }
-                this.geometryCache.get('completeGeometries').push(completeGeometryData);
             }
 
         });
     }
 
     /**
-     * 带进度回调的几何数据处理方法
+     * 带进度回调的几何数据处理方法（优化版本 - 保持实时进度）
      * @param onProgress 进度回调函数
      */
     private async processGeometryDataWithProgress(onProgress: ProgressCallback | null): Promise<void> {
-        const completeGeometries = this.geometryCache.get('completeGeometries') || [];
-        const totalGeometries = completeGeometries.length;
+        const rawGeometries = this.geometryCache.get('rawGeometries') || [];
+        const totalGeometries = rawGeometries.length;
 
         if (totalGeometries === 0) {
             return;
         }
 
-        const batchSize = 50;
+        // 优化批处理大小，根据几何体数量动态调整
+        const batchSize = Math.min(Math.max(100, Math.floor(totalGeometries / 10)), 250);
         let processedGeometryCount = 0;
 
-        console.log(`开始处理几何数据，共 ${totalGeometries} 个几何体`);
+        console.log(`开始处理几何数据，共 ${totalGeometries} 个几何体，批处理大小: ${batchSize}`);
 
-        // 使用异步处理批次，带进度更新
-        const processBatchAsync = async (batchIndex: number): Promise<void> => {
-            const batch = completeGeometries.slice(batchIndex, batchIndex + batchSize);
-
-            for (const geometryData of batch) {
-                const { expressID, placedGeometry, vertexData } = geometryData;
-
-                try {
-                    // 使用已经创建好的顶点数据
-                    if (vertexData && vertexData.positions && vertexData.positions.length > 0) {
-                        // 获取IFC实体的GlobalId并转换为UUID
-                        const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, expressID) as IIfcEntity;
-                        const baseGuid = ifcGuidToUuid(entity.GlobalId.value);
-
-                        // 跳过处理不存在空间结构关系的元素
-                        if (!this.ifcExpressIds.includes(String(expressID))) {
-                            continue;
-                        }
-
-                        // 计算颜色ID并获取/创建材质
-                        const colorID = this.calculateColorID(placedGeometry.color);
-                        if (!this.materialCache.has(colorID)) {
-                            const material = this.createBabylonMaterial(placedGeometry.color);
-                            this.materialCache.set(colorID, material);
-                        }
-                        const material = this.materialCache.get(colorID)!;
-
-                        // 直接存储合并用的几何数据，不创建任何网格对象
-                        const mergeData: IMergeGeometryData = {
-                            vertexData: vertexData,
-                            material: material,
-                            metadata: {
-                                originalExpressID: expressID,
-                                geometryExpressID: placedGeometry.geometryExpressID,
-                                globalId: entity.GlobalId.value,
-                                guid: baseGuid,
-                                color: placedGeometry.color,
-                                transformation: placedGeometry.flatTransformation
-                            }
-                        };
-
-                        // 按材质分组存储合并数据
-                        if (!this.materialsMap.has(colorID)) {
-                            this.materialsMap.set(colorID, []);
-                        }
-                        this.materialsMap.get(colorID)!.push(mergeData);
-
-                        processedGeometryCount++;
-
-                        // 每处理10个几何体更新一次进度
-                        if (processedGeometryCount % 10 === 0 && onProgress) {
-                            const progressPercent = 60 + (processedGeometryCount / totalGeometries) * 25;
-                            onProgress(progressPercent, "正在处理几何数据...", Math.floor(progressPercent), 100);
-                        }
-                    }
-                } catch (error) {
-                    console.warn(`处理几何体 ${expressID} 时出错:`, error);
-                    continue;
+        // 预计算有效的几何体索引，避免重复检查
+        const validGeometryIndices: number[] = [];
+        for (let i = 0; i < rawGeometries.length; i++) {
+            const geometryData = rawGeometries[i];
+            if (geometryData.vertexArray && geometryData.vertexArray.length > 0) {
+                const expressID = geometryData.expressID;
+                // 提前检查空间结构关系，避免在循环中重复检查
+                if (this.ifcExpressIds && this.ifcExpressIds.includes(String(expressID))) {
+                    validGeometryIndices.push(i);
                 }
             }
+        }
 
+        const validGeometriesCount = validGeometryIndices.length;
+        console.log(`有效几何体数量: ${validGeometriesCount}/${totalGeometries}`);
+
+        if (validGeometriesCount === 0) {
+            if (onProgress) {
+                onProgress(85, "没有有效的几何体数据", 85, 100);
+            }
+            return;
+        }
+
+        // 使用异步串行处理，保持实时进度更新
+        const processBatchAsync = async (batchStart: number, batchEnd: number): Promise<void> => {
+            for (let i = batchStart; i < batchEnd; i++) {
+                const geometryIndex = validGeometryIndices[i];
+                const geometryData = rawGeometries[geometryIndex];
+
+                await this.processSingleGeometry(geometryData);
+
+                processedGeometryCount++;
+
+                // 优化进度更新频率：每处理50个几何体更新一次进度
+                if (onProgress && (processedGeometryCount % 50 === 0 || i === batchEnd - 1)) {
+                    const progressPercent = 50 + (processedGeometryCount / validGeometriesCount) * 30;
+                    onProgress(progressPercent, "正在处理几何数据...", Math.floor(progressPercent), 100);
+                }
+
+                // 每处理100个几何体让出控制权，让UI有机会更新，避免过于频繁
+                if (processedGeometryCount % 100 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
         };
 
-        // 逐批异步处理，带进度更新
-        for (let batchIndex = 0; batchIndex < totalGeometries; batchIndex += batchSize) {
-            await processBatchAsync(batchIndex);
-
-            // 每处理完一批后，让出控制权给浏览器，让UI有机会更新
-            await new Promise(resolve => setTimeout(resolve, 0));
+        // 异步串行处理所有批次
+        for (let batchStart = 0; batchStart < validGeometriesCount; batchStart += batchSize) {
+            const batchEnd = Math.min(batchStart + batchSize, validGeometriesCount);
+            await processBatchAsync(batchStart, batchEnd);
         }
 
         // 处理完成，更新最终进度
         if (onProgress) {
-            onProgress(85, "几何数据处理完成", 85, 100);
+            onProgress(80, "几何数据处理完成", 80, 100);
         }
 
         console.log(`几何数据处理完成，共处理 ${processedGeometryCount} 个几何体`);
+    }
+
+    /**
+     * 处理单个几何体（优化版本）
+     * @param geometryData 几何体数据
+     */
+    private async processSingleGeometry(geometryData: any): Promise<void> {
+        const { expressID, placedGeometry, vertexArray, indexArray } = geometryData;
+
+        try {
+            // 获取IFC实体的GlobalId并转换为UUID
+            const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, expressID) as IIfcEntity;
+            const baseGuid = ifcGuidToUuid(entity.GlobalId.value);
+
+            // 计算颜色ID并获取/创建材质
+            const colorID = this.calculateColorID(placedGeometry.color);
+            if (!this.materialCache.has(colorID)) {
+                const material = this.createBabylonMaterial(placedGeometry.color);
+                this.materialCache.set(colorID, material);
+            }
+            const material = this.materialCache.get(colorID)!;
+
+            // 提取位置和法线数据
+            const { positions, normals } = this.extractPositionAndNormals(vertexArray);
+
+            // 应用变换矩阵到顶点和法线
+            const transformedData = this.applyTransformationToVertices(positions, normals, placedGeometry.flatTransformation);
+
+            // 存储合并用的几何数据
+            const mergeData: IMergeGeometryData = {
+                positions: transformedData.positions,
+                normals: transformedData.normals,
+                indices: indexArray,
+                material: material,
+                metadata: {
+                    originalExpressID: expressID,
+                    geometryExpressID: placedGeometry.geometryExpressID,
+                    globalId: entity.GlobalId.value,
+                    guid: baseGuid,
+                    color: placedGeometry.color,
+                    transformation: placedGeometry.flatTransformation
+                }
+            };
+
+            // 按材质分组存储合并数据
+            if (!this.materialsMap.has(colorID)) {
+                this.materialsMap.set(colorID, []);
+            }
+            this.materialsMap.get(colorID)!.push(mergeData);
+        } catch (error) {
+            console.warn(`处理几何体 ${expressID} 时出错:`, error);
+        }
     }
     // 公共 getter 方法
     public get MaterialsMap(): Map<number, BABYLON.AbstractMesh[]> {
