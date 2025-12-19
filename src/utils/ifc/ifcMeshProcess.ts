@@ -13,14 +13,13 @@ export function simplifyGeometry(
 ): { positions: Float32Array; normals: Float32Array; indices: Uint32Array } {
   const tolerance = 0.01; // 合并容差
   const originalVertexCount = positions.length / 3;
-  const originalTriangleCount = indices.length / 3;
 
   // 设置简化阈值：只有当顶点数量超过1000时才进行简化
   const SIMPLIFY_THRESHOLD = 1000;
 
   if (originalVertexCount <= SIMPLIFY_THRESHOLD) {
     // 顶点数量较少，直接返回原始数据
-    console.log(`几何简化跳过：顶点数量 ${originalVertexCount} 低于阈值 ${SIMPLIFY_THRESHOLD}，保持原样`);
+    // console.log(`几何简化跳过：顶点数量 ${originalVertexCount} 低于阈值 ${SIMPLIFY_THRESHOLD}，保持原样`);
     return {
       positions: positions,
       normals: normals,
@@ -78,12 +77,12 @@ export function simplifyGeometry(
     }
   }
 
-  const simplifiedVertexCount = newPositions.length / 3;
+  // const simplifiedVertexCount = newPositions.length / 3;
 
   // 计算简化率
-  const vertexReduction = ((originalVertexCount - simplifiedVertexCount) / originalVertexCount * 100).toFixed(2);
+  // const vertexReduction = ((originalVertexCount - simplifiedVertexCount) / originalVertexCount * 100).toFixed(2);
 
-  console.log(`几何简化结果：顶点 ${originalVertexCount} → ${simplifiedVertexCount} (减少${vertexReduction}%)`);
+  // console.log(`几何简化结果：顶点 ${originalVertexCount} → ${simplifiedVertexCount} (减少${vertexReduction}%)`);
 
   return {
     positions: new Float32Array(newPositions),
@@ -640,6 +639,7 @@ function createRestoreSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData
  */
 function rebuildMergedMesh(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): void {
   try {
+    console.log('重新构建合并网格');
     // 性能优化：预计算总顶点和索引数量
     let totalVertexCount = 0;
     let totalIndexCount = 0;
@@ -1083,19 +1083,14 @@ export function findClosestSubMeshWithFallback(
 export function collectTransparentMeshData(selectedMeshIds: Set<number>, scene: BABYLON.Scene): Map<string, any[]> {
   const materialGroups = new Map<string, any[]>();
 
+  // 第一步：收集选中子网格的数据，不隐藏原始子网格
   scene!.meshes.forEach(mesh => {
-    if (mesh.name.includes('highlight')) {
-      mesh.isVisible = false;
-    }
-
     if (mesh.metadata?.isMergedMesh) {
       const originalMeshData = mesh.metadata.originalMeshData || [];
 
       originalMeshData.forEach((subMeshInfo: any) => {
         const expressID = subMeshInfo.metadata.originalExpressID;
         if (selectedMeshIds.has(expressID)) {
-          mesh.metadata.hideSubMesh(expressID);
-
           // 检查是否已经存在相同expressID的透明网格
           const existingTransparentMesh = scene!.meshes.find(m =>
             m.name === `transparentMesh${expressID}`

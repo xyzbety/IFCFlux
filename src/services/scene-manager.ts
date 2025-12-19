@@ -35,6 +35,7 @@ export class SceneManager {
   private hiddenMeshIds: Set<number> = new Set(); // 存储已隐藏的mesh ID
   private isolatedMeshIds: Set<number> = new Set(); // 存储已隔离的mesh ID
   private transparentMeshIds: Set<number> = new Set(); // 存储已半透明的mesh ID
+  private modifiedMergedMeshes: Set<BABYLON.Mesh> = new Set(); // 跟踪被修改过的合并网格
   private sceneStore = useSceneStore();
   private modelStore = useModelStore();
   private ifcPropertyUtils = IfcPropertyUtils.getInstance();
@@ -62,11 +63,22 @@ export class SceneManager {
   }
 
   /**
+   * 清空修改记录（在新模型加载时调用）
+   */
+  public clearModificationHistory(): void {
+    this.modifiedMergedMeshes.clear();
+    console.log('已清空网格修改记录');
+  }
+
+  /**
    * 初始化场景
    * @param scene BABYLON场景实例
    */
   public initializeScene(scene: BABYLON.Scene) {
     this.scene = scene;
+
+    // 清空之前的修改记录
+    this.clearModificationHistory();
 
     // --- Scene Properties ---
     this.scene.useRightHandedSystem = true;
@@ -480,20 +492,36 @@ export class SceneManager {
    * 处理隐藏选中网格
    */
   private handleHideSelected(selectedMeshIds: Set<number>) {
+    // 第一步：处理选中子网格的隐藏
     this.scene!.meshes.forEach(mesh => {
-      if (mesh.name.includes('highlight')) {
-        mesh.isVisible = false;
-      }
       if (mesh.metadata?.isMergedMesh) {
         const originalMeshData = mesh.metadata.originalMeshData || [];
+        let meshWasModified = false;
+
         originalMeshData.forEach((subMeshInfo: any) => {
           const expressID = subMeshInfo.metadata.originalExpressID;
           if (selectedMeshIds.has(expressID)) {
             mesh.metadata.hideSubMesh(expressID);
+            meshWasModified = true;
           }
         });
+
+        // 如果这个合并网格被修改了，记录下来
+        if (meshWasModified) {
+          this.modifiedMergedMeshes.add(mesh);
+        }
       }
     });
+
+    // 第二步：延迟隐藏高亮网格，确保子网格的批处理重建先完成
+    // 批处理延迟是10ms，所以设置为15ms确保在重建后执行
+    setTimeout(() => {
+      this.scene!.meshes.forEach(mesh => {
+        if (mesh.name.includes('highlight')) {
+          mesh.isVisible = false;
+        }
+      });
+    }, 15); // 15ms延迟，确保子网格重建操作先执行
   }
 
   /**
@@ -505,6 +533,10 @@ export class SceneManager {
         mesh.isVisible = true;
       } else {
         mesh.isVisible = false;
+        // 如果是合并网格被隐藏，也标记为修改过
+        if (mesh.metadata?.isMergedMesh) {
+          this.modifiedMergedMeshes.add(mesh);
+        }
       }
     });
   }
@@ -512,10 +544,13 @@ export class SceneManager {
   /**
    * 处理半透明选中网格
    */
-  private handleTransparentSelected(selectedMeshIds: Set<number>) {
+  private async handleTransparentSelected(selectedMeshIds: Set<number>) {
     const transparentMeshes: BABYLON.AbstractMesh[] = [];
+    
+    // 第一步：收集选中子网格的数据，不隐藏原始子网格
     const materialGroups = collectTransparentMeshData(selectedMeshIds, this.scene!);
 
+    // 第二步：创建半透明网格并等待渲染完成
     materialGroups.forEach((groupDataList, materialKey) => {
       if (groupDataList.length > 0) {
         const transparentMesh = createMergedTransparentMesh(groupDataList, materialKey, this.scene!);
@@ -525,7 +560,57 @@ export class SceneManager {
       }
     });
 
+    // 第三步：应用高亮效果到半透明网格
     this.effectManager?.applyHighlight(transparentMeshes);
+
+    // 第四步：强制渲染一帧，确保半透明网格完全显示
+    await this.waitForNextFrame();
+
+    // 第五步：隐藏选中的原始子网格（现在半透明网格已经可见）
+    this.scene!.meshes.forEach(mesh => {
+      if (mesh.metadata?.isMergedMesh) {
+        const originalMeshData = mesh.metadata.originalMeshData || [];
+        let meshWasModified = false;
+
+        originalMeshData.forEach((subMeshInfo: any) => {
+          const expressID = subMeshInfo.metadata.originalExpressID;
+          if (selectedMeshIds.has(expressID)) {
+            mesh.metadata.hideSubMesh(expressID);
+            meshWasModified = true;
+          }
+        });
+
+        // 如果这个合并网格被修改了，记录下来
+        if (meshWasModified) {
+          this.modifiedMergedMeshes.add(mesh);
+        }
+      }
+    });
+
+    // 第六步：隐藏可能冲突的高亮网格
+    this.scene!.meshes.forEach(mesh => {
+      if (mesh.name.includes('highlight')) {
+        mesh.isVisible = false;
+      }
+    });
+  }
+
+  /**
+   * 等待下一帧渲染完成
+   */
+  private waitForNextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.scene) {
+        this.scene.executeWhenReady(() => {
+          // 等待当前帧完成
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      } else {
+        resolve();
+      }
+    });
   }
 
 
@@ -541,16 +626,31 @@ export class SceneManager {
     // 清理半透明相关资源
     cleanupTransparentResources(this.scene!);
 
-    // 恢复所有网格可见性
+    // 优化：只恢复被修改过的合并网格，而不是全部重建
+    const totalMergedMeshes = this.scene!.meshes.filter(mesh => mesh.metadata?.isMergedMesh).length;
+
+    if (this.modifiedMergedMeshes.size > 0) {
+      console.log(`显示全部：只重建 ${this.modifiedMergedMeshes.size} 个被修改过的合并网格（总共 ${totalMergedMeshes} 个合并网格）`);
+
+      this.modifiedMergedMeshes.forEach(mesh => {
+        if (mesh.metadata?.isMergedMesh && mesh.metadata.restoreSubMesh) {
+          mesh.metadata.restoreSubMesh();
+        }
+      });
+
+      // 清空修改过的网格记录
+      this.modifiedMergedMeshes.clear();
+    } else {
+      console.log(`显示全部：没有需要重建的合并网格（总共 ${totalMergedMeshes} 个合并网格）`);
+    }
+
+    // 恢复所有网格可见性（对普通网格和未被修改的合并网格）
     this.scene!.meshes.forEach(mesh => {
       if (mesh.name === 'skyBox' || mesh.name === 'ground' || mesh.name === 'infiniteGrid') {
         return;
       }
 
-      if (mesh.metadata?.isMergedMesh && mesh.metadata.restoreSubMesh) {
-        mesh.metadata.restoreSubMesh();
-      }
-
+      // 对于所有网格设置可见性（已被修改的网格在restoreSubMesh中已经处理过）
       mesh.isVisible = true;
     });
 
