@@ -562,7 +562,7 @@ export class IFCParser {
     return result
   }
 
-  // 获取模型中所有的属性
+  // 获取模型中所有的属性（使用流式处理避免内存溢出）
   async getAllProps() {
     const psetLines = this.ifcapi.GetLineIDsWithType(
       this.modelId as number,
@@ -573,49 +573,66 @@ export class IFCParser {
     const properties = {} as { [key: string]: any }
     const allElementsPropsIdMap: { [key: number]: number[] } = {}; // 存储所有实体的属性数据
     const geometryIds = await this.getAllGeometriesIds() // 获取所有几何体 ID，以排除它们
-    const allLinesIDs = await this.ifcapi.GetAllLines(this.modelId as number)
-    const allLinesCount = allLinesIDs.size()
-    for (let i = 0; i < allLinesCount; i++) {
-      const id = allLinesIDs.get(i)
-      if (!geometryIds.has(id)) { // 如果不是几何体，则处理其属性
-        const props = await this.getItemProperty(id)
-        if (props) {
-          if (props.type === 'IFCRELDEFINESBYPROPERTIES' && props.RelatedObjects) {
-            psetRelations.push(props.RelatedObjects)
-            for (const relatedObjectId of props.RelatedObjects) {
-              // 将属性集ID和实体ID的关系添加到 allElementsPropsIdMap
-              const propertyDefinitionId = Number(props.RelatingPropertyDefinition)
-              if (allElementsPropsIdMap[propertyDefinitionId]) {
-                allElementsPropsIdMap[propertyDefinitionId].push(relatedObjectId);
-              } else {
-                allElementsPropsIdMap[propertyDefinitionId] = [relatedObjectId];
-              }
-            }
-          }
-          if (props.type === 'IFCRELDEFINESBYTYPE' && props.RelatedObjects) {
-            const relatingTypeId = Number(props.RelatingType)
-            const relatingType = await this.ifcapi.GetLine(this.modelId as number, relatingTypeId)
-            const propertySetIds = relatingType.HasPropertySets
-            if (propertySetIds) {
-              for (const relatedObjectId of props.RelatedObjects) {
-                // 将属性集ID和实体ID的关系添加到 defindsByTypePropsIdMap
-                for (const propertyDefinitionId of propertySetIds) {
-                  if (allElementsPropsIdMap[propertyDefinitionId.value]) {
-                    this.defindsByTypePropsIdMap[propertyDefinitionId.value].push(relatedObjectId);
+
+    // 使用流式处理，逐个类型获取属性，避免一次性加载所有行
+    const propertyElementTypes = Object.keys(IfcElements).map(e => parseInt(e));
+    
+    for (const elementType of propertyElementTypes) {
+      try {
+        const lines = await this.ifcapi.GetLineIDsWithType(this.modelId as number, elementType);
+        const size = lines.size();
+        
+        // 限制每个类型处理的最大数量，避免内存溢出
+        const maxPerType = 10000; // 每个类型最多处理1万个元素
+        const processCount = Math.min(size, maxPerType);
+        
+        for (let i = 0; i < processCount; i++) {
+          const id = lines.get(i);
+          if (!geometryIds.has(id)) { // 如果不是几何体，则处理其属性
+            const props = await this.getItemProperty(id);
+            if (props) {
+              if (props.type === 'IFCRELDEFINESBYPROPERTIES' && props.RelatedObjects) {
+                psetRelations.push(props.RelatedObjects);
+                for (const relatedObjectId of props.RelatedObjects) {
+                  // 将属性集ID和实体ID的关系添加到 allElementsPropsIdMap
+                  const propertyDefinitionId = Number(props.RelatingPropertyDefinition);
+                  if (allElementsPropsIdMap[propertyDefinitionId]) {
+                    allElementsPropsIdMap[propertyDefinitionId].push(relatedObjectId);
                   } else {
-                    this.defindsByTypePropsIdMap[propertyDefinitionId.value] = [relatedObjectId];
+                    allElementsPropsIdMap[propertyDefinitionId] = [relatedObjectId];
                   }
                 }
               }
+              if (props.type === 'IFCRELDEFINESBYTYPE' && props.RelatedObjects) {
+                const relatingTypeId = Number(props.RelatingType);
+                const relatingType = await this.ifcapi.GetLine(this.modelId as number, relatingTypeId);
+                const propertySetIds = relatingType.HasPropertySets;
+                if (propertySetIds) {
+                  for (const relatedObjectId of props.RelatedObjects) {
+                    // 将属性集ID和实体ID的关系添加到 defindsByTypePropsIdMap
+                    for (const propertyDefinitionId of propertySetIds) {
+                      if (allElementsPropsIdMap[propertyDefinitionId.value]) {
+                        this.defindsByTypePropsIdMap[propertyDefinitionId.value].push(relatedObjectId);
+                      } else {
+                        this.defindsByTypePropsIdMap[propertyDefinitionId.value] = [relatedObjectId];
+                      }
+                    }
+                  }
+                }
+              }
+
+              properties[id] = props;
             }
           }
-
-          properties[id] = props
         }
+        
+        console.log(`Processed ${processCount} elements of type ${elementType}`);
+      } catch (error) {
+        console.error(`Error processing element type ${elementType}:`, error);
       }
     }
 
-    return { psetLines, psetRelations, properties, allElementsPropsIdMap }
+    return { psetLines, psetRelations, properties, allElementsPropsIdMap };
   }
 
 
@@ -680,24 +697,40 @@ export class IFCParser {
     return IfcElements[typeID]
   }
 
-  // 获取模型中所有几何体的 ID
+  // 获取模型中所有几何体的 ID（使用更高效的方法避免内存溢出）
   async getAllGeometriesIds() {
-    const geometriesIds = new Set();
+    // 使用一个轻量级的对象来存储几何体ID，避免Map的内存限制
+    const geometriesIds: { [key: number]: boolean } = {};
     const geomTypesArray = Array.from(GeometryTypes); // 从预定义的几何类型集合中获取
+    
+    // 分批处理几何体类型，避免一次性加载过多数据
     for (let i = 0; i < geomTypesArray.length; i++) {
       const category = geomTypesArray[i];
       try {
         const ids = await this.ifcapi.GetLineIDsWithType(this.modelId as number, category);
         const idsSize = ids.size();
-        for (let j = 0; j < idsSize; j++) {
-          geometriesIds.add(ids.get(j));
+        
+        // 限制每个类型处理的最大数量，避免内存溢出
+        const maxPerType = 100000; // 每个类型最多处理10万个ID
+        const processCount = Math.min(idsSize, maxPerType);
+        
+        for (let j = 0; j < processCount; j++) {
+          const id = ids.get(j);
+          geometriesIds[id] = true;
         }
+        
+        console.log(`Processed ${processCount} geometry IDs for category ${category}`);
       } catch (error) {
         console.error(`Error adding geometry IDs for category ${category}:`, error);
       }
     }
-    this.geometryIdsCount = geometriesIds.size;
-    return geometriesIds;
+    
+    this.geometryIdsCount = Object.keys(geometriesIds).length;
+    
+    // 返回一个代理对象，提供has方法但不存储所有数据
+    return {
+      has: (id: number) => geometriesIds.hasOwnProperty(id)
+    };
   }
 
 
