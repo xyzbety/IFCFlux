@@ -1,4 +1,5 @@
 import { reactive, ref, shallowRef, watch, markRaw, computed, onMounted, onUnmounted } from 'vue';
+import { MessagePlugin } from 'tdesign-vue-next';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getMatches } from '@tauri-apps/plugin-cli';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -145,7 +146,7 @@ function createAppCore() {
         sceneManager.handleSlice(action);
     };
     const handleVisibility = (mode: any) => {
-        sceneManager.handleVisibility(mode, selectedMeshIds,expressID);
+        sceneManager.handleVisibility(mode, selectedMeshIds, expressID);
     };
     const handleMeasure = (type: any) => {
         sceneManager.clear();
@@ -178,6 +179,9 @@ function createAppCore() {
         resetGlobalVariables();
 
         try {
+            if (file.size > 600 * 1024 * 1024) {
+                MessagePlugin.info({ content: '文件过大，加载需要较长时间，请耐心等待', duration: 3000 });
+            }
             await modelManager.loadModel(file, async () => {
                 const modelData = modelStore.modelData;
                 if (modelData) {

@@ -21,12 +21,7 @@ export class EffectManager {
   public simpleTarget: BABYLON.RenderTargetTexture | null = null; // 简单渲染目标
   private maskTarget: BABYLON.RenderTargetTexture | null = null; // 遮罩渲染目标
 
-  private transparentOverlayMeshes: Map<number, BABYLON.Mesh> = new Map(); // 存储半透明覆盖网格
-  private pendingTransparentOverlayData: Array<{
-    mergedMesh: BABYLON.Mesh;
-    expressID: number;
-    transparency: number;
-  }> = []; // 待处理的半透明覆盖网格数据
+  private edgeMeshes: BABYLON.AbstractMesh[] = [];
 
   /**
    * 私有构造函数，确保单例模式
@@ -189,65 +184,204 @@ export class EffectManager {
    * @param expressID 可选的网格ID（当前未使用）
    */
   public edgeRender(expressID?: string) {
-    console.log("edgeRender", expressID, this.isEdegeRender, this.isHighlightRender);
+    console.log("edgeRender", expressID, this.isEdegeRender, this.edgeMeshes);
+    if (this.edgeMeshes.length === 0) {
+      console.log("创建新边框");
 
-    if (this.isEdegeRender) {
-      // 如果边缘渲染已启用，直接更新颜色而不重新渲染
-      if (this.isEdgeRenderingEnabled()) {
-        this.updateEdgeColor();
-      } else {
-        // 首次启用边缘渲染
-        this.clearEdgeRender();
-        this.scene.meshes.forEach(mesh => {
-          // 启用边缘渲染
-          mesh.enableEdgesRendering(0.999, true, {
-            useAlternateEdgeFinder: false,
-            applyTessellation: false,
-            useFastVertexMerger: false
-          });
-          mesh.edgesWidth = this.edgeWidth;
-          mesh.edgesRenderer!.lineShader.options.useClipPlane = true;
-          mesh.edgesColor = this.edgeColor;
-        });
+      // 收集所有网格的边缘数据
+      const allEdgeData: BABYLON.Vector3[][] = [];
+
+      this.scene.meshes.forEach((mesh, index) => {
+        if (index > 0) {
+          const edgeData = this.calculateEdges(mesh)
+          for (let i = 0; i < edgeData.length; i++) {
+            allEdgeData.push(edgeData[i]);
+          }
+        }
+      });
+
+      // 创建一个合并的边框mesh
+      if (allEdgeData.length > 0) {
+        let edges = BABYLON.MeshBuilder.CreateLineSystem("lines", {
+          lines: allEdgeData,
+          updatable: true,
+        }, this.scene);
+
+        this.edgeMeshes.push(edges)
       }
-    } else {
-      this.clearEdgeRender();
+
     }
+
+    else {
+      this.updateEdgeColor()
+    }
+    this.edgeMeshes.forEach(edges => {
+      edges.setEnabled(this.isEdegeRender)
+    })
+
   }
+
+  private calculateEdges(mesh: BABYLON.AbstractMesh, thresholdAngle = 15): BABYLON.Vector3[][] {
+    console.time('calculateEdges')
+
+    const indexAttr = mesh.getIndices()!;
+    const indexCount = mesh.getTotalIndices();
+    const positionAttr = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind)!;
+
+    // 预计算阈值和精度
+    const thresholdDot = Math.cos(BABYLON.Angle.FromDegrees(thresholdAngle).radians());
+    const precision = 10000; // 减少精度位数，提高性能
+
+    // 使用 Map 替代 Object，提高查找性能
+    const edgeMap = new Map<string, { normal: number[]; triangleIndex: number }>();
+    const edges: BABYLON.Vector3[][] = [];
+
+    // 重用临时变量，减少对象创建
+    const tempVectors = {
+      a: new BABYLON.Vector3(),
+      b: new BABYLON.Vector3(),
+      c: new BABYLON.Vector3(),
+      edge1: new BABYLON.Vector3(),
+      edge2: new BABYLON.Vector3(),
+      normal: new BABYLON.Vector3()
+    };
+
+    // 顶点坐标缓存，避免重复计算
+    const vertexCache = new Map<number, number[]>();
+
+    // 计算顶点坐标的哈希值
+    const getVertexHash = (vertexIndex: number): string => {
+      if (vertexCache.has(vertexIndex)) {
+        const coords = vertexCache.get(vertexIndex)!;
+        return `${Math.round(coords[0] * precision)},${Math.round(coords[1] * precision)},${Math.round(coords[2] * precision)}`;
+      }
+
+      const posIndex = vertexIndex * 3;
+      const coords = [
+        positionAttr[posIndex],
+        positionAttr[posIndex + 1],
+        positionAttr[posIndex + 2]
+      ];
+      vertexCache.set(vertexIndex, coords);
+
+      return `${Math.round(coords[0] * precision)},${Math.round(coords[1] * precision)},${Math.round(coords[2] * precision)}`;
+    };
+
+    // 计算三角形法线
+    const computeTriangleNormal = (v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3, normal: BABYLON.Vector3) => {
+      tempVectors.edge1.copyFrom(v2).subtractInPlace(v1);
+      tempVectors.edge2.copyFrom(v3).subtractInPlace(v1);
+      BABYLON.Vector3.CrossToRef(tempVectors.edge1, tempVectors.edge2, normal);
+      normal.normalize();
+    };
+
+    // 处理每个三角形
+    for (let i = 0; i < indexCount; i += 3) {
+      const vertexIndices = [indexAttr[i], indexAttr[i + 1], indexAttr[i + 2]];
+
+      // 获取顶点位置
+      for (let j = 0; j < 3; j++) {
+        const posIndex = vertexIndices[j] * 3;
+        const coords = [positionAttr[posIndex], positionAttr[posIndex + 1], positionAttr[posIndex + 2]];
+
+        switch (j) {
+          case 0: tempVectors.a.copyFromFloats(coords[0], coords[1], coords[2]); break;
+          case 1: tempVectors.b.copyFromFloats(coords[0], coords[1], coords[2]); break;
+          case 2: tempVectors.c.copyFromFloats(coords[0], coords[1], coords[2]); break;
+        }
+      }
+
+      // 计算法线
+      computeTriangleNormal(tempVectors.a, tempVectors.b, tempVectors.c, tempVectors.normal);
+
+      // 获取顶点哈希
+      const hashes = vertexIndices.map(getVertexHash);
+
+      // 跳过退化三角形
+      if (hashes[0] === hashes[1] || hashes[1] === hashes[2] || hashes[2] === hashes[0]) {
+        continue;
+      }
+
+      // 处理每条边
+      for (let j = 0; j < 3; j++) {
+        const jNext = (j + 1) % 3;
+        const vecHash0 = hashes[j];
+        const vecHash1 = hashes[jNext];
+
+        const hash = `${vecHash0}_${vecHash1}`;
+        const reverseHash = `${vecHash1}_${vecHash0}`;
+
+        // 检查是否存在反向边
+        if (edgeMap.has(reverseHash)) {
+          const existingEdge = edgeMap.get(reverseHash)!;
+
+          // 计算法线点积
+          const dot = tempVectors.normal.x * existingEdge.normal[0] +
+            tempVectors.normal.y * existingEdge.normal[1] +
+            tempVectors.normal.z * existingEdge.normal[2];
+
+          // 如果夹角大于阈值，创建边
+          if (dot <= thresholdDot) {
+            const v0 = j === 0 ? tempVectors.a : j === 1 ? tempVectors.b : tempVectors.c;
+            const v1 = jNext === 0 ? tempVectors.a : jNext === 1 ? tempVectors.b : tempVectors.c;
+
+            edges.push([
+              new BABYLON.Vector3(v0.x, v0.y, v0.z),
+              new BABYLON.Vector3(v1.x, v1.y, v1.z)
+            ]);
+          }
+
+          // 移除已处理的边
+          edgeMap.delete(reverseHash);
+        } else if (!edgeMap.has(hash)) {
+          // 存储新边
+          edgeMap.set(hash, {
+            normal: [tempVectors.normal.x, tempVectors.normal.y, tempVectors.normal.z],
+            triangleIndex: i
+          });
+        }
+      }
+    }
+
+    // 处理剩余的边界边
+    for (const [hash, edgeInfo] of edgeMap) {
+      const [hash0, hash1] = hash.split('_');
+
+      // 解析顶点坐标
+      const coords0 = hash0.split(',').map(Number).map(v => v / precision);
+      const coords1 = hash1.split(',').map(Number).map(v => v / precision);
+
+      edges.push([
+        new BABYLON.Vector3(coords0[0], coords0[1], coords0[2]),
+        new BABYLON.Vector3(coords1[0], coords1[1], coords1[2])
+      ]);
+    }
+
+    console.timeEnd('calculateEdges');
+    console.log(`计算得到 ${edges.length} 条边`);
+
+    return edges;
+  }
+
+
 
   /**
    * 仅更新边框颜色，不重新渲染边框
    * @param newColor 新的边框颜色
    */
   public updateEdgeColor(newColor?: BABYLON.Color4): void {
+    console.log("更新边框颜色");
     // 如果有传入新颜色，更新当前颜色
     if (newColor) {
       this.edgeColor = newColor;
     }
 
-    // 检查边缘渲染是否已启用
-    if (!this.isEdgeRenderingEnabled()) {
-      console.warn("边缘渲染未启用，无法更新颜色");
-      return;
-    }
-
     // 遍历所有网格，仅更新边缘颜色
-    let updatedCount = 0;
-    this.scene.meshes.forEach(mesh => {
-      if (mesh.edgesRenderer && mesh.edgesRenderer.isEnabled) {
-        mesh.edgesColor = this.edgeColor;
-        updatedCount++;
+    this.edgeMeshes.forEach(mesh => {
+      if (this.isEdegeRender) {
+        mesh.color = this.edgeColor;
       }
     });
-  }
-
-  /**
-   * 检查边缘渲染是否已启用
-   */
-  private isEdgeRenderingEnabled(): boolean {
-    return this.scene.meshes.some(mesh =>
-      mesh.edgesRenderer && mesh.edgesRenderer.isEnabled
-    );
   }
 
   /**
@@ -258,6 +392,7 @@ export class EffectManager {
     console.log("重置资源");
     // 释放现有资源
     this.disposeResources();
+    this.clearEdgeRender();
 
     // 重新初始化资源
     this.createMaterials();
@@ -269,10 +404,10 @@ export class EffectManager {
    * 清除边缘渲染效果
    */
   private clearEdgeRender() {
-    this.scene.meshes.forEach(mesh => {
-      // 禁用边缘渲染
-      mesh.disableEdgesRendering();
+    this.edgeMeshes.forEach(mesh => {
+      mesh.dispose();
     });
+    this.edgeMeshes = [];
   }
 
 

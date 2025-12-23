@@ -84,7 +84,7 @@ export class SceneManager {
     this.scene.useRightHandedSystem = true;
     this.scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 0);
     this.scene.autoClear = true;
-    // this.scene.debugLayer.show();
+    this.scene.debugLayer.show();
 
     // --- Camera Creation ---
     const canvas = scene.getEngine().getRenderingCanvas();
@@ -546,7 +546,7 @@ export class SceneManager {
    */
   private async handleTransparentSelected(selectedMeshIds: Set<number>) {
     const transparentMeshes: BABYLON.AbstractMesh[] = [];
-    
+
     // 第一步：收集选中子网格的数据，不隐藏原始子网格
     const materialGroups = collectTransparentMeshData(selectedMeshIds, this.scene!);
 
@@ -911,7 +911,7 @@ export class SceneManager {
     if (data.type === 'reset') {
       this.light.direction = new BABYLON.Vector3(1, -0.5, 0.5);
       this.light.intensity = 0.75;
-      this.light.shadowEnabled = false;
+      this.light.shadowEnabled = true;
 
       const handleSliderX = document.getElementById("horizontalSliderX") as any;
       const handleSliderY = document.getElementById("horizontalSliderY") as any;

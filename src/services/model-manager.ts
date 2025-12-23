@@ -83,8 +83,6 @@ export class ModelManager {
           psetRelations: ifcLoader.psetRelations
         }, ifcLoader.psetLines);
 
-        this.updateProgress(100, "完成");
-
       } else {
         throw new Error(`Unsupported file format: ${fileExtension}`);
       }
@@ -93,6 +91,8 @@ export class ModelManager {
         onModelLoaded();
       }
 
+      this.updateProgress(100, "加载完成");
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
       console.error("加载失败:", error);
       this.updateProgress(100, "加载失败");

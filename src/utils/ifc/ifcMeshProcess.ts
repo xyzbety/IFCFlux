@@ -423,11 +423,11 @@ export async function mergeMeshesByMaterial(
     materialsMap.get(colorID)!.push(mesh);
   });
 
-  if (onProgress) {
-    onProgress(100, "加载完成！", 100, 100);
-    // 让加载完成的文字显示足够时间
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
+  // if (onProgress) {
+  //   onProgress(100, "加载完成！", 100, 100);
+  //   // 让加载完成的文字显示足够时间
+  await new Promise(resolve => setTimeout(resolve, 100));
+  // }
   console.log(`网格合并完成，共创建了 ${mergedMeshes.length} 个合并后的网格，保留了所有原始子网格`);
 }
 
