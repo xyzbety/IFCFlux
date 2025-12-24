@@ -1,5 +1,9 @@
 import * as BABYLON from '@babylonjs/core';
 
+export interface EdgeData {
+  lines: BABYLON.Vector3[][];
+}
+
 
 /* 几何简化算法（基于顶点合并）
      * @param positions 原始顶点位置
@@ -92,6 +96,128 @@ export function simplifyGeometry(
 }
 
 /**
+ * 计算网格边框（优化版本，在合并阶段预计算）
+ */
+export function calculateMeshEdges(
+  positions: Float32Array,
+  indices: Uint32Array | Uint16Array,
+  thresholdAngle = 15
+): EdgeData {
+  const thresholdDot = Math.cos(BABYLON.Angle.FromDegrees(thresholdAngle).radians());
+  const precision = 10000;
+
+  const edgeMap = new Map<string, { normal: number[]; triangleIndex: number }>();
+  const edges: BABYLON.Vector3[][] = [];
+
+  const tempVectors = {
+    a: new BABYLON.Vector3(),
+    b: new BABYLON.Vector3(),
+    c: new BABYLON.Vector3(),
+    edge1: new BABYLON.Vector3(),
+    edge2: new BABYLON.Vector3(),
+    normal: new BABYLON.Vector3()
+  };
+
+  const vertexCache = new Map<number, number[]>();
+
+  const getVertexHash = (vertexIndex: number): string => {
+    if (vertexCache.has(vertexIndex)) {
+      const coords = vertexCache.get(vertexIndex)!;
+      return `${Math.round(coords[0] * precision)},${Math.round(coords[1] * precision)},${Math.round(coords[2] * precision)}`;
+    }
+
+    const posIndex = vertexIndex * 3;
+    const coords = [
+      positions[posIndex],
+      positions[posIndex + 1],
+      positions[posIndex + 2]
+    ];
+    vertexCache.set(vertexIndex, coords);
+
+    return `${Math.round(coords[0] * precision)},${Math.round(coords[1] * precision)},${Math.round(coords[2] * precision)}`;
+  };
+
+  const computeTriangleNormal = (v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3, normal: BABYLON.Vector3) => {
+    tempVectors.edge1.copyFrom(v2).subtractInPlace(v1);
+    tempVectors.edge2.copyFrom(v3).subtractInPlace(v1);
+    BABYLON.Vector3.CrossToRef(tempVectors.edge1, tempVectors.edge2, normal);
+    normal.normalize();
+  };
+
+  const indexCount = indices.length;
+
+  for (let i = 0; i < indexCount; i += 3) {
+    const vertexIndices = [indices[i], indices[i + 1], indices[i + 2]];
+
+    for (let j = 0; j < 3; j++) {
+      const posIndex = vertexIndices[j] * 3;
+      const coords = [positions[posIndex], positions[posIndex + 1], positions[posIndex + 2]];
+
+      switch (j) {
+        case 0: tempVectors.a.copyFromFloats(coords[0], coords[1], coords[2]); break;
+        case 1: tempVectors.b.copyFromFloats(coords[0], coords[1], coords[2]); break;
+        case 2: tempVectors.c.copyFromFloats(coords[0], coords[1], coords[2]); break;
+      }
+    }
+
+    computeTriangleNormal(tempVectors.a, tempVectors.b, tempVectors.c, tempVectors.normal);
+
+    const hashes = vertexIndices.map(getVertexHash);
+
+    if (hashes[0] === hashes[1] || hashes[1] === hashes[2] || hashes[2] === hashes[0]) {
+      continue;
+    }
+
+    for (let j = 0; j < 3; j++) {
+      const jNext = (j + 1) % 3;
+      const vecHash0 = hashes[j];
+      const vecHash1 = hashes[jNext];
+
+      const hash = `${vecHash0}_${vecHash1}`;
+      const reverseHash = `${vecHash1}_${vecHash0}`;
+
+      if (edgeMap.has(reverseHash)) {
+        const existingEdge = edgeMap.get(reverseHash)!;
+
+        const dot = tempVectors.normal.x * existingEdge.normal[0] +
+          tempVectors.normal.y * existingEdge.normal[1] +
+          tempVectors.normal.z * existingEdge.normal[2];
+
+        if (dot <= thresholdDot) {
+          const v0 = j === 0 ? tempVectors.a : j === 1 ? tempVectors.b : tempVectors.c;
+          const v1 = jNext === 0 ? tempVectors.a : jNext === 1 ? tempVectors.b : tempVectors.c;
+
+          edges.push([
+            new BABYLON.Vector3(v0.x, v0.y, v0.z),
+            new BABYLON.Vector3(v1.x, v1.y, v1.z)
+          ]);
+        }
+
+        edgeMap.delete(reverseHash);
+      } else if (!edgeMap.has(hash)) {
+        edgeMap.set(hash, {
+          normal: [tempVectors.normal.x, tempVectors.normal.y, tempVectors.normal.z],
+          triangleIndex: i
+        });
+      }
+    }
+  }
+
+  for (const [hash] of edgeMap) {
+    const [hash0, hash1] = hash.split('_');
+    const coords0 = hash0.split(',').map(Number).map(v => v / precision);
+    const coords1 = hash1.split(',').map(Number).map(v => v / precision);
+
+    edges.push([
+      new BABYLON.Vector3(coords0[0], coords0[1], coords0[2]),
+      new BABYLON.Vector3(coords1[0], coords1[1], coords1[2])
+    ]);
+  }
+
+  return { lines: edges };
+}
+
+/**
  * 合并相同材质的网格
  * 按材质分组几何体，分别合并每个材质组的几何体
  */
@@ -101,10 +227,13 @@ export async function mergeMeshesByMaterial(
   scene: BABYLON.Scene,
   model: BABYLON.Mesh,
   onProgress?: (percent: number, message: string, loaded: number, total: number) => void
-): Promise<void> {
+): Promise<{ edgeDataMap: Map<number, EdgeData> }> {
   // 创建按材质分组的几何体映射表（使用新的数据结构）
   const geometriesByMaterials = new Map<number, any[]>();
   const originalMeshesByMaterial = new Map<number, any[]>();
+
+  // 边框数据映射表 - 在合并阶段预计算边框
+  const edgeDataMap = new Map<number, EdgeData>();
 
   // 第一步：收集所有几何数据，按材质分组
   const totalMaterials = materialsMap.size;
@@ -150,8 +279,8 @@ export async function mergeMeshesByMaterial(
     // 更新收集阶段的进度（收集阶段占总进度的30%）
     processedMaterials++;
     if (onProgress) {
-      const collectProgress = 80 + (processedMaterials / totalMaterials) * 3; // 80%-83%
-      onProgress(collectProgress, "正在收集网格数据...", Math.floor(collectProgress), 100);
+      const collectProgress = 75 + (processedMaterials / totalMaterials) * 5; // 75%-80%
+      onProgress(collectProgress, "正在合并网格...", Math.floor(collectProgress), 100);
       console.log(`合并网格阶段 - 收集进度: ${processedMaterials}/${totalMaterials} -> ${collectProgress}%`);
 
       // 添加微小延迟，让进度条有足够时间显示
@@ -238,13 +367,49 @@ export async function mergeMeshesByMaterial(
         }
 
         // 设置合并后的顶点数据
-        mergedVertexData.positions = Array.from(positions);
-        mergedVertexData.normals = Array.from(normals);
-        mergedVertexData.indices = Array.from(indices);
+        // 【优化】直接使用 TypedArray，避免 Array.from() 转换
+        // Babylon.js VertexData 支持直接使用 TypedArray
+        mergedVertexData.positions = positions;   // 直接使用 Float32Array
+        mergedVertexData.normals = normals;      // 直接使用 Float32Array  
+        mergedVertexData.indices = indices;       // 直接使用 Uint32Array
 
         // 创建合并后的网格
         const mergedMesh = new BABYLON.Mesh(`merged_material_${colorID}`, scene);
         mergedVertexData.applyToMesh(mergedMesh, true);
+
+        // 预计算边框数据 - 在合并阶段直接计算，避免后续重复获取顶点数据
+        console.log(`开始预计算材质 ${colorID} 的边框数据`);
+        const vertexCount = (mergedVertexData.positions as Float32Array).length / 3;
+        const triangleCount = (mergedVertexData.indices!.length) / 3;
+
+        // 根据顶点数量动态调整阈值，避免边数过多
+        let thresholdAngle = 15; // 默认阈值
+        if (vertexCount > 100000) {
+          thresholdAngle = 35; // 大型几何体使用大阈值
+        } else if (vertexCount > 50000) {
+          thresholdAngle = 25;
+        } else if (vertexCount > 20000) {
+          thresholdAngle = 20;
+        }
+
+        console.log(`材质 ${colorID}: 顶点数 ${vertexCount}, 使用阈值 ${thresholdAngle}°`);
+
+        const edgeData = calculateMeshEdges(
+          mergedVertexData.positions as Float32Array,
+          mergedVertexData.indices!,
+          thresholdAngle
+        );
+
+        // 设置合理的边数上限，避免渲染性能问题
+        const MAX_EDGES_PER_MATERIAL = 500000; // 每个材质最多50万条边
+        if (edgeData.lines.length > MAX_EDGES_PER_MATERIAL) {
+          console.warn(`材质 ${colorID} 边数过多 (${edgeData.lines.length})，限制为 ${MAX_EDGES_PER_MATERIAL} 条`);
+          edgeData.lines = edgeData.lines.slice(0, MAX_EDGES_PER_MATERIAL);
+        }
+
+        edgeDataMap.set(colorID, edgeData);
+        console.log(`材质 ${colorID} 边框计算完成，顶点数: ${vertexCount}, 三角形数: ${triangleCount}, 最终边数: ${edgeData.lines.length}`);
+
         // 设置材质（保持原有的材质缓存机制）
         const material = materialCache.get(colorID);
         if (material) {
@@ -400,7 +565,7 @@ export async function mergeMeshesByMaterial(
     // 更新合并阶段的进度（合并阶段占总进度的16%）
     processedMergeGroups++;
     if (onProgress) {
-      const mergeProgress = 83 + (processedMergeGroups / totalMergeGroups) * 16; // 83%-99%
+      const mergeProgress = 80 + (processedMergeGroups / totalMergeGroups) * 15; // 80%-95%
       onProgress(mergeProgress, "正在合并网格...", Math.floor(mergeProgress), 100);
       console.log(`合并网格阶段 - 合并进度: ${processedMergeGroups}/${totalMergeGroups} -> ${mergeProgress}%`);
 
@@ -423,12 +588,11 @@ export async function mergeMeshesByMaterial(
     materialsMap.get(colorID)!.push(mesh);
   });
 
-  // if (onProgress) {
-  //   onProgress(100, "加载完成！", 100, 100);
-  //   // 让加载完成的文字显示足够时间
-  await new Promise(resolve => setTimeout(resolve, 100));
-  // }
   console.log(`网格合并完成，共创建了 ${mergedMeshes.length} 个合并后的网格，保留了所有原始子网格`);
+
+  // 返回边框数据映射表
+  console.log(`边框预计算完成，共 ${edgeDataMap.size} 个材质的边框数据`);
+  return { edgeDataMap };
 }
 
 /**

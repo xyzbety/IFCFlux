@@ -177,7 +177,9 @@ function createAppCore() {
         sceneManager.clear();
         pageState.treeData = [];
         resetGlobalVariables();
-
+        if (window.gc) {
+            window.gc();
+        }
         try {
             if (file.size > 600 * 1024 * 1024) {
                 MessagePlugin.info({ content: '文件过大，加载需要较长时间，请耐心等待', duration: 3000 });
