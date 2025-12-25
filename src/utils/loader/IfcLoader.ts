@@ -3,7 +3,7 @@ import * as BABYLON from "@babylonjs/core";
 import { cacheDB } from './CacheDB';
 import { IfcParser } from "./IfcParser";
 import { ifcGuidToUuid } from '../ifc/ifcGuidConverter'
-import { mergeMeshesByMaterial } from '../ifc/ifcMeshProcess';
+import { calculateEdges, mergeMeshesByMaterial } from '../ifc/ifcMeshProcess';
 
 // 定义进度回调函数类型
 type ProgressCallback = (percent: number, message: string, loaded: number, total: number) => void;
@@ -53,7 +53,6 @@ export class IfcLoader {
     private materialsMap: Map<number, IMergeGeometryData[]>; // 材质映射表（直接存储合并数据）
     private materialCache: Map<number, BABYLON.StandardMaterial>; // 材质缓存（避免重复创建）
     private geometryCache: Map<string, BABYLON.Mesh[]>;
-    private edgeDataMap: Map<number, any>; // 预计算的边框数据映射表
 
     // 已加载数量
     private loadedCount: number;
@@ -186,21 +185,18 @@ export class IfcLoader {
         return new Promise(async (resolve, reject) => {
             try {
                 this.model.setEnabled(false);
-
-                console.log('开始流式处理几何数据...');
                 // StreamAllMeshes是同步操作，无法在中间更新UI，不更新进度条
                 this.streamGetData()
-
                 console.log('IFC模型已加载,流式处理完成');
                 // 关闭模型并清理API
                 if (this.modelID !== null) {
-                    console.log('关闭模型...', this.ifcApi);
+                    console.log('关闭模型...');
                     this.ifcApi.CloseModel(this.modelID);
                     this.modelID = null;
                     this.ifcApi.Dispose();
                 }
 
-                // 阶段3：处理几何数据 (45% - 75%)
+                // 阶段3：处理几何数据 (45% - 70%)
                 await this.processGeometryDataWithProgress(onProgress)
 
                 // 清理几何缓存
@@ -211,34 +207,27 @@ export class IfcLoader {
                 console.log('IFC模型已加载,分批处理完成');
 
                 // 执行实际的合并操作并获取预计算的边框数据
-                // 合并阶段进度：75-95%
-                const { edgeDataMap } = await mergeMeshesByMaterial(this.materialsMap, this.materialCache, this.scene, this.model, (percent, message) => {
+                // 合并阶段进度：70-90%
+                await mergeMeshesByMaterial(this.materialsMap, this.materialCache, this.scene, this.model, (percent, message) => {
                     if (onProgress) {
                         onProgress(percent, message, Math.floor(percent), 100);
                     }
                 });
 
-                // 保存边框数据供后续使用
-                this.edgeDataMap = edgeDataMap;
 
                 // 清理材质映射表以释放内存
                 this.materialCache.clear();
                 this.materialsMap.clear();
 
                 // 使用预计算的边框数据渲染边框
-                // 边框阶段进度：96-99%
+                // 边框阶段进度：90-99%
                 await this.renderEdgesFromPrecomputedData((progress) => {
                     if (onProgress) {
-                        // 将边框进度映射到96-99%区间
-                        const mappedProgress = 95 + (progress * 0.03); // 0-100% -> 96-99%
+                        // 将边框进度映射到90-99%区间
+                        const mappedProgress = 90 + (progress * 0.09); // 0-100% -> 90-99%
                         onProgress(mappedProgress, `正在计算边界...`, Math.floor(mappedProgress), 100);
                     }
                 });
-
-                // 最终进度报告
-                if (onProgress) {
-                    onProgress(100, "IFC模型加载完成", 100, 100);
-                }
 
                 this.isComplete = true;
                 this.model.setEnabled(true);
@@ -639,7 +628,7 @@ export class IfcLoader {
 
         if (validGeometriesCount === 0) {
             if (onProgress) {
-                onProgress(75, "没有有效的几何体数据", 75, 100);
+                onProgress(70, "没有有效的几何体数据", 70, 100);
             }
             return;
         }
@@ -654,14 +643,10 @@ export class IfcLoader {
 
                 processedGeometryCount++;
 
-                // 优化进度更新频率：每处理50个几何体更新一次进度
-                if (onProgress && (processedGeometryCount % 50 === 0 || i === batchEnd - 1)) {
-                    const progressPercent = 45 + (processedGeometryCount / validGeometriesCount) * 30;
+                // 优化进度更新频率：每处理500个几何体更新一次进度
+                if (onProgress && (processedGeometryCount % 500 === 0 || i === batchEnd - 1)) {
+                    const progressPercent = 45 + (processedGeometryCount / validGeometriesCount) * 25;
                     onProgress(progressPercent, "正在处理几何数据...", Math.floor(progressPercent), 100);
-                }
-
-                // 每处理250个几何体让出控制权，让UI有机会更新，避免过于频繁
-                if (processedGeometryCount % 250 === 0) {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
@@ -675,7 +660,7 @@ export class IfcLoader {
 
         // 处理完成，更新最终进度
         if (onProgress) {
-            onProgress(75, "几何数据处理完成", 75, 100);
+            onProgress(70, "几何数据处理完成", 70, 100);
         }
 
         console.log(`几何数据处理完成，共处理 ${processedGeometryCount} 个几何体`);
@@ -738,59 +723,57 @@ export class IfcLoader {
     private async renderEdgesFromPrecomputedData(onProgress?: (progress: number) => void) {
         const t0 = performance.now();
         let allEdgeData: BABYLON.Vector3[][] = [];
+        const indexAttrs: BABYLON.IndicesArray[] = []
+        const indexCounts: number[] = []
+        const positionAttrs: BABYLON.FloatArray[] = []
 
         try {
-            console.log(`使用预计算边框数据，共 ${this.edgeDataMap.size} 个材质`);
+            this.scene.meshes.forEach((mesh) => {
+                indexAttrs.push(mesh.getIndices()!);
+                indexCounts.push(mesh.getTotalIndices());
+                positionAttrs.push(mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind)!);
+            })
 
-            // 直接使用预计算的边框数据，避免重新获取顶点数据
-            // 使用分批处理避免栈溢出，但保留完整边框数据
-            const totalMaterials = this.edgeDataMap.size;
-            let processedMaterials = 0;
-
-            for (const [materialId, edgeData] of this.edgeDataMap) {
-                if (edgeData && edgeData.lines) {
-                    // 分批添加边数据，避免一次性push大量数据导致栈溢出
-                    // 使用concat而不是push(...array)来避免栈溢出
-                    allEdgeData = allEdgeData.concat(edgeData.lines);
-                    processedMaterials++;
-                    const progress = (processedMaterials / totalMaterials) * 100;
-                    onProgress?.(progress);
-                    await new Promise(resolve => setTimeout(resolve, 0));
+            // 收集所有网格的边缘数据
+            for (let i = 1; i < indexAttrs.length; i++) {
+                const edgeData = calculateEdges(indexAttrs[i], indexCounts[i], positionAttrs[i], 15);
+                for (let j = 0; j < edgeData.length; j++) {
+                    allEdgeData.push(edgeData[j]);
                 }
-            }
 
-            const t1 = performance.now();
-            console.log(`预计算边框数据组装完成，耗时 ${((t1 - t0) / 1000).toFixed(2)} 秒，总边数量: ${allEdgeData.length}`);
-            // 设置全局边数上限，确保渲染性能
-            const MAX_TOTAL_EDGES = 2000000; // 总共最多200万条边
-            if (allEdgeData.length > MAX_TOTAL_EDGES) {
-                console.warn(`总边数过多 (${allEdgeData.length})，限制为 ${MAX_TOTAL_EDGES} 条边以保证渲染性能`);
-                allEdgeData = allEdgeData.slice(0, MAX_TOTAL_EDGES);
-            }
+                const progress = (i / (indexAttrs.length - 1)) * 100; // 减1因为从索引1开始
+                onProgress?.(progress);
 
-            // 创建一个合并的边框mesh
+                // 定期让出控制权，保持UI响应
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
             if (allEdgeData.length > 0) {
-
                 const edges = BABYLON.MeshBuilder.CreateLineSystem("meshEdge", {
                     lines: allEdgeData,
                     updatable: true,
                 }, this.scene);
                 edges.color = new BABYLON.Color3(0, 0, 0);
                 edges.setEnabled(false);
-
-                console.log(`边框mesh创建成功，使用预计算数据`);
             } else {
                 console.warn('没有预计算的边框数据可渲染');
             }
+
+            const t1 = performance.now();
+            console.log(`预计算边框数据组装完成，耗时 ${((t1 - t0) / 1000).toFixed(2)} 秒，总边数量: ${allEdgeData.length}`);
+
         } catch (error) {
             console.error('使用预计算数据创建边框时出错:', error);
         } finally {
-            // 清理边框数据以释放内存
+            // 计算完成后清理所有数据以释放内存
             allEdgeData.length = 0;
             allEdgeData = [];
-            this.edgeDataMap.clear(); // 清理预计算数据
 
-            console.log('预计算边框数据已清理');
+            // 清理数组数据
+            indexAttrs.length = 0;
+            indexCounts.length = 0;
+            positionAttrs.length = 0;
+
+            console.log('边框计算完成，所有数据已清理');
         }
     }
 

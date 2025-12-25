@@ -181,6 +181,7 @@ function createAppCore() {
             window.gc();
         }
         try {
+            const t0 = performance.now();
             if (file.size > 600 * 1024 * 1024) {
                 MessagePlugin.info({ content: '文件过大，加载需要较长时间，请耐心等待', duration: 3000 });
             }
@@ -201,6 +202,8 @@ function createAppCore() {
                     sceneManager.setupCameraAndLight();
                     sceneManager.setDefaultScene()
                     await sceneManager.batchProcessSceneMeshes();
+                    const t1 = performance.now();
+                    console.log(`模型加载完成，耗时 ${(t1 - t0) / 1000} 秒`);
                     // await sceneManager.saveOriginalMaterialProperties();
                 }
             });

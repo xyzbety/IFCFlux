@@ -183,17 +183,17 @@ export function simplifyGeometry(
 
   return result;
 }
-export function calculateEdges(
-  positions: Float32Array,
-  indices: Uint32Array | Uint16Array,
-  thresholdAngle = 15
-): EdgeData {
-  const thresholdDot = Math.cos(BABYLON.Angle.FromDegrees(thresholdAngle).radians());
-  const precision = 10000;
 
+export function calculateEdges(indexAttr: number[], indexCount: number, positionAttr: number[], thresholdAngle = 15): BABYLON.Vector3[][] {
+  // 预计算阈值和精度
+  const thresholdDot = Math.cos(BABYLON.Angle.FromDegrees(thresholdAngle).radians());
+  const precision = 10000; // 减少精度位数，提高性能
+
+  // 使用 Map 替代 Object，提高查找性能
   const edgeMap = new Map<string, { normal: number[]; triangleIndex: number }>();
   const edges: BABYLON.Vector3[][] = [];
 
+  // 重用临时变量，减少对象创建
   const tempVectors = {
     a: new BABYLON.Vector3(),
     b: new BABYLON.Vector3(),
@@ -203,8 +203,10 @@ export function calculateEdges(
     normal: new BABYLON.Vector3()
   };
 
+  // 顶点坐标缓存，避免重复计算
   const vertexCache = new Map<number, number[]>();
 
+  // 计算顶点坐标的哈希值
   const getVertexHash = (vertexIndex: number): string => {
     if (vertexCache.has(vertexIndex)) {
       const coords = vertexCache.get(vertexIndex)!;
@@ -213,15 +215,16 @@ export function calculateEdges(
 
     const posIndex = vertexIndex * 3;
     const coords = [
-      positions[posIndex],
-      positions[posIndex + 1],
-      positions[posIndex + 2]
+      positionAttr[posIndex],
+      positionAttr[posIndex + 1],
+      positionAttr[posIndex + 2]
     ];
     vertexCache.set(vertexIndex, coords);
 
     return `${Math.round(coords[0] * precision)},${Math.round(coords[1] * precision)},${Math.round(coords[2] * precision)}`;
   };
 
+  // 计算三角形法线
   const computeTriangleNormal = (v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3, normal: BABYLON.Vector3) => {
     tempVectors.edge1.copyFrom(v2).subtractInPlace(v1);
     tempVectors.edge2.copyFrom(v3).subtractInPlace(v1);
@@ -229,14 +232,14 @@ export function calculateEdges(
     normal.normalize();
   };
 
-  const indexCount = indices.length;
-
+  // 处理每个三角形
   for (let i = 0; i < indexCount; i += 3) {
-    const vertexIndices = [indices[i], indices[i + 1], indices[i + 2]];
+    const vertexIndices = [indexAttr[i], indexAttr[i + 1], indexAttr[i + 2]];
 
+    // 获取顶点位置
     for (let j = 0; j < 3; j++) {
       const posIndex = vertexIndices[j] * 3;
-      const coords = [positions[posIndex], positions[posIndex + 1], positions[posIndex + 2]];
+      const coords = [positionAttr[posIndex], positionAttr[posIndex + 1], positionAttr[posIndex + 2]];
 
       switch (j) {
         case 0: tempVectors.a.copyFromFloats(coords[0], coords[1], coords[2]); break;
@@ -245,14 +248,18 @@ export function calculateEdges(
       }
     }
 
+    // 计算法线
     computeTriangleNormal(tempVectors.a, tempVectors.b, tempVectors.c, tempVectors.normal);
 
+    // 获取顶点哈希
     const hashes = vertexIndices.map(getVertexHash);
 
+    // 跳过退化三角形
     if (hashes[0] === hashes[1] || hashes[1] === hashes[2] || hashes[2] === hashes[0]) {
       continue;
     }
 
+    // 处理每条边
     for (let j = 0; j < 3; j++) {
       const jNext = (j + 1) % 3;
       const vecHash0 = hashes[j];
@@ -261,13 +268,16 @@ export function calculateEdges(
       const hash = `${vecHash0}_${vecHash1}`;
       const reverseHash = `${vecHash1}_${vecHash0}`;
 
+      // 检查是否存在反向边
       if (edgeMap.has(reverseHash)) {
         const existingEdge = edgeMap.get(reverseHash)!;
 
+        // 计算法线点积
         const dot = tempVectors.normal.x * existingEdge.normal[0] +
           tempVectors.normal.y * existingEdge.normal[1] +
           tempVectors.normal.z * existingEdge.normal[2];
 
+        // 如果夹角大于阈值，创建边
         if (dot <= thresholdDot) {
           const v0 = j === 0 ? tempVectors.a : j === 1 ? tempVectors.b : tempVectors.c;
           const v1 = jNext === 0 ? tempVectors.a : jNext === 1 ? tempVectors.b : tempVectors.c;
@@ -278,8 +288,10 @@ export function calculateEdges(
           ]);
         }
 
+        // 移除已处理的边
         edgeMap.delete(reverseHash);
       } else if (!edgeMap.has(hash)) {
+        // 存储新边
         edgeMap.set(hash, {
           normal: [tempVectors.normal.x, tempVectors.normal.y, tempVectors.normal.z],
           triangleIndex: i
@@ -288,8 +300,11 @@ export function calculateEdges(
     }
   }
 
-  for (const [hash] of edgeMap) {
+  // 处理剩余的边界边
+  for (const [hash, edgeInfo] of edgeMap) {
     const [hash0, hash1] = hash.split('_');
+
+    // 解析顶点坐标
     const coords0 = hash0.split(',').map(Number).map(v => v / precision);
     const coords1 = hash1.split(',').map(Number).map(v => v / precision);
 
@@ -299,7 +314,7 @@ export function calculateEdges(
     ]);
   }
 
-  return { lines: edges };
+  return edges;
 }
 
 /**
@@ -361,9 +376,9 @@ export async function mergeMeshesByMaterial(
     // 更新收集阶段的进度（收集阶段占总进度的30%）
     processedMaterials++;
     if (onProgress) {
-      const collectProgress = 75 + (processedMaterials / totalMaterials) * 5; // 75%-80%
+      const collectProgress = 70 + (processedMaterials / totalMaterials) * 5; // 70%-75%
       onProgress(collectProgress, "正在合并网格...", Math.floor(collectProgress), 100);
-      console.log(`合并网格阶段 - 收集进度: ${processedMaterials}/${totalMaterials} -> ${collectProgress}%`);
+      // console.log(`合并网格阶段 - 收集进度: ${processedMaterials}/${totalMaterials} -> ${collectProgress}%`);
 
       // 添加微小延迟，让进度条有足够时间显示
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -471,7 +486,7 @@ export async function mergeMeshesByMaterial(
         mergedMesh.isVisible = true;
 
         // 保存合并信息到元数据，保留所有原始网格的expressID、GUID等数据
-        const originalMeshes = originalMeshesByMaterial.get(colorID) || [];
+        // const originalMeshes = originalMeshesByMaterial.get(colorID) || [];
 
         // 保存原始几何数据用于后续操作
         const originalMeshData: any[] = [];
@@ -550,7 +565,7 @@ export async function mergeMeshesByMaterial(
 
         mergedMeshes.push(mergedMesh);
 
-        console.log(`合并了材质 ${colorID} 的 ${geometries.length} 个几何体，保留了 ${originalMeshes.length} 个原始子网格数据，合并后的网格数量为 ${mergedMeshes.length} 个`);
+        // console.log(`合并了材质 ${colorID} 的 ${geometries.length} 个几何体，保留了 ${originalMeshes.length} 个原始子网格数据，合并后的网格数量为 ${mergedMeshes.length} 个`);
 
       } catch (error) {
         console.error(`合并材质 ${colorID} 的几何体时发生错误:`, error);
@@ -623,9 +638,9 @@ export async function mergeMeshesByMaterial(
     // 更新合并阶段的进度（合并阶段占总进度的16%）
     processedMergeGroups++;
     if (onProgress) {
-      const mergeProgress = 80 + (processedMergeGroups / totalMergeGroups) * 15; // 80%-95%
+      const mergeProgress = 75 + (processedMergeGroups / totalMergeGroups) * 15; // 75%-90%
       onProgress(mergeProgress, "正在合并网格...", Math.floor(mergeProgress), 100);
-      console.log(`合并网格阶段 - 合并进度: ${processedMergeGroups}/${totalMergeGroups} -> ${mergeProgress}%`);
+      // console.log(`合并网格阶段 - 合并进度: ${processedMergeGroups}/${totalMergeGroups} -> ${mergeProgress}%`);
 
       // 添加微小延迟，让进度条有足够时间显示
       await new Promise(resolve => setTimeout(resolve, 0));
