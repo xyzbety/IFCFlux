@@ -1,0 +1,83 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "IFCFlux",
+  "version": "0.1.0",
+  "identifier": "com.tuari-vue-ts-starter.IFCflux",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:5000",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "IFCFlux",
+        "width": 1000,
+        "height": 700,
+        "minWidth": 700,
+        "decorations": false,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "cli": {
+      "description": "My Tauri App",
+      "args": [
+        {
+          "name": "verbose",
+          "short": "v",
+          "description": "Enable verbose output",
+          "takesValue": false
+        }
+      ],
+      "subcommands": {
+        "greet": {
+          "description": "Greet someone",
+          "args": [
+            {
+              "name": "name",
+              "description": "Name to greet",
+              "takesValue": true,
+              "required": true
+            }
+          ]
+        },
+        "convert": {
+          "description": "Convert IFC file to GLB",
+          "args": [
+            {
+              "name": "input",
+              "description": "Input IFC file path",
+              "takesValue": true,
+              "required": true,
+              "index": 1
+            },
+            {
+              "name": "output",
+              "description": "Output GLB file path",
+              "takesValue": true,
+              "required": true,
+              "index": 2
+            }
+          ]
+        }
+      }
+    }
+  }
+}

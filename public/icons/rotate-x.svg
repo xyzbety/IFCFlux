@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="none" version="2.0"><style id="theme-style">
+      .contrast-fill { fill: #ffffff; fill-opacity: 1; }
+      .contrast-stroke { stroke: #ffffff; stroke-opacity: 1;  }
+      .accent-fill { fill: #ff7f00; fill-opacity: 0.5; }
+      .accent-stroke { stroke: #ff7f00; stroke-opacity:  0.5; }</style><circle cx="39.478" cy="3.078" r="28" class="accent-fill" transform="rotate(40.542)"/><path stroke-width="5" d="m7.074 30.053 29.397 11.985-3.673-33.493" class="contrast-stroke"/><path stroke-width="2.996" d="M24.504 23.207a11.98 11.98 0 0 0-9.8 7.507" class="contrast-stroke contrast-fill"/><path d="m29.818 22.808-6.184 4.6-.541-8.364z" class="contrast-fill"/></svg>

@@ -1,0 +1,65 @@
+:root {
+  --td-font-family: 'SarasaUiSC','PingFang SC','Hiragino Sans GB','Microsoft YaHei UI','Microsoft YaHei','Noto Sans CJK SC','WenQuanYi Zen Hei',sans-serif ;
+  --smart-font-family:'SarasaUiSC','PingFang SC','Hiragino Sans GB','Microsoft YaHei UI','Microsoft YaHei','Noto Sans CJK SC','WenQuanYi Zen Hei',sans-serif ;
+  /* 默认主题 (来自 themes.ts 的 '绀青') */
+  --theme-color-primary: #185abd;
+  --theme-color-hover: #144da1;
+  --theme-color-active: #1a63d0;
+
+  /* 语义化变量 */
+  --app-header-background: var(--theme-color-primary);
+  --app-header-text: #ffffff;
+  --app-border-color: #e0e0e0;
+
+  /* 备用色板 (来自 themes.ts) */
+  --color-ganqing: #185abd;
+  --color-shiqing: #177cb0;
+  --color-jingtailan: #2775b6;
+  --color-huaqing: #2376b7;
+  --color-dailan: #405a75;
+  --color-dingxiang: #8f77b5;
+  --color-zizi: #522653;
+  --color-qinglian: #8b2671;
+  --color-meiguizi: #c21f7c;
+  --color-yanzhi: #c04851;
+  --color-shiliuhong: #c21f30;
+  --color-haitanghong: #db5a6b;
+  --color-taohong: #f47983;
+  --color-shihong: #f26b4a;
+  --color-cihuang: #ffd661;
+  --color-xiangse: #f0d8a8;
+  --color-hupo: #ffbf00;
+  --color-feicuilv: #00a67c;
+  --color-liulv: #b3d98c;
+  --color-bilv: #3e8e41;
+  --color-ailv: #a4b59d;
+  --color-zheshi: #8c6b5d;
+  --color-yanse: #8a8a8a;
+  --color-xuanhei: #3d3d3f;
+}
+
+/** 公共前缀 */
+@starter-prefix: tdesign-starter;
+
+// 响应式断点
+@screen-sm: 768px;
+@screen-md: 992px;
+@screen-lg: 1200px;
+@screen-xl: 1400px;
+
+@screen-sm-min: @screen-sm;
+@screen-md-min: @screen-md;
+@screen-lg-min: @screen-lg;
+@screen-xl-min: @screen-xl;
+
+@screen-sm-max: calc(@screen-md-min - 1px);
+@screen-md-max: calc(@screen-lg-min - 1px);
+@screen-lg-max: calc(@screen-xl-min - 1px);
+
+// 动画
+@anim-time-fn-easing: cubic-bezier(0.38, 0, 0.24, 1);
+@anim-time-fn-ease-out: cubic-bezier(0, 0, 0.15, 1);
+@anim-time-fn-ease-in: cubic-bezier(0.82, 0, 1, 0.9);
+@anim-duration-base: 0.2s;
+@anim-duration-moderate: 0.24s;
+@anim-duration-slow: 0.28s;

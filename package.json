@@ -1,0 +1,51 @@
+{
+  "name": "IFCFlux",
+  "description": "本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理IFC模型数据",
+  "keywords": [
+    "IFC",
+    "BIM"
+  ],
+  "author": "",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^8.31.0",
+    "@babylonjs/gui": "^8.31.0",
+    "@babylonjs/inspector": "^8.37.0",
+    "@babylonjs/materials": "^8.31.0",
+    "@babylonjs/serializers": "^8.31.0",
+    "@duckdb/duckdb-wasm": "^1.30.0",
+    "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-cli": "^2.4.0",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
+    "@tauri-apps/plugin-fs": "^2.4.2",
+    "@types/node": "20.11.30",
+    "@visactor/vtable": "^1.19.8",
+    "@visactor/vtable-search": "^1.19.8",
+    "pinia": "^3.0.3",
+    "proj4": "^2.11.0",
+    "smart-webcomponents": "~24.0.22",
+    "tdesign-icons-vue-next": "^0.4.1",
+    "tdesign-vue-next": "^1.17.1",
+    "vue": "^3.5.22",
+    "web-ifc": "~0.0.72",
+    "xe-utils": "^3.7.9"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.4",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "less": "^4.4.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "vue-tsc": "^3.1.1"
+  },
+  "main": "index.js",
+  "license": "Apache-2.0"
+}

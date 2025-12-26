@@ -1,0 +1,133 @@
+.sidebar-overlay {
+  position: fixed;
+  top: 65px; /* Approx height of title bar + ribbon header */
+  left: 0;
+  width: 100%;
+  height: calc(100% - 65px);
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.sidebar-container {
+  width: 700px;
+  height: 100%;
+  background-color: white;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  animation: slide-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.setting-cards-container {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.setting-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 12px 16px; /* Reduced padding */
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #fafafa;
+}
+
+.setting-card:hover {
+  border-color: var(--card-hover-border-color);
+  background-color: var(--card-bg-color, #fafafa);
+}
+
+.setting-card.active {
+  border-color: var(--card-active-border-color);
+  background-color: var(--card-bg-color, #fafafa);
+  box-shadow: 0 0 0 2px var(--card-active-shadow-color);
+}
+
+.card-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* We can't use :deep() in a global stylesheet without a parent selector.
+   Let's assume the sidebar container will have a specific class or ID we can use.
+   For now, we will make them more generic, but this might need adjustment if it affects other parts of the app.
+   A better approach is to use a unique class on the root element of the component.
+*/
+.sidebar-container .t-menu__item {
+  font-size: 18px;
+  height: 52px;
+  color: #2c2c2c;
+  background-color: transparent;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-container .t-menu__item:hover {
+  background-color: var(--menu-hover-bg, #e8e8e8) !important;
+  color: #2c2c2c !important;
+}
+
+.sidebar-container .t-menu__item.t-is-active {
+  color: var(--menu-active-color) !important;
+  background-color: var(--menu-active-bg) !important;
+}
+
+.sidebar-container .t-menu__item.t-is-active .t-icon {
+  color: var(--menu-active-color) !important;
+}
+
+.sidebar-container .t-list-item__meta-description {
+  font-size: 11px;
+}
+
+.card-icon {
+  font-size: 24px;
+  color: #5e5e5e;
+}
+
+.card-text .title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c2c2c;
+  margin: 0;
+}
+
+.card-text .description {
+  font-size: 11px;
+  color: #8b8b8b;
+  margin: 4px 0 0 0;
+}
+
+.color-swatch-large {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.empty-history {
+  margin-top: 24px;
+  text-align: center;
+  color: var(--td-text-color-placeholder);
+  padding: 40px 0;
+  border: 1px dashed var(--td-border-level-2-color);
+  border-radius: var(--td-radius-medium);
+}
+
+.theme-card .card-text .description {
+  display: none;
+}

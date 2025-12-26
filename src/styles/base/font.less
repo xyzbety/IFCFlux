@@ -1,0 +1,24 @@
+@font-face {
+  font-family: 'SarasaUiSC'; /* 所有字重都使用相同的字体家族名称 */
+  src: url('/fonts/SarasaUiSC-Regular.woff2') format('woff2'); 
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 定义 SarasaUiSC Bold字重 */
+@font-face {
+  font-family: 'SarasaUiSC'; /* 相同的字体家族名称 */
+  src: url('/fonts/SarasaUiSC-Bold.woff2') format('woff2'); 
+  font-weight: bold; 
+  font-style: normal;
+  font-display: swap;
+}
+
+/*  全局字体应用和系统字体回退策略 */
+body {
+  font-family: 'SarasaUiSC','PingFang SC','Hiragino Sans GB','Microsoft YaHei UI','Microsoft YaHei','Noto Sans CJK SC','WenQuanYi Zen Hei',sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  color: #333!important; /* 示例文字颜色 */
+}

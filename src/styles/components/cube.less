@@ -1,0 +1,173 @@
+/* cube组件专用样式文件 */
+
+/* 定义cube组件所需的CSS变量 */
+:root {
+  --cube-bg-color-secondarycontainer-hover: #eee;
+  --cube-text-color-placeholder: rgba(0, 0, 0, 0.4);
+  --cube-text-color-primary: rgba(0, 0, 0, 0.9);
+  --cube-font-family: PingFang SC, Microsoft YaHei, Arial Regular;
+  --cube-font-size-body-medium: 14px;
+  --cube-line-height-common: 8px;
+  --cube-line-height-body-medium: calc(14px + 8px);
+  --cube-font-body-medium: 14px / calc(14px + 8px) PingFang SC, Microsoft YaHei, Arial Regular;
+  --cube-brand-color-3: #b5c7ff;
+  --cube-bg-color-opacity-container: rgba(255, 255, 255, 0.7);
+}
+
+.loader {
+  perspective: 3000px;
+  width: calc(100% / 3);
+  height: calc(100% / 3);
+}
+
+.m-cube {
+  position: relative;
+}
+
+.cube {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform .2s linear;
+}
+
+.face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.face-show {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 2;
+  clip-path: polygon(0px 25%, 0px 75%, 25% 100%, 75% 100%, 100% 75%, 100% 25%, 75% 0, 25% 0px, 0px 25%);
+  background: var(--cube-bg-color-secondarycontainer-hover);
+  border: 1px solid var(--cube-text-color-placeholder);
+  box-sizing: border-box;
+}
+
+.face-show div {
+  width: 100%;
+  height: 100%;
+  color: var(--cube-text-color-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font: var(--cube-font-body-medium);
+}
+
+.face-show div:hover,
+.face-corner:hover {
+  background: var(--cube-brand-color-3);
+}
+
+.face-corner {
+  content: '';
+  display: block;
+  position: absolute;
+  z-index: 1;
+  background: var(--cube-bg-color-secondarycontainer-hover);
+  width: 0;
+  height: 0;
+  cursor: pointer;
+}
+
+.face-corners .face-corner div {
+  position: absolute;
+  content: '';
+  display: block;
+}
+
+/* 角点样式定义 */
+.face-corners .corner-1 {
+  top: 0px;
+  left: 0px;
+  border-top: 10px solid var(--cube-text-color-placeholder);
+  border-right: 10px solid transparent;
+  
+  div {
+    top: -10px;
+    left: 0px;
+    border-top: 9px solid var(--cube-bg-color-secondarycontainer-hover);
+    border-right: 9px solid transparent;
+  }
+  
+  &[aria-hover="true"] div {
+    border-top-color: var(--cube-brand-color-3);
+  }
+}
+
+.face-corners .corner-2 {
+  top: 0;
+  right: 0;
+  border-top: 10px solid var(--cube-text-color-placeholder);
+  border-left: 10px solid transparent;
+  
+  div {
+    top: -10px;
+    right: 0;
+    border-top: 9px solid var(--cube-bg-color-secondarycontainer-hover);
+    border-left: 9px solid transparent;
+  }
+  
+  &[aria-hover="true"] div {
+    border-top-color: var(--cube-brand-color-3);
+  }
+}
+
+.face-corners .corner-3 {
+  bottom: 0;
+  right: 0;
+  border-bottom: 10px solid var(--cube-text-color-placeholder);
+  border-left: 10px solid transparent;
+  
+  div {
+    top: 1px;
+    left: -8.5px;
+    border-bottom: 9px solid var(--cube-bg-color-secondarycontainer-hover);
+    border-left: 9px solid transparent;
+  }
+  
+  &[aria-hover="true"] div {
+    border-bottom-color: var(--cube-brand-color-3);
+  }
+}
+
+.face-corners .corner-4 {
+  bottom: 0;
+  left: 0;
+  border-bottom: 10px solid var(--cube-text-color-placeholder);
+  border-right: 10px solid transparent;
+  
+  div {
+    top: 1px;
+    right: -8.5px;
+    border-bottom: 9px solid var(--cube-bg-color-secondarycontainer-hover);
+    border-right: 9px solid transparent;
+  }
+  
+  &[aria-hover="true"] div {
+    border-bottom-color: var(--cube-brand-color-3);
+  }
+}
+
+.circle {
+  width: 250%;
+  height: 250%;
+  position: absolute;
+  top: 0;
+  left: -75%;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  100% {
+    transform: rotateX(360deg) rotateY(360deg);
+  }
+}

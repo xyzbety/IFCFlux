@@ -1,0 +1,796 @@
+{
+  "name": "湖北省BIM基础数据交换标准 施工图审查MVD",
+  "version": "送审稿",
+  "data_sheet": {
+    "IfcAlarm": {
+      "Pset_报警器信息属性集": {
+        "设备长度": "IfcReal",
+        "设备宽度": "IfcReal",
+        "设备高度": "IfcReal",
+        "设备标高": "IfcReal",
+        "静态电流": "IfcReal",
+        "报警电流": "IfcReal",
+        "最小工作温度": "IfcReal",
+        "最大工作温度": "IfcReal",
+        "设备名称": "IfcLabel",
+        "设备类型": "IfcLabel",
+        "防护等级": "IfcLabel",
+        "备注": "IfcText",
+        "是否防爆类型": "IfcLabel"
+      }
+    },
+    "IfcAudioVisualAppliance": {
+      "Pset_显示设备信息属性集": { "外壳防护等级": "IfcLabel" }
+    },
+    "IfcBeam": {
+      "Pset_产品规格属性集": { "重量": "IfcReal", "体积": "IfcReal" },
+      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_梁信息属性集": {
+        "长度": "IfcReal",
+        "高度": "IfcReal",
+        "宽度": "IfcReal"
+      },
+      "Pset_混凝土梁信息属性集": {
+        "抗震等级": "IfcLabel",
+        "预留孔洞数量": "IfcInteger"
+      },
+      "Pset_燃烧特性属性集": {
+        "耐火极限": "IfcReal",
+        "防火性能": "IfcLabel",
+        "耐火完整性": "IfcReal",
+        "耐火隔热性": "IfcReal",
+        "防火性能等级": "IfcLabel",
+        "耐火等级": "IfcLabel",
+        "燃烧性能": "IfcText"
+      },
+      "Pset_耐久性属性集": {
+        "结构耐久性": "IfcLabel",
+        "结构耐久性要求": "IfcText",
+        "设计使用年限": "IfcDuration"
+      }
+    },
+    "IfcBoiler": {
+      "Pset_锅炉信息属性集": {
+        "燃料种类": "IfcLabel",
+        "热媒类型": "IfcLabel",
+        "燃烧方式": "IfcLabel",
+        "排气方式": "IfcLabel"
+      }
+    },
+    "IfcChiller": {
+      "Pset_冷水机信息属性集": {
+        "冷水机组类型": "IfcLabel",
+        "冷却方式": "IfcLabel",
+        "制冷剂类型": "IfcLabel",
+        "制冷量": "IfcReal",
+        "COP": "IfcReal",
+        "是否变频": "IfcBoolean"
+      }
+    },
+    "IfcCoil": { "Pset_风机盘管信息属性集": { "水阻": "IfcReal" } },
+    "IfcColumn": {
+      "Pset_产品规格属性集": {
+        "重量": "IfcReal",
+        "表面积": "IfcReal",
+        "体积": "IfcReal"
+      },
+      "Pset_位置特征属性集": {
+        "起点坐标X": "IfcReal",
+        "起点坐标Y": "IfcReal",
+        "起点坐标Z": "IfcReal",
+        "终点坐标X": "IfcReal",
+        "终点坐标Y": "IfcReal",
+        "终点坐标Z": "IfcReal"
+      },
+      "Pset_柱信息属性集": {
+        "高度": "IfcReal",
+        "截面最大宽度": "IfcReal",
+        "截面最大高度": "IfcReal",
+        "体积": "IfcReal",
+        "重量": "IfcReal",
+        "柱底标高": "IfcReal",
+        "材料": "IfcText"
+      },
+      "Pset_燃烧特性属性集": {
+        "耐火极限": "IfcReal",
+        "防火性能": "IfcLabel",
+        "耐火完整性": "IfcReal",
+        "耐火隔热性": "IfcReal",
+        "防火性能等级": "IfcLabel",
+        "耐火等级": "IfcLabel",
+        "燃烧性能": "IfcText"
+      },
+      "Pset_结构柱信息属性集": {
+        "抗震等级": "IfcLabel",
+        "混凝土强度等级": "IfcLabel",
+        "保护层厚度": "IfcReal",
+        "表面积": "IfcReal",
+        "混凝土等级": "IfcLabel",
+        "牛腿数量": "IfcInteger",
+        "预留孔洞数量": "IfcInteger",
+        "材质": "IfcText"
+      },
+      "Pset_耐久性属性集": {
+        "结构耐久性": "IfcLabel",
+        "设计使用年限": "IfcDuration",
+        "结构耐久性要求": "IfcText"
+      }
+    },
+    "IfcCommunicationsAppliance": {
+      "Pset_广播设备信息属性集": {
+        "备注": "IfcText",
+        "底距地高度": "IfcReal",
+        "厚度": "IfcReal"
+      },
+      "Pset_通信设备信息属性集": {
+        "厚度": "IfcReal",
+        "高度": "IfcReal",
+        "宽度": "IfcReal"
+      },
+      "Pset_集线器信息属性集": { "底距地高度": "IfcReal" }
+    },
+    "IfcController": {
+      "Pset_监测设备通用属性集": {
+        "设备型号": "IfcLabel",
+        "设备ID": "IfcText",
+        "设备名称": "IfcLabel"
+      }
+    },
+    "IfcCurtainWall": {
+      "Pset_位置特征属性集": {
+        "起点坐标X": "IfcReal",
+        "起点坐标Y": "IfcReal",
+        "起点坐标Z": "IfcReal",
+        "终点坐标X": "IfcReal",
+        "终点坐标Y": "IfcReal",
+        "终点坐标Z": "IfcReal"
+      },
+      "Pset_密封特性属性集": { "水密性能": "IfcLabel", "气密性能": "IfcLabel" },
+      "Pset_幕墙信息属性集": {
+        "是否为外墙": "IfcBoolean",
+        "高度": "IfcReal",
+        "厚度": "IfcReal",
+        "反射比": "IfcReal",
+        "采光折减系数": "IfcReal",
+        "连接组件类型": "IfcLabel",
+        "面板类型": "IfcLabel",
+        "抗风压性能": "IfcLabel",
+        "传热系数": "IfcReal",
+        "遮阳系数": "IfcReal",
+        "幕墙特征": "IfcLabel",
+        "幕墙功能": "IfcLabel"
+      },
+      "Pset_燃烧特性属性集": { "耐火等级": "IfcLabel" },
+      "Pset_玻璃幕墙信息属性集": {
+        "窗参数说明": "IfcText",
+        "可见光反射比": "IfcReal",
+        "主体材质类型": "IfcLabel",
+        "材质参数说明": "IfcText"
+      },
+      "Pset_石材幕墙信息属性集": {
+        "石材种类": "IfcLabel",
+        "石材参数说明": "IfcText"
+      },
+      "Pset_金属幕墙信息属性集": {
+        "金属板材类型": "IfcLabel",
+        "支承类型": "IfcLabel"
+      }
+    },
+    "IfcDoor": {
+      "Pset_出入口信息属性集": { "边长": "IfcReal", "直径": "IfcReal" },
+      "Pset_密封特性属性集": { "水密性能": "IfcLabel", "气密性能": "IfcLabel" },
+      "Pset_燃烧特性属性集": {
+        "耐火极限": "IfcReal",
+        "防火性能": "IfcLabel",
+        "耐火完整性": "IfcReal",
+        "耐火隔热性": "IfcReal",
+        "防火性能等级": "IfcLabel",
+        "耐火等级": "IfcLabel",
+        "燃烧性能": "IfcText"
+      },
+      "Pset_特种门信息属性集": { "通过宽度": "IfcReal", "通过高度": "IfcReal" },
+      "Pset_门信息属性集": {
+        "是否为外门": "IfcBoolean",
+        "是否为安全出口": "IfcBoolean",
+        "是否为疏散门": "IfcBoolean",
+        "宽度": "IfcReal",
+        "高度": "IfcReal",
+        "底高度": "IfcReal",
+        "门槛高度": "IfcReal",
+        "净宽": "IfcReal",
+        "厚度": "IfcReal",
+        "把手材质类型": "IfcLabel",
+        "把手尺寸": "IfcReal",
+        "标高": "IfcReal",
+        "开启方向": "IfcLabel",
+        "开启面积": "IfcReal",
+        "类型": "IfcLabel",
+        "人防门类型": "IfcLabel"
+      },
+      "Pset_预制门窗属性集": {
+        "是否为外部构件": "IfcBoolean",
+        "安装方式": "IfcLabel"
+      }
+    },
+    "IfcDuctSegment": {
+      "Pset_风管段信息属性集": {
+        "比摩阻": "IfcReal",
+        "沿程阻力": "IfcReal",
+        "隔热层厚度": "IfcReal",
+        "圆形风管直径": "IfcReal",
+        "保温方式": "IfcLabel"
+      }
+    },
+    "IfcElectricDistributionBoard": {
+      "Pset_配电柜信息属性集": {
+        "配电柜长度": "IfcReal",
+        "配电柜宽度": "IfcReal",
+        "配电柜高度": "IfcReal",
+        "配电柜功率": "IfcReal",
+        "配电柜名称": "IfcLabel",
+        "防护等级": "IfcLabel",
+        "专业": "IfcLabel",
+        "类型": "IfcLabel",
+        "前配电柜ID": "IfcLabel",
+        "后配电柜ID": "IfcLabel"
+      },
+      "Pset_配电箱信息属性集": {
+        "标高": "IfcReal",
+        "配电箱宽度": "IfcReal",
+        "配电箱高度": "IfcReal",
+        "配电箱长度": "IfcReal",
+        "配电箱容量": "IfcReal",
+        "需要系数": "IfcReal",
+        "防护等级": "IfcLabel",
+        "配电箱名称": "IfcLabel",
+        "专业": "IfcLabel",
+        "备注": "IfcText"
+      }
+    },
+    "IfcElectricGenerator": {
+      "Pset_发电机信息属性集": { "型号规格": "IfcLabel" }
+    },
+    "IfcElectricTimeControl": {
+      "Pset_电气时间控制器信息属性集": { "宽度": "IfcReal", "高度": "IfcReal" }
+    },
+    "IfcFan": {
+      "Pset_风机信息属性集": {
+        "全压": "IfcReal",
+        "出口静压": "IfcReal",
+        "电机功率": "IfcReal",
+        "电机电压": "IfcReal",
+        "电机功率因数": "IfcReal",
+        "是否防爆": "IfcBoolean"
+      }
+    },
+    "IfcFireSuppressionTerminal": {
+      "Pset_水泵接合器信息属性集": { "标高": "IfcReal" },
+      "Pset_消火栓信息属性集": {
+        "标高": "IfcReal",
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "高度": "IfcReal",
+        "最低栓口流量": "IfcReal"
+      },
+      "Pset_消火栓箱信息属性集": {
+        "设计流量": "IfcReal",
+        "水带长度": "IfcReal",
+        "水柱长度": "IfcReal",
+        "最低栓口流量": "IfcReal",
+        "最低充实水柱": "IfcReal",
+        "灭火器数量": "IfcInteger",
+        "厚度": "IfcReal",
+        "是否设置消防软管卷盘": "IfcBoolean",
+        "消防水带材质类型": "IfcLabel",
+        "是否为减压型": "IfcBoolean",
+        "消防用水量": "IfcReal",
+        "灭火器类型": "IfcLabel",
+        "灭火器规格型号": "IfcLabel"
+      },
+      "Pset_消防喷头信息属性集": {
+        "标高": "IfcReal",
+        "喷水强度": "IfcReal",
+        "作用面积": "IfcReal",
+        "流量系数": "IfcReal",
+        "喷头类型": "IfcLabel",
+        "保护面积类型": "IfcLabel"
+      },
+      "Pset_灭火器箱信息属性集": {
+        "标高": "IfcReal",
+        "灭火剂类型": "IfcLabel",
+        "灭火剂充装量": "IfcReal",
+        "灭火级别": "IfcLabel"
+      }
+    },
+    "IfcFooting": {
+      "Pset_承台信息属性集": { "承台下桩数量": "IfcInteger" },
+      "Pset_柱墩信息属性集": {
+        "柱墩尺寸": "IfcReal",
+        "混凝土强度等级": "IfcLabel",
+        "锚固长度": "IfcReal"
+      }
+    },
+    "IfcFurniture": {
+      "Pset_家具信息属性集": {
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "高度": "IfcReal"
+      }
+    },
+    "IfcInterceptor": {
+      "Pset_一体式隔油装置信息属性集": {
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "高度": "IfcReal"
+      }
+    },
+    "IfcJunctionBox": {
+      "Pset_接线盒信息属性集": {
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "高度": "IfcReal",
+        "主体材质类型": "IfcLabel"
+      }
+    },
+    "IfcLightFixture": {
+      "Pset_灯具信息属性集": {
+        "标高": "IfcReal",
+        "灯具长度": "IfcReal",
+        "灯具宽度": "IfcReal",
+        "灯具高度": "IfcReal",
+        "总光通量": "IfcReal",
+        "镇流器功率": "IfcReal",
+        "显色指数": "IfcReal",
+        "色温": "IfcReal",
+        "光效率": "IfcReal",
+        "备用电源连续供电时长": "IfcDuration",
+        "名称": "IfcLabel",
+        "光源类型": "IfcLabel",
+        "光源数量": "IfcInteger",
+        "专业": "IfcLabel",
+        "灯具布置方式": "IfcLabel",
+        "备注": "IfcText"
+      }
+    },
+    "IfcOpeningElement": {
+      "Pset_洞口信息属性集": {
+        "正投影面积": "IfcReal",
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "高度": "IfcReal",
+        "厚度": "IfcReal",
+        "外径": "IfcReal",
+        "类型": "IfcLabel",
+        "备注": "IfcText",
+        "穿墙套管材质": "IfcText"
+      }
+    },
+    "IfcOutlet": {
+      "Pset_插座信息属性集": {
+        "标高": "IfcReal",
+        "插座长度": "IfcReal",
+        "插座宽度": "IfcReal",
+        "插座高度": "IfcReal",
+        "相数": "IfcLabel",
+        "防护等级": "IfcLabel",
+        "专业": "IfcLabel",
+        "备注": "IfcText",
+        "是否为安全型": "IfcBoolean"
+      }
+    },
+    "IfcPile": {
+      "Pset_桩基础信息属性集": {
+        "桩顶高程": "IfcReal",
+        "桩伸入承台距离": "IfcReal",
+        "桩截面尺寸": "IfcReal",
+        "桩受力类型": "IfcLabel",
+        "抗震等级": "IfcLabel",
+        "宽度": "IfcReal",
+        "高度": "IfcReal",
+        "桩径": "IfcReal",
+        "桩长": "IfcReal"
+      },
+      "Pset_混凝土桩信息属性集": {
+        "混凝土材料信息": "IfcText",
+        "混凝土用量": "IfcReal"
+      }
+    },
+    "IfcPipeFitting": {
+      "Pset_水管三通信息属性集": {
+        "主管直径": "IfcReal",
+        "直管直径": "IfcReal"
+      },
+      "Pset_水管四通信息属性集": {
+        "主管直径": "IfcReal",
+        "直管直径": "IfcReal",
+        "支管1直径": "IfcReal",
+        "支管2直径": "IfcReal"
+      },
+      "Pset_水管弯头信息属性集": { "公称直径": "IfcReal" }
+    },
+    "IfcPipeSegment": {
+      "Pset_水管段信息属性集": {
+        "隔热层厚度": "IfcReal",
+        "管材名称": "IfcLabel",
+        "专业": "IfcLabel",
+        "坡度": "IfcReal"
+      }
+    },
+    "IfcProtectiveDevice": {
+      "Pset_接地极构件信息属性集": {
+        "材质": "IfcText",
+        "专业": "IfcLabel",
+        "备注": "IfcText"
+      }
+    },
+    "IfcPump": {
+      "Pset_泵信息属性集": { "扬程": "IfcReal", "水泵型号": "IfcLabel" }
+    },
+    "IfcRailing": {
+      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_扶栏信息属性集": {
+        "高度": "IfcReal",
+        "至完成面高度": "IfcReal",
+        "类型": "IfcLabel",
+        "防攀爬措施": "IfcText",
+        "有无防攀滑措施": "IfcBoolean"
+      },
+      "Pset_耐久性属性集": { "设计使用年限": "IfcDuration" }
+    },
+    "IfcRamp": {
+      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_坡道信息属性集": {
+        "坡道净宽": "IfcReal",
+        "坡道宽度": "IfcReal",
+        "坡道水平长度": "IfcReal",
+        "坡道高度": "IfcReal",
+        "坡道纵向坡度": "IfcReal",
+        "坡道横向坡度": "IfcReal"
+      },
+      "Pset_耐久性属性集": {
+        "结构耐久性": "IfcLabel",
+        "结构耐久性要求": "IfcText"
+      }
+    },
+    "IfcRoof": {
+      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_屋顶信息属性集": {
+        "屋面保温层厚度": "IfcReal",
+        "尖端构件锚固措施": "IfcText",
+        "屋面防水等级": "IfcLabel",
+        "材质": "IfcText",
+        "屋面构造": "IfcText"
+      },
+      "Pset_耐久性属性集": {
+        "结构耐久性": "IfcLabel",
+        "结构耐久性要求": "IfcText",
+        "设计使用年限": "IfcDuration"
+      }
+    },
+    "IfcSanitaryTerminal": {
+      "Pset_卫生洁具信息属性集": {
+        "标高": "IfcReal",
+        "冲水量": "IfcReal",
+        "是否设置存水弯": "IfcBoolean",
+        "排水当量": "IfcReal",
+        "类型": "IfcLabel"
+      }
+    },
+    "IfcSensor": {
+      "Pset_感温感烟探测器信息属性集": {
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "高度": "IfcReal",
+        "标高": "IfcReal",
+        "名称": "IfcLabel",
+        "类型": "IfcLabel",
+        "探测器类型": "IfcLabel",
+        "是否为防爆类型": "IfcBoolean",
+        "防护等级": "IfcLabel",
+        "备注": "IfcText"
+      }
+    },
+    "IfcSite": {
+      "Pset_场地信息属性集": {
+        "日照间距": "IfcReal",
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "总用地面积": "IfcReal",
+        "可建设用地面积": "IfcReal",
+        "建筑密度": "IfcReal",
+        "建筑比例": "IfcReal",
+        "混合用地比例": "IfcReal",
+        "容积率": "IfcReal",
+        "绿地率": "IfcReal",
+        "地块编号": "IfcLabel",
+        "城市用地分类和使用": "IfcText"
+      }
+    },
+    "IfcSlab": {
+      "Pset_板信息属性集": {
+        "厚度": "IfcReal",
+        "面层厚度": "IfcReal",
+        "顶部高程": "IfcReal",
+        "面积": "IfcReal",
+        "平台宽度": "IfcReal",
+        "坡度": "IfcReal",
+        "是否为屋面": "IfcBoolean",
+        "轮廓线": "IfcText"
+      },
+      "Pset_混凝土楼板信息属性集": {
+        "标高": "IfcReal",
+        "抗震等级": "IfcLabel",
+        "高度": "IfcReal",
+        "筏板中桩数量": "IfcInteger",
+        "筏板中梁数量": "IfcInteger",
+        "顶面高程": "IfcReal",
+        "厚度": "IfcReal"
+      },
+      "Pset_结构板信息属性集": {
+        "所含预制板最厚厚度": "IfcReal",
+        "重量": "IfcReal",
+        "体积": "IfcReal",
+        "水平投影面积": "IfcReal",
+        "名称": "IfcLabel",
+        "厚度": "IfcReal",
+        "偏移": "IfcReal",
+        "材料": "IfcText",
+        "装配式": "IfcText",
+        "屋面属性": "IfcText"
+      }
+    },
+    "IfcSpace": {
+      "Pset_公共建筑空间信息属性集": {
+        "净空高度": "IfcReal",
+        "结构形式": "IfcLabel"
+      },
+      "Pset_居住建筑空间信息属性集": {
+        "楼（地）面反射比": "IfcReal",
+        "人数": "IfcInteger"
+      },
+      "Pset_建筑空间信息属性集": {
+        "房间功能类型": "IfcLabel",
+        "顶棚反射比": "IfcReal",
+        "墙面反射比": "IfcReal",
+        "楼（地）面反射比": "IfcReal",
+        "高度": "IfcReal",
+        "净面积": "IfcReal",
+        "总建筑面积": "IfcReal",
+        "地板类型": "IfcLabel",
+        "地板厚度": "IfcReal",
+        "墙面涂料厚度": "IfcReal",
+        "天花板涂料类型": "IfcLabel",
+        "天花板涂料厚度": "IfcReal",
+        "净宽度": "IfcReal",
+        "空间使用特征": "IfcLabel",
+        "外墙墙体构造": "IfcText",
+        "内墙墙体构造": "IfcText",
+        "楼（地）面构造": "IfcText",
+        "顶棚构造": "IfcText",
+        "墙面涂料": "IfcText"
+      },
+      "Pset_绿色空间属性集": {
+        "空气污染物浓度": "IfcReal",
+        "是否设置禁烟标志": "IfcBoolean",
+        "PM2.5年均浓度": "IfcReal",
+        "采光系数": "IfcReal",
+        "采光照度值": "IfcReal",
+        "室内热环境参数说明": "IfcText",
+        "隔声性能": "IfcLabel",
+        "室内噪声级": "IfcLabel",
+        "空气质量性能": "IfcLabel",
+        "空间热环境舒适性": "IfcLabel",
+        "采光性能": "IfcLabel",
+        "自然通风性能": "IfcLabel",
+        "室内噪声与隔声性能": "IfcLabel"
+      }
+    },
+    "IfcSpaceHeater": {
+      "Pset_房间加热器信息属性集": {
+        "散热器片数": "IfcInteger",
+        "单片散热量": "IfcReal"
+      }
+    },
+    "IfcSpatialZone": {
+      "Pset_停车场信息属性集": {
+        "机动车位数量": "IfcInteger",
+        "非机动车位数量": "IfcInteger",
+        "无障碍车位数量": "IfcInteger"
+      },
+      "Pset_建筑区域信息属性集": {
+        "主功能类别": "IfcLabel",
+        "子功能类别": "IfcLabel",
+        "区域类别": "IfcLabel",
+        "区域标记": "IfcLabel",
+        "计容系数": "IfcReal",
+        "计算系数": "IfcReal",
+        "结构净高": "IfcReal",
+        "建筑净高": "IfcReal",
+        "结构层高": "IfcReal",
+        "计算标高": "IfcReal",
+        "计算标高（埋深）": "IfcReal",
+        "面积": "IfcReal",
+        "建筑面积": "IfcReal",
+        "楼层数量": "IfcInteger",
+        "是否为疏散分区": "IfcBoolean",
+        "区域人数": "IfcInteger",
+        "区域长度": "IfcReal",
+        "区域宽度": "IfcReal",
+        "轮廓线": "IfcText",
+        "区域位置": "IfcText"
+      }
+    },
+    "IfcStackTerminal": {
+      "Pset_立管末端设备信息属性集": { "深度": "IfcReal" }
+    },
+    "IfcStair": {
+      "Pset_楼梯信息属性集": {
+        "标高": "IfcReal",
+        "是否为疏散楼梯": "IfcBoolean",
+        "宽度": "IfcReal",
+        "实际踏板深度": "IfcReal",
+        "实际踏板高度": "IfcReal",
+        "底部偏移": "IfcReal",
+        "顶部偏移": "IfcReal",
+        "楼梯井净宽": "IfcReal",
+        "坡度": "IfcReal",
+        "水平段长度": "IfcReal",
+        "是否为旋转楼梯": "IfcBoolean",
+        "高度": "IfcReal",
+        "平台宽度": "IfcReal",
+        "楼梯净宽": "IfcReal",
+        "梯段宽度": "IfcReal",
+        "梯段高度": "IfcReal",
+        "踢面数量": "IfcInteger",
+        "踏步板厚度": "IfcReal",
+        "踏步数量": "IfcInteger",
+        "踏步材质类型": "IfcLabel",
+        "扶手高度": "IfcReal",
+        "扶手材质类型": "IfcLabel",
+        "主体材质类型": "IfcLabel",
+        "砂浆强度等级": "IfcLabel",
+        "扶手材质强度要求": "IfcText",
+        "连接件强度要求": "IfcText",
+        "扶手间净距": "IfcReal",
+        "栏杆扶手高度": "IfcReal",
+        "防攀滑措施": "IfcText",
+        "防坠落措施": "IfcText",
+        "功能": "IfcLabel"
+      },
+      "Pset_燃烧特性属性集": { "防火性能等级": "IfcLabel" },
+      "Pset_耐久性属性集": {
+        "结构耐久性": "IfcLabel",
+        "结构耐久性要求": "IfcText",
+        "设计使用年限": "IfcDuration"
+      }
+    },
+    "IfcStairFlight": {
+      "Pset_楼梯段信息属性集": {
+        "重量": "IfcReal",
+        "体积": "IfcReal",
+        "水平投影面积": "IfcReal",
+        "长度": "IfcReal",
+        "梯段宽度": "IfcReal",
+        "梯段高度": "IfcReal",
+        "踏步深度": "IfcReal",
+        "踏步高度": "IfcReal",
+        "踏步板厚度": "IfcReal",
+        "踏步数量": "IfcInteger",
+        "材料": "IfcText",
+        "是否为装配式": "IfcBoolean"
+      },
+      "Pset_混凝土楼梯段信息属性集": {
+        "混凝土强度等级": "IfcLabel",
+        "重量": "IfcReal"
+      },
+      "Pset_耐久性属性集": {
+        "结构耐久性": "IfcLabel",
+        "结构耐久性要求": "IfcText",
+        "设计使用年限": "IfcDuration"
+      }
+    },
+    "IfcSwitchingDevice": {
+      "Pset_开关信息属性集": {
+        "相数": "IfcLabel",
+        "长度": "IfcReal",
+        "宽度": "IfcReal",
+        "厚度": "IfcReal"
+      }
+    },
+    "IfcTank": {
+      "Pset_水箱信息属性集": {
+        "是否设置消毒装置": "IfcBoolean",
+        "进水管管径": "IfcReal",
+        "进水管口最低点标高": "IfcReal",
+        "溢流边缘标高": "IfcReal",
+        "有效容量": "IfcReal",
+        "最低有效水位": "IfcReal",
+        "最高有效水位": "IfcReal"
+      }
+    },
+    "IfcTransformer": {
+      "Pset_变压器信息属性集": {
+        "变压器长度": "IfcReal",
+        "变压器宽度": "IfcReal",
+        "变压器高度": "IfcReal",
+        "一次电压": "IfcReal",
+        "二次电压": "IfcReal",
+        "额定二次电流": "IfcReal",
+        "额定频率": "IfcReal",
+        "空载损耗": "IfcReal",
+        "负载损耗": "IfcReal",
+        "空载电流": "IfcReal",
+        "类型": "IfcLabel",
+        "绝缘等级": "IfcLabel",
+        "防护等级": "IfcLabel"
+      }
+    },
+    "IfcUnitaryEquipment": {
+      "Pset_空调机组/新风机组信息属性集": { "机外静压": "IfcReal" }
+    },
+    "IfcValve": {
+      "Pset_分、集水器信息属性集": {
+        "管口直径": "IfcReal",
+        "筒体直径": "IfcReal"
+      },
+      "Pset_水阀信息属性集": { "直径": "IfcReal", "工作压力": "IfcReal" }
+    },
+    "IfcWall": {
+      "Pset_位置特征属性集": {
+        "起点坐标X": "IfcReal",
+        "起点坐标Y": "IfcReal",
+        "起点坐标Z": "IfcReal",
+        "终点坐标X": "IfcReal",
+        "终点坐标Y": "IfcReal",
+        "终点坐标Z": "IfcReal"
+      },
+      "Pset_墙体材料节能信息属性集": {
+        "单层材料厚度": "IfcReal",
+        "单层材料类型": "IfcLabel",
+        "单层材料名称": "IfcLabel",
+        "单层材料依据": "IfcText",
+        "防火等级": "IfcLabel"
+      },
+      "Pset_墙信息属性集": {
+        "是否为外墙": "IfcBoolean",
+        "高度": "IfcReal",
+        "厚度": "IfcReal",
+        "长度": "IfcReal",
+        "是否为临空墙": "IfcBoolean"
+      }
+    },
+    "IfcWasteTerminal": {
+      "Pset_地漏信息属性集": { "标高": "IfcReal", "材料": "IfcText" },
+      "Pset_存水弯信息属性集": { "水封深度": "IfcReal" }
+    },
+    "IfcWindow": {
+      "Pset_声学特性属性集": { "声学性能": "IfcLabel" },
+      "Pset_密封特性属性集": { "气密性能": "IfcLabel" },
+      "Pset_燃烧特性属性集": { "耐火极限": "IfcReal" },
+      "Pset_窗体材料节能信息属性集": {
+        "窗可见透射比": "IfcReal",
+        "可开启面积比": "IfcReal",
+        "材料依据": "IfcText"
+      },
+      "Pset_窗信息属性集": {
+        "标高": "IfcReal",
+        "是否为外窗": "IfcBoolean",
+        "是否为排烟窗": "IfcBoolean",
+        "底高度": "IfcReal",
+        "面积": "IfcReal",
+        "有效面积": "IfcReal",
+        "高度": "IfcReal",
+        "宽度": "IfcReal",
+        "是否可开启": "IfcBoolean",
+        "开启扇高度": "IfcReal",
+        "开启扇下量子高度": "IfcReal",
+        "开启扇总宽度": "IfcReal",
+        "厚度": "IfcReal",
+        "可开启面积": "IfcReal",
+        "开启方向": "IfcLabel",
+        "材质": "IfcText"
+      },
+      "Pset_耐久性属性集": { "设计使用年限": "IfcDuration" }
+    }
+  }
+}

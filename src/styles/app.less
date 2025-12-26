@@ -1,0 +1,144 @@
+.container-title {
+  background-color: var(--theme-color-primary);
+  color: white;
+  transition: background-color 0.3s;
+}
+
+.container-title,
+.title-left,
+.title-right {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 40px;
+  font-size: 40px;
+}
+
+.title-left img {
+  height: 15px;
+  padding: 0 5px;
+}
+
+.title-left span {
+  height: 40px;
+  line-height: 40px;
+  font-size: 16px;
+  padding: 0 5px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: default;
+}
+
+.title-left .icon,
+.title-right .icon {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.title-left .icon:hover,
+.title-right .icon:hover {
+  background-color: var(--theme-color-hover);
+}
+
+.title-right .icon:last-child:hover {
+  background-color: #e81123;
+}
+
+.container-ribbon {
+  height: 130px;
+}
+
+smart-ribbon:focus>div.smart-ribbon {
+  outline: none !important;
+
+}
+
+.container-canvas {
+  position: relative;
+  height: calc(100vh - 170px);
+  display: flex;
+  background-color: rgb(240, 240, 240);
+  border-top: 1px solid rgb(175, 176, 182);
+}
+
+.canvas-left,
+.canvas-right {
+  min-width: 350px;
+  position: relative;
+  background: #f8f8f8;
+  transition: width 0.1s;
+  z-index: 1;
+  margin: 15px;
+}
+
+#canvas-middle {
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  background: white;
+  display: flex;
+  height: 100%;
+}
+
+.drag-bar {
+  width: 1px;
+  cursor: ew-resize;
+  background: #e0e0e0;
+  z-index: 10;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.drag-bar:hover {
+  background: #b0b0b0;
+}
+
+.check-wrapper {
+  display: flex;
+  height: 100%;
+}
+#codeInspect {
+  height: 100%;
+  flex: 1 1 0;
+}
+.drag-bar-check {
+  width: 1px;
+  flex: none; /* 关键：防止被flex挤压 */
+  cursor: ew-resize;
+  background: #e0e0e0;
+  z-index: 10;
+  height: 100%;
+  transition: background 0.2s;
+}
+
+.drag-bar-check:hover {
+  background: #b0b0b0;
+}
+
+#codePanel {
+  flex: 0 1 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+#rightArea {
+  flex: 1 1 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+#viewer {
+  width: 100%;
+  height: 100%;
+  background: white;
+}
+
+#viewer-canvas {
+  outline: none;
+}
