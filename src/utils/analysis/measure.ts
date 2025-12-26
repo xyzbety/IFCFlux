@@ -2,13 +2,8 @@ import * as BABYLON from "@babylonjs/core";
 import { EffectManager } from "../../services/scene-effect";
 
 // 常量定义
-const LINE_COLORS = [BABYLON.Color3.White(), new BABYLON.Color3(1, 0.5, 0)];
-const LINE_OPTIONS = {
-    useColors: true,
-    colors: LINE_COLORS,
-    colorDistribution: BABYLON.GreasedLineMeshColorDistribution.COLOR_DISTRIBUTION_REPEAT,
-    width: 0.1
-};
+const LINE_COLOR = new BABYLON.Color3(1.0, 0.5, 0);
+const TEMP_LINE_COLOR = new BABYLON.Color3(1.0, 0.5, 0);
 
 export class Measure {
     private markSize: number;
@@ -29,11 +24,11 @@ export class Measure {
     private tempLine?: BABYLON.Mesh;
     private line?: BABYLON.Mesh;
     private effectManager: any;
-    private lineWidth: number | undefined;
+    private lastUpdateTime: number = 0;
+    private updateThrottle: number = 16; // 约60fps的更新频率
 
-    constructor(scene: BABYLON.Scene, type: 'distance' | 'area' | 'angle' | 'coordinate', markSize?: number, lineWidth?: number) {
+    constructor(scene: BABYLON.Scene, type: 'distance' | 'area' | 'angle' | 'coordinate', markSize?: number) {
         this.markSize = markSize || 1; // 默认标记点大小
-        this.lineWidth = lineWidth || 0.1;
         this.points = [];
         this.pointMarkers = [];
         this.lineDistance = 0;
@@ -52,22 +47,85 @@ export class Measure {
         this.effectManager = EffectManager.getInstance(scene);
     }
 
-    // 创建带颜色的线条
-    private createColoredLine(name: string, points: BABYLON.Vector3[], width?: number): BABYLON.Mesh {
-        const vecPoints = BABYLON.GreasedLineTools.SegmentizeLineBySegmentLength(points, 1);
-        const line = BABYLON.CreateGreasedLine(name, {
-            points: vecPoints
-        }, {
-            ...LINE_OPTIONS,
-            width: this.lineWidth || width
+    // 创建 Tube
+    private createTube(name: string, points: BABYLON.Vector3[], color: BABYLON.Color3, updatable: boolean = false): BABYLON.Mesh {
+        const tube = BABYLON.MeshBuilder.CreateTube(name, {
+            path: points,
+            radius: this.markSize * 0.3,
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+            updatable: updatable
         }, this.scene);
 
-        line.isPickable = false;
-        line.renderingGroupId = 1;
-        this.effectManager.simpleTarget.renderList.push(line);
-        this.effectManager?.simpleTarget.setMaterialForRendering(line, line.material);
+        tube.isPickable = false;
+        tube.renderingGroupId = 1;
 
-        return line;
+        // 创建材质
+        BABYLON.Effect.ShadersStore["customVertexShader"] = `
+            precision highp float;
+
+            attribute vec3 position;
+            attribute vec2 uv;
+
+            uniform mat4 worldViewProjection;
+
+            varying vec2 vUV;
+            void main() {
+                vUV = uv;
+                gl_Position = worldViewProjection * vec4( position, 1.0);
+
+            }`;
+
+        BABYLON.Effect.ShadersStore["customFragmentShader"] = `
+            varying vec2 vUV;
+
+            void main() {
+                vec3 bgColor = vec3(1.0, 1.0, 1.0);  // 白色背景
+                vec3 stripeColor = vec3(1.0, 0.5, 0.0); // 橙色条纹
+                vec3 pixel = bgColor;
+                
+                // 创建白橙白橙白...的条纹效果
+                float stripeWidth = 0.06;  // 每条条纹的宽度
+                float stripePattern = mod(vUV.y, stripeWidth * 2.0);
+                
+                // 如果在橙色条纹区域内，则使用橙色
+                if (stripePattern < stripeWidth) {
+                    pixel = stripeColor;
+                }
+                
+                // 确保第一行和最后一行都是橙色
+                if (vUV.y < stripeWidth || vUV.y > 1.0 - stripeWidth) {
+                    pixel = stripeColor;
+                }
+                
+                gl_FragColor = vec4(pixel, 1.0);
+            }`;
+
+        var shaderMaterial = new BABYLON.ShaderMaterial("shader", this.scene, {
+            vertex: "custom",
+            fragment: "custom",
+        },
+            {
+                attributes: ["position", "normal", "uv"],
+                uniforms: ["worldViewProjection", "view", "projection"]
+            });
+
+        shaderMaterial.backFaceCulling = false;
+        tube.material = shaderMaterial;
+
+        this.effectManager.simpleTarget.renderList.push(tube);
+        this.effectManager?.simpleTarget.setMaterialForRendering(tube, tube.material);
+
+        return tube;
+    }
+
+    // 更新 Tube 的路径
+    private updateTubePath(tube: BABYLON.Mesh, startPoint: BABYLON.Vector3, endPoint: BABYLON.Vector3): void {
+        const newPath = [startPoint, endPoint];
+        BABYLON.MeshBuilder.CreateTube(tube.name, {
+            path: newPath,
+            radius: this.markSize * 0.3,
+            instance: tube
+        });
     }
 
     // 绘制测量线
@@ -86,24 +144,40 @@ export class Measure {
             this.tempLine?.dispose(true);
             this.tempLine = undefined;
             this.lineDistance = BABYLON.Vector3.Distance(this.points[0], this.points[1]);
-            this.line = this.createColoredLine('measureLine', this.points);
+            this.line = this.createTube('measureLine', this.points, LINE_COLOR);
             this.points = [];
         }
     }
 
     private createMeasureLineToMouse(point: BABYLON.Vector3): void {
+        // 节流控制，避免过于频繁的更新
+        const currentTime = Date.now();
+        if (currentTime - this.lastUpdateTime < this.updateThrottle) {
+            return;
+        }
+        this.lastUpdateTime = currentTime;
+
         const ray = this.scene.createPickingRay(
             this.scene.pointerX,
             this.scene.pointerY,
             BABYLON.Matrix.Identity(),
             this.scene.activeCamera
         );
-        const pickResult = this.scene.pickWithRay(ray);
+
+        // 优化：只检测modelMesh层级，忽略其他mesh
+        const pickResult = this.scene.pickWithRay(ray, (mesh) => {
+            return mesh.parent?.name === "modelMesh";
+        }, true);
 
         if (pickResult?.hit && pickResult.pickedPoint && pickResult.pickedMesh) {
             if (pickResult.pickedMesh.parent?.name === "modelMesh") {
-                this.tempLine?.dispose(true);
-                this.tempLine = this.createColoredLine('tempLine', [point, pickResult.pickedPoint]);
+                // 如果临时 Tube 不存在，则创建一个可更新的
+                if (!this.tempLine) {
+                    this.tempLine = this.createTube('tempLine', [point, pickResult.pickedPoint], TEMP_LINE_COLOR, true);
+                } else {
+                    // 更新现有 Tube 的路径
+                    this.updateTubePath(this.tempLine, point, pickResult.pickedPoint);
+                }
 
                 if (this.measureType === 'distance') {
                     this.lineDistance = BABYLON.Vector3.Distance(point, pickResult.pickedPoint);
@@ -136,14 +210,18 @@ export class Measure {
         // 清除主要的临时线条
         this.tempLine?.dispose(true);
         this.tempLine = undefined;
-        
-        // 清除所有可能的临时线条
-        const tempLineNames = ['tempLine_toMouse', 'tempLine_mouseToFirst', 'tempLine'];
+
+        // 清除所有可能的临时线条名称
+        const tempLineNames = ['tempLine', 'tempLine_toMouse', 'tempLine_mouseToFirst'];
+
         tempLineNames.forEach(name => {
-            const meshes = this.scene.meshes.filter(mesh => mesh.name === name);
-            meshes.forEach(mesh => mesh.dispose(true));
+            const mesh = this.scene.getMeshByName(name);
+            if (mesh) {
+                mesh.dispose(true);
+            }
         });
     }
+
 
     // 清除上一次面积测量的数据
     private clearPreviousAreaMeasurement(): void {
@@ -195,11 +273,11 @@ export class Measure {
 
         if (this.areaPoints.length < 2) return;
 
-        // 为每条边单独创建线条，确保每条边都被分成5段显示红白相间
+        // 为每条边单独创建 Tube
         for (let i = 0; i < this.areaPoints.length; i++) {
             const startPoint = this.areaPoints[i];
             const endPoint = (i === this.areaPoints.length - 1) ? this.areaPoints[0] : this.areaPoints[i + 1];
-            const boundaryLine = this.createColoredLine(`areaBoundary_${i}`, [startPoint, endPoint]);
+            const boundaryLine = this.createTube(`areaBoundary_${i}`, [startPoint, endPoint], LINE_COLOR);
             this.areaLines.push(boundaryLine);
         }
     }
@@ -235,31 +313,54 @@ export class Measure {
     private createAreaLineToMouse(): void {
         if (this.areaPoints.length === 0) return;
 
+        // 节流控制
+        const currentTime = Date.now();
+        if (currentTime - this.lastUpdateTime < this.updateThrottle) {
+            return;
+        }
+        this.lastUpdateTime = currentTime;
+
         const ray = this.scene.createPickingRay(
             this.scene.pointerX,
             this.scene.pointerY,
             BABYLON.Matrix.Identity(),
             this.scene.activeCamera
         );
-        const pickResult = this.scene.pickWithRay(ray);
+
+        // 优化：只检测modelMesh层级，忽略其他mesh
+        const pickResult = this.scene.pickWithRay(ray, (mesh) => {
+            return mesh.parent?.name === "modelMesh";
+        }, true);
 
         if (pickResult?.hit && pickResult.pickedPoint && pickResult.pickedMesh) {
             if (pickResult.pickedMesh.parent?.name === "modelMesh") {
-                // 清除所有之前的临时线条
-                this.clearTempLines();
-
                 const lastPoint = this.areaPoints[this.areaPoints.length - 1];
 
                 if (this.areaPoints.length === 1) {
                     // 第一个点到鼠标的线
-                    this.tempLine = this.createColoredLine('tempLine', [this.areaPoints[0], pickResult.pickedPoint]);
+                    if (!this.tempLine) {
+                        this.tempLine = this.createTube('tempLine', [this.areaPoints[0], pickResult.pickedPoint], TEMP_LINE_COLOR, true);
+                    } else {
+                        this.updateTubePath(this.tempLine, this.areaPoints[0], pickResult.pickedPoint);
+                    }
                 } else {
-                    // 创建两条独立的线：最后一个点到鼠标的线，以及鼠标到第一个点的线（预览封闭图形）
-                    // 创建最后一点到鼠标位置的线
-                    const lineToMouse = this.createColoredLine('tempLine_toMouse', [lastPoint, pickResult.pickedPoint]);
-                    // 创建鼠标位置到第一点的线
-                    this.createColoredLine('tempLine_mouseToFirst', [pickResult.pickedPoint, this.areaPoints[0]]);
-                    
+                    // 创建两条独立的 Tube：最后一个点到鼠标的线，以及鼠标到第一个点的线（预览封闭图形）
+                    // 获取或创建最后一点到鼠标位置的线
+                    let lineToMouse = this.scene.getMeshByName('tempLine_toMouse') as BABYLON.Mesh;
+                    if (!lineToMouse) {
+                        lineToMouse = this.createTube('tempLine_toMouse', [lastPoint, pickResult.pickedPoint], TEMP_LINE_COLOR, true);
+                    } else {
+                        this.updateTubePath(lineToMouse, lastPoint, pickResult.pickedPoint);
+                    }
+
+                    // 获取或创建鼠标位置到第一点的线
+                    let mouseToFirstLine = this.scene.getMeshByName('tempLine_mouseToFirst') as BABYLON.Mesh;
+                    if (!mouseToFirstLine) {
+                        mouseToFirstLine = this.createTube('tempLine_mouseToFirst', [pickResult.pickedPoint, this.areaPoints[0]], TEMP_LINE_COLOR, true);
+                    } else {
+                        this.updateTubePath(mouseToFirstLine, pickResult.pickedPoint, this.areaPoints[0]);
+                    }
+
                     // 保存临时线条引用，用于后续清理
                     this.tempLine = lineToMouse;
                 }
@@ -279,6 +380,7 @@ export class Measure {
 
             // 标记面积测量完成
             this.areaMeasurementActive = false;
+            this.clearTempLines()
 
             console.log(`Final area measurement completed: ${this.area}`);
             console.log(`Area measurement finished with ${this.areaPoints.length} points`);
@@ -309,12 +411,12 @@ export class Measure {
         if (this.points.length === 2) {
             this.tempLine?.dispose(true);
             this.tempLine = undefined;
-            this.line = this.createColoredLine('measureLine', this.points);
+            this.line = this.createTube('measureLine', this.points, LINE_COLOR);
         }
         if (this.points.length === 3) {
             this.tempLine?.dispose(true);
             this.tempLine = undefined;
-            this.line = this.createColoredLine('measureLine', [this.points[1], this.points[2]]);
+            this.line = this.createTube('measureLine', [this.points[1], this.points[2]], LINE_COLOR);
 
             const pointA = this.points[0];
             const pointB = this.points[1];
@@ -345,6 +447,12 @@ export class Measure {
                     if (this.measureType === 'coordinate' && pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedPoint) {
                         this.createCoordinateMarker(pointerInfo.pickInfo.pickedPoint);
                     }
+                    // 单击鼠标右键完成面积测量
+                    if (pointerInfo.event.button === 2) {
+                        if (this.measureType === 'area' && this.areaMeasurementActive) {
+                            this.finishAreaMeasurement();
+                        }
+                    }
                     break;
                 case BABYLON.PointerEventTypes.POINTERMOVE:
                     if (this.points.length === 1 && (this.measureType === 'distance' || this.measureType === 'angle')) {
@@ -359,10 +467,6 @@ export class Measure {
                     }
                     break;
                 case BABYLON.PointerEventTypes.POINTERDOUBLETAP:
-                    // 双击完成面积测量
-                    if (this.measureType === 'area' && this.areaMeasurementActive) {
-                        this.finishAreaMeasurement();
-                    }
                     break;
                 case BABYLON.PointerEventTypes.POINTERUP:
                     break;

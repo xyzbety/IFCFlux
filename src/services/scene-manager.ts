@@ -31,6 +31,7 @@ export class SceneManager {
   private cameraHistoryManager: CameraHistoryManager;
   private slicePlane: SlicePlane | null = null;
   private measure: Measure | null = null;
+  public isMeasuring: boolean = false;
   private ifcExplosion: IfcExplosion | null = null;
   private hiddenMeshIds: Set<number> = new Set(); // 存储已隐藏的mesh ID
   private isolatedMeshIds: Set<number> = new Set(); // 存储已隔离的mesh ID
@@ -121,6 +122,7 @@ export class SceneManager {
     let isDragging = false;
     this.scene.onPointerObservable.add((pointerInfo: BABYLON.PointerInfo) => {
       if (!this.camera) return;
+      if (this.isMeasuring) return;
 
       if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERTAP) {
         if (pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh) {
@@ -708,14 +710,17 @@ export class SceneManager {
 
     if (type === 'clear') {
       this.effectManager!.isHighlightRender = true;
+      this.isMeasuring = false;
     } else {
+      this.isMeasuring = true;
       // 计算标记尺寸
       const markSize = this.calculateMarkSize();
 
       // 创建测量UI
       const { distanceLabel, anchor } = this.createMeasurementUI();
 
-      this.measure = new Measure(this.scene, type, markSize, markSize * 0.5);
+      this.measure = new Measure(this.scene, type, markSize);
+      MessagePlugin.info(`点击场景开始测量，按下鼠标右键结束测量`);
 
       this.scene.onBeforeRenderObservable.add(() => {
         const meshes = this.scene!.meshes.filter(mesh => mesh.name === "tempLine");

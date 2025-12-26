@@ -46,9 +46,9 @@ export function createGround(scene: BABYLON.Scene, bbox: any, isGrid: boolean) {
     gridMaterial.majorUnitFrequency = 1; // 主线每1格
     gridMaterial.minorUnitVisibility = 1; // 次线可见度
     gridMaterial.gridRatio = gridWidth / 20; // 减小网格大小，增加网格密度
-    gridMaterial.lineColor = new BABYLON.Color3(0.0, 1.0, 1.0); 
-    gridMaterial.mainColor = new BABYLON.Color3(0.5, 0.5, 0.5); 
-    gridMaterial.opacity = 0.99; 
+    gridMaterial.lineColor = new BABYLON.Color3(0.0, 1.0, 1.0);
+    gridMaterial.mainColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+    gridMaterial.opacity = 0.99;
     gridMaterial.alphaMode = BABYLON.Engine.ALPHA_COMBINE;
     gridMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; // 允许alpha混合
     gridMaterial.backFaceCulling = false;
@@ -131,30 +131,30 @@ export function calculateEdgeWidthByBoundingBox(diagonalLength: number): number 
         [265, 50],
         [314, 65]
     ];
-    
+
     // 如果小于最小值，使用最小比例
     if (diagonalLength <= sizeMapping[0][0]) {
         return sizeMapping[0][1] * (diagonalLength / sizeMapping[0][0]);
     }
-    
+
     // 如果在最大值之外，使用最大比例
     if (diagonalLength >= sizeMapping[sizeMapping.length - 1][0]) {
         const last = sizeMapping[sizeMapping.length - 1];
         return last[1] * (diagonalLength / last[0]);
     }
-    
+
     // 在已知数据点之间进行线性插值
     for (let i = 0; i < sizeMapping.length - 1; i++) {
         const [currentSize, currentWidth] = sizeMapping[i];
         const [nextSize, nextWidth] = sizeMapping[i + 1];
-        
+
         if (diagonalLength >= currentSize && diagonalLength <= nextSize) {
             // 线性插值公式
             const ratio = (diagonalLength - currentSize) / (nextSize - currentSize);
             return currentWidth + ratio * (nextWidth - currentWidth);
         }
     }
-    
+
     // 默认回退方案（基于对数缩放）
     return 10 * Math.log1p(diagonalLength) / 3;
 }
@@ -168,7 +168,7 @@ export function updateTempLineLabel(tempLine: BABYLON.AbstractMesh, anchor: BABY
     const end = new BABYLON.Vector3(points[points.length - 3], points[points.length - 2], points[points.length - 1]);
     // 计算中点
     const mid = BABYLON.Vector3.Center(start, end);
-    console.log("mid", tempLine.position,start, end, mid);    
+    // console.log("mid", tempLine.position,start, end, mid);    
     anchor.position.copyFrom(mid);
 }
 

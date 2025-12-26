@@ -241,7 +241,7 @@ function createAppCore() {
         if (!sceneManager.scene || !modelStore.modelData) return;
         const scene = sceneManager.scene;
         const tree = modelStore.modelData.tree;
-
+        if (sceneManager.isMeasuring) return;
         if (event[0]?.originData?.expressId) {
             expressID = event[0]?.originData?.type === 'ifcSiteNode' ? event[0]?.originData?.expressId.replace('ifcSiteNode_', '') : event[0]?.originData?.expressId;
             selectedMeshIds = ifcPropertyUtils.processYourData(new Set(ifcPropertyUtils.getChildrenExpressIds(expressID, pageState.treeData)));
