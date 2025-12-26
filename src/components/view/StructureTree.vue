@@ -60,6 +60,7 @@ const options = reactive({
         {
             headerType: 'checkbox' as const, //指定表头单元格显示为复选框
             cellType: 'checkbox' as const,
+            checked: true,
             field: 'check',
             width: "11%" as const,
             style: {
@@ -217,7 +218,7 @@ onMounted(() => {
                         },
                         ...options.columns.slice(1),
                     ]);
-                    treeInstance.setCellCheckboxState(0, 0, true);
+                    // treeInstance.setCellCheckboxState(0, 0, true);
                 }
             }
         },
@@ -246,7 +247,7 @@ onMounted(() => {
         }
         if (newValue.length > 0 && treeInstance) {
             treeInstance.setRecords(treeData.value)
-            treeInstance.setCellCheckboxState(0, 0, true);
+            // treeInstance.setCellCheckboxState(0, 0, true);
             search = new SearchComponent({
                 table: treeInstance as any,
                 autoJump: true,
