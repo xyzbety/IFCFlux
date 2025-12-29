@@ -34,9 +34,9 @@
 
   **构建工具**: Vite
   
-- **3D Rendering Engine**: Babylon
+- **3D Rendering Engine**: Babylon.js
 
-  **3D渲染引擎**: Babylon
+  **3D渲染引擎**: Babylon.js
   
 - **Type System**: TypeScript
 

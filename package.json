@@ -1,13 +1,13 @@
 {
   "name": "IFCFlux",
-  "description": "本应用提供了直观的用户界面、高性能的3D渲染和丰富的交互功能，帮助建筑工程专业人员更高效地查看和管理IFC模型数据",
+  "description": "IFCFlux is a lightweight, pluggable, WebGPU-based IFC engine built for viewing and analyzing IFC files. The app delivers an intuitive UI, high-performance 3D rendering, and rich interaction tools to help AEC professionals inspect and analyze BIM data faster",
   "keywords": [
     "IFC",
     "BIM"
   ],
-  "author": "",
+  "author": "IFCFlux Team",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
