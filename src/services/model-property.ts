@@ -501,7 +501,7 @@ export class IfcPropertyUtils {
         this.effectManager = EffectManager.getInstance(scene);
       }
       console.log('匹配的网格数据列表:', meshDataList);
-      
+
       if (meshDataList.length > 0) {
         // 创建需要高亮的expressID集合
         const targetExpressIds = new Set<string>();
@@ -510,30 +510,30 @@ export class IfcPropertyUtils {
             targetExpressIds.add(item.metadata.originalExpressID);
           }
         });
-        
+
         // 检查场景中是否存在匹配的合并网格
         let existingMergedMeshes: BABYLON.Mesh[] = [];
         let needCreateNewMesh = true;
-        
+
         // 遍历场景中的所有网格，查找已存在的合并网格
         scene.meshes.forEach(mesh => {
           // 跳过特殊网格和高亮网格
           if (this.isSpecialMesh(mesh.id) || mesh.metadata?.isHighlightMesh) {
             return;
           }
-          
+
           // 只检查合并网格
           if (mesh.metadata?.isMergedMesh && mesh.metadata?.originalMeshData) {
             const meshExpressIds = new Set<string>();
             let allMeshDataIncluded = true;
-            
+
             // 收集当前合并网格的所有expressID
             mesh.metadata.originalMeshData.forEach((item: any) => {
               if (item.metadata && item.metadata.originalExpressID) {
                 meshExpressIds.add(item.metadata.originalExpressID);
               }
             });
-            
+
             // 检查是否所有需要高亮的expressID都包含在当前合并网格中
             for (const expressId of targetExpressIds) {
               if (!meshExpressIds.has(expressId)) {
@@ -541,7 +541,7 @@ export class IfcPropertyUtils {
                 break;
               }
             }
-            
+
             // 如果当前合并网格包含所有需要高亮的expressID，且没有多余的内容
             if (allMeshDataIncluded && meshExpressIds.size === targetExpressIds.size) {
               existingMergedMeshes.push(mesh);
@@ -549,7 +549,7 @@ export class IfcPropertyUtils {
             }
           }
         });
-        
+
         // 如果不需要创建新网格，直接使用现有网格
         if (!needCreateNewMesh && existingMergedMeshes.length > 0) {
           console.log('使用已存在的合并网格进行高亮:', existingMergedMeshes);
@@ -575,9 +575,16 @@ export class IfcPropertyUtils {
             mergedHighlightMeshes.forEach(mesh => {
               const meshBoundingBox = mesh.getBoundingInfo().boundingBox;
               if (!combinedBoundingBox) {
-                combinedBoundingBox = meshBoundingBox;
+                // 直接使用现有的最小和最大点创建新的包围盒
+                combinedBoundingBox = new BABYLON.BoundingBox(
+                  meshBoundingBox.minimum.clone(),
+                  meshBoundingBox.maximum.clone()
+                );
               } else {
-                combinedBoundingBox = combinedBoundingBox.merge(meshBoundingBox);
+                // 创建包含两个包围盒的新包围盒
+                const min = BABYLON.Vector3.Minimize(combinedBoundingBox.minimum, meshBoundingBox.minimum);
+                const max = BABYLON.Vector3.Maximize(combinedBoundingBox.maximum, meshBoundingBox.maximum);
+                combinedBoundingBox = new BABYLON.BoundingBox(min, max);
               }
             });
 
