@@ -4,7 +4,6 @@ import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import * as BABYLON from '@babylonjs/core';
 import { GLTF2Export } from "@babylonjs/serializers";
 import { IFCParser2DB } from '../utils/ifc/IfcParserToDb';
-
 export async function exportGLB(scene: any, fileNameWithoutExtension: string, isTauriEnv: boolean, saveDialogConfig: any) {
     let savePath: string | null = '';
 
@@ -101,170 +100,188 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
             closeBtn: true
         });
     }
+    // 流式处理：逐字段序列化并写入文件
+    try {
+        // 定义要导出的字段获取函数，按需序列化
+        const exportFieldGetters = [
+            { key: 'autoClear', value: scene.autoClear },
+            { key: 'clearColor', value: scene.clearColor },
+            { key: 'ambientColor', value: scene.ambientColor },
+            { key: 'gravity', value: scene.gravity },
+            { key: 'collisionsEnabled', value: scene.collisionsEnabled },
+            { key: 'useRightHandedSystem', value: scene.useRightHandedSystem },
+            { key: 'fogMode', value: scene.fogMode },
+            { key: 'fogColor', value: scene.fogColor },
+            { key: 'fogStart', value: scene.fogStart },
+            { key: 'fogEnd', value: scene.fogEnd },
+            { key: 'fogDensity', value: scene.fogDensity },
+            { key: 'multiplyMaterial', value: scene.multiplyMaterial ? scene.multiplyMaterial : [] },
+            { key: 'morphTargetManagers', value: scene.morphTargetManagers },
+            { key: 'activeCameraID', value: scene.activeCamera ? scene.activeCamera.id : null },
+            { key: 'animations', value: scene.animations },
+            { key: 'environmentIntensity', value: scene.environmentIntensity },
+            { key: 'iblIntensity', value: scene.iblIntensity },
+            { key: 'skeletons', value: scene.skeletons },
+            { key: 'transformNodes', value: scene.transformNodes },
+            { key: 'particleSystems', value: scene.particleSystems }
+        ];
 
-    const exportDataScene = BABYLON.SceneSerializer.Serialize(scene);
-    const seenObjects = new WeakSet();
-    // 自定义 replacer 函数
-    const replacer = (key: string, value: any): any => {
-        if (typeof value === 'object' && value !== null) {
-            if (seenObjects.has(value)) {
-                return '[Circular]';
+        // 同步构建 JSON 字符串到缓冲区，然后批量写入
+        let writeBuffer = '';
+        const flushBuffer = async (): Promise<void> => {
+            if (isTauriEnv && writeBuffer.length > 0) {
+                await writeTextFile(savePath, writeBuffer, { append: true });
+                await new Promise(resolve => setTimeout(resolve, 0));
+                writeBuffer = '';
             }
-            seenObjects.add(value);
-
-            // 对于大型对象，只保留必要信息
+        };
+        const stringifyBabylonValue = (value: any): string | null => {
             if (value && typeof value === 'object') {
-                // 特殊处理 Babylon.js 的 Mesh 对象
-                if (value.className === 'Mesh' || (value.geometry && value.material)) {
-                    return {
-                        id: value.id,
-                        name: value.name,
-                        className: value.className,
-                        // 只包含基本属性，不包括复杂的引用
-                        position: value.position,
-                        rotation: value.rotation,
-                        scaling: value.scaling,
-                        // 标记为简化对象
-                        _simplified: true
-                    };
+                if (value.r !== undefined && value.g !== undefined && value.b !== undefined) {
+                    if (value.a !== undefined) {
+                        return `[${value.r},${value.g},${value.b},${value.a}]`;
+                    }
+                    return `[${value.r},${value.g},${value.b}]`;
                 }
-
-                // 对于大型数组，标记但不处理
-                if (Array.isArray(value) && value.length > 1000) {
-                    return `[Large Array with ${value.length} items]`;
+                if (value.x !== undefined && value.y !== undefined && value.z !== undefined && value.w === undefined) {
+                    return `[${value.x},${value.y},${value.z}]`;
                 }
             }
-        }
-        return value;
-    };
+            return null;
+        };
+        // 异步分块序列化到缓冲区
+        const stringifyToBufferAsync = async (value: any, indent: string = '', depth: number = 0): Promise<void> => {
+            const babylonStr = stringifyBabylonValue(value);
+            if (babylonStr) {
+                writeBuffer += babylonStr;
+                return;
+            }
 
-    if (!isTauriEnv) {
-        // 浏览器环境：分块处理超大对象
-        try {
-            let exportFile = '';
-            const keys = Object.keys(exportDataScene);
-            let isFirstField = true;
+            if (value === null || value === undefined) {
+                writeBuffer += 'null';
+                return;
+            }
+            if (typeof value === 'string') {
+                writeBuffer += `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`;
+                return;
+            }
+            if (typeof value === 'number') {
+                writeBuffer += String(value);
+                return;
+            }
+            if (typeof value === 'boolean') {
+                writeBuffer += String(value);
+                return;
+            }
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    writeBuffer += '[]';
+                    return;
+                }
+                const nextIndent = indent + '  ';
+                writeBuffer += '[\n' + nextIndent;
+                for (let i = 0; i < value.length; i++) {
+                    await stringifyToBufferAsync(value[i], nextIndent, depth + 1);
+                    if (i < value.length - 1) writeBuffer += ',\n' + nextIndent;
+                }
+                writeBuffer += '\n' + indent + ']';
+                return;
+            }
+            if (typeof value === 'object') {
+                const keys = Object.keys(value);
+                if (keys.length === 0) {
+                    writeBuffer += '{}';
+                    return;
+                }
+                const nextIndent = indent + '  ';
+                writeBuffer += '{\n' + nextIndent;
+                for (let i = 0; i < keys.length; i++) {
+                    const key = keys[i];
+                    writeBuffer += `"${key}": `;
+                    await stringifyToBufferAsync(value[key], nextIndent, depth + 1);
+                    if (i < keys.length - 1) writeBuffer += ',\n' + nextIndent;
+                }
+                writeBuffer += '\n' + indent + '}';
+                return;
+            }
+            writeBuffer += 'null';
+        };
 
-            exportFile += '{' + '\n';
-            for (const key of keys) {
-                const value = exportDataScene[key];
-                if (value === undefined) continue;
-
-                try {
-                    // 检查是否为数组
-                    if (Array.isArray(value)) {
-                        // 大型数组特殊处理 - 逐个元素处理
-                        exportFile += isFirstField ? `  "${key}": [` : `,\n  "${key}": [`;
-                        let arrayIsFirst = true;
-
-                        // 逐个处理数组元素
-                        for (let i = 0; i < value.length; i++) {
-                            try {
-                                // 尝试序列化单个元素
-                                const itemString = JSON.stringify(value[i], replacer, 2);
-                                const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                exportFile += prefix + itemString;
-                            } catch (itemError) {
-                                console.error(`数组元素 ${i} 序列化失败:`, itemError);
-                                // 处理失败的情况，写入错误信息
-                                const errorMessage = `"序列化失败: ${itemError instanceof Error ? itemError.message : '未知错误'}"`;
-                                const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                exportFile += prefix + errorMessage;
-                            }
+        // 统一收集所有集合数据
+        const collections = {
+            lights: scene.lights.map((light: any) => {
+                const lightInfo = light.serialize();
+                return lightInfo.lights?.[0];
+            }).filter(Boolean),
+            cameras: scene.cameras.map((camera: any) => {
+                const cameraInfo = camera.serialize();
+                return cameraInfo.cameras?.[0];
+            }).filter(Boolean),
+            materials: scene.materials.map((mat: any) => {
+                const materialInfo = mat.serialize();
+                return materialInfo;
+            }).filter(Boolean),
+            postProcesses: (() => {
+                const postProcessesKeys = ['tags', 'name', 'width', 'height', 'renderTargetSamplingMode', 'autoClear', 'forceAutoClearInAlphaMode', 'alphaMode', 'enablePixelPerfectMode',
+                    'forceFullscreenViewport', 'scaleMode', 'alwaysForcePOT', 'samples', 'adaptScaleToCurrentViewport', 'customType', 'cameraId', '_reusable', '_textureType',
+                    '_fragmentUrl', '_parameters', '_samplers', '_uniformBuffers', '_options', 'defines', '_textureFormat', '_vertexUrl', '_indexParameters'];
+                const result: any[] = [];
+                scene.postProcesses.forEach((postProcess: any) => {
+                    const filteredPostProcess: any = {};
+                    for (const key of postProcessesKeys) {
+                        let saveKey = key.startsWith('_') ? key.substring(1) : key;
+                        filteredPostProcess[saveKey] = postProcess[key];
+                        if (key === 'cameraId' && postProcess['_camera']) {
+                            filteredPostProcess[saveKey] = postProcess['_camera'].id;
                         }
-
-                        exportFile += '\n  ]';
-                    } else {
-                        // 尝试处理普通对象
-                        try {
-                            const valueString = JSON.stringify(value, replacer, 2);
-                            const fieldLine = `  "${key}": ${valueString}`;
-                            exportFile += isFirstField ? fieldLine : `,\n${fieldLine}`;
-                        } catch (error) {
-                            // 如果普通序列化失败，尝试逐个属性处理
-                            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                                console.log(`对象 ${key} 序列化失败，尝试逐个属性处理`);
-                                exportFile += isFirstField ? `  "${key}": {` : `,\n  "${key}": {`;
-
-                                const objKeys = Object.keys(value);
-                                let isFirstProp = true;
-
-                                for (const propKey of objKeys) {
-                                    try {
-                                        const propValue = value[propKey];
-                                        // 检查属性值是否为大型数组
-                                        if (Array.isArray(propValue) && propValue.length > 100) {
-                                            // 大型数组属性特殊处理
-                                            exportFile += isFirstProp ? `\n    "${propKey}": [` : `,\n    "${propKey}": [`;
-
-                                            // 逐个处理数组元素
-                                            for (let i = 0; i < propValue.length; i++) {
-                                                try {
-                                                    const itemString = JSON.stringify(propValue[i], replacer, 1);
-                                                    const prefix = i === 0 ? '\n      ' : ',\n      ';
-                                                    exportFile += prefix + itemString;
-                                                } catch (itemError) {
-                                                    console.error(`属性 ${propKey} 的元素 ${i} 序列化失败:`, itemError);
-                                                    const errorMessage = `"序列化失败"`;
-                                                    const prefix = i === 0 ? '\n      ' : ',\n      ';
-                                                    exportFile += prefix + errorMessage;
-                                                }
-                                            }
-
-                                            exportFile += '\n    ]';
-                                        } else {
-                                            // 普通属性
-                                            const propString = JSON.stringify(propValue, replacer, 1);
-                                            const propLine = isFirstProp ? `\n    "${propKey}": ${propString}` : `,\n    "${propKey}": ${propString}`;
-                                            exportFile += propLine;
-                                        }
-                                        isFirstProp = false;
-                                    } catch (propError) {
-                                        console.error(`属性 ${propKey} 序列化失败:`, propError);
-                                        const errorMessage = isFirstProp ? `\n    "${propKey}": "序列化失败"` : `,\n    "${propKey}": "序列化失败"`;
-                                        exportFile += errorMessage;
-                                        isFirstProp = false;
-                                    }
-                                }
-
-                                exportFile += '\n  }';
-                            } else if (Array.isArray(value)) {
-                                // 处理小数组
-                                exportFile += isFirstField ? `  "${key}": [` : `,\n  "${key}": [`;
-
-                                for (let i = 0; i < value.length; i++) {
-                                    try {
-                                        const itemString = JSON.stringify(value[i], replacer, 1);
-                                        const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                        exportFile += prefix + itemString;
-                                    } catch (itemError) {
-                                        console.error(`小数组元素 ${i} 序列化失败:`, itemError);
-                                        const errorMessage = `"序列化失败"`;
-                                        const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                        exportFile += prefix + errorMessage;
-                                    }
-                                }
-
-                                exportFile += '\n  ]';
-                            } else {
-                                // 非对象类型，写入错误信息
-                                const errorLine = isFirstField ? `  "${key}": "序列化失败: ${error instanceof Error ? error.message : '未知错误'}"` : `,\n  "${key}": "序列化失败: ${error instanceof Error ? error.message : '未知错误'}"`;
-                                exportFile += errorLine;
-                            }
+                        if (key === 'customType' && !postProcess['customType']) {
+                            filteredPostProcess[saveKey] = 'BABYLON.PostProcess';
                         }
                     }
-                    isFirstField = false;
-                } catch (error) {
-                    console.error(`字段 ${key} 处理失败:`, error);
-                    // 如果整体处理失败，记录错误但继续导出其他字段
-                    exportFile += isFirstField ? `  "${key}": "处理失败: ${error instanceof Error ? error.message : '未知错误'}"` : `,\n  "${key}": "处理失败: ${error instanceof Error ? error.message : '未知错误'}"`;
-                    isFirstField = false;
-                }
-            }
-            exportFile += '\n}';
+                    result.push(filteredPostProcess);
+                });
+                return result;
+            })(),
+            shadowGenerators: (() => {
+                const shadowGeneratorsKeys = ['className', 'lightId', 'cameraId', 'id', 'mapSize', 'forceBackFacesOnly', 'darkness', 'transparencyShadow', 'frustumEdgeFalloff',
+                    'bias', 'normalBias', 'usePercentageCloserFiltering', 'useContactHardeningShadow', 'contactHardeningLightSizeUVRatio', 'filteringQuality', 'useExponentialShadowMap',
+                    'useCloseExponentialShadowMap', 'useBlurCloseExponentialShadowMap', 'usePoissonSampling', 'depthScale', 'blurBoxOffset', 'blurKernel', 'blurScale', 'useKernelBlur', 'renderList'];
+                const result: any[] = [];
+                scene.lights.forEach((light: any) => {
+                    const lightShadowGenerators = light._shadowGenerators;
+                    if (!lightShadowGenerators) return;
+                    const processGenerator = (generator: any) => {
+                        const filteredGenerator: any = {};
+                        for (const key of shadowGeneratorsKeys) {
+                            if (key === 'className') {
+                                filteredGenerator.className = generator.getClassName();
+                            } else if (key === 'lightId') {
+                                filteredGenerator.lightId = generator.getLight()?.id;
+                            } else if (key === 'renderList') {
+                                const shadowMap = generator.getShadowMap?.();
+                                filteredGenerator.renderList = shadowMap?.renderList ? shadowMap.renderList.map((mesh: any) => mesh.name) : [];
+                            } else {
+                                filteredGenerator[key] = generator[key];
+                            }
+                        }
+                        result.push(filteredGenerator);
+                    };
+                    if (lightShadowGenerators instanceof Map) {
+                        lightShadowGenerators.forEach(processGenerator);
+                    } else {
+                        Object.values(lightShadowGenerators).forEach(processGenerator);
+                    }
+                });
+                return result;
+            })()
+        };
 
-            // 使用 Blob 下载
-            const blob = new Blob([exportFile], { type: "application/json" });
+        // 开始流式写入
+        if (!isTauriEnv) {
+            // 浏览器环境：不进行写入，只提供示例
+            let fullJson = '{}';
+
+            const blob = new Blob([fullJson], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -272,234 +289,108 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
             document.body.appendChild(a);
             a.click();
 
-            // 清理资源
             setTimeout(() => {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }, 0);
 
             MessagePlugin.success({ content: '导出成功！', duration: 2000 });
-        } catch (error) {
-            console.error('浏览器导出失败:', error);
-            MessagePlugin.error({ content: '导出失败', duration: 3000 });
-        }
-    } else {
-        // Tauri 环境：分块写入文件
-        try {
-            await writeTextFile(savePath, "{\n", { append: false });
-            const keys = Object.keys(exportDataScene);
-            let isFirstField = true;
+        } else {
+            // Tauri 环境：流式写入，逐个处理每个字段
+            await writeTextFile(savePath, '{\n', { append: false });
+            writeBuffer = '';
 
-            for (const key of keys) {
-                try {
-                    const value = exportDataScene[key];
-                    if (value === undefined) continue;
+            // 写入简单字段
+            for (let i = 0; i < exportFieldGetters.length; i++) {
+                const field = exportFieldGetters[i];
+                writeBuffer += `  "${field.key}": `;
+                await stringifyToBufferAsync(field.value, '  ', 0);
+                writeBuffer += ',\n';
+                await flushBuffer();
+            }
 
-                    // 检查是否为大型数组
-                    if (Array.isArray(value) && value.length > 1000) {
-                        // 大型数组特殊处理 - 逐个元素处理
-                        const arrayStart = isFirstField ? `  "${key}": [` : `,\n  "${key}": [`;
-                        await writeTextFile(savePath, arrayStart, { append: true });
-
-                        // 逐个处理数组元素
-                        for (let i = 0; i < value.length; i++) {
-                            const item = value[i];
-                            try {
-                                // 尝试序列化单个元素
-                                const itemString = JSON.stringify(item, replacer, 2);
-                                // 添加适当的分隔符
-                                const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                await writeTextFile(savePath, prefix + itemString, { append: true });
-                            } catch (itemError) {
-                                console.error(`数组元素 ${i} 序列化失败:`, itemError);
-                                // 处理失败的情况，写入错误信息
-                                const errorMessage = `"序列化失败: ${itemError instanceof Error ? itemError.message : '未知错误'}"`;
-                                const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                await writeTextFile(savePath, prefix + errorMessage, { append: true });
-                            }
-                        }
-
-                        await writeTextFile(savePath, '\n  ]', { append: true });
-                    } else {
-                        // 尝试处理普通对象或小数组
-                        try {
-                            const valueString = JSON.stringify(value, replacer, 2);
-                            const fieldLine = `  "${key}": ${valueString}`;
-                            const formattedLine = isFirstField ? fieldLine : `,\n${fieldLine}`;
-                            await writeTextFile(savePath, formattedLine, { append: true });
-                        } catch (error) {
-                            // 如果普通序列化失败，尝试逐个属性处理
-                            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                                console.log(`对象 ${key} 序列化失败，尝试逐个属性处理`);
-                                const objStart = isFirstField ? `  "${key}": {` : `,\n  "${key}": {`;
-                                await writeTextFile(savePath, objStart, { append: true });
-
-                                const objKeys = Object.keys(value);
-                                let isFirstProp = true;
-
-                                for (const propKey of objKeys) {
-                                    try {
-                                        const propValue = value[propKey];
-                                        // 检查属性值是否为大型数组
-                                        if (Array.isArray(propValue) && propValue.length > 100) {
-                                            // 大型数组属性特殊处理
-                                            const propStart = isFirstProp ? `\n    "${propKey}": [` : `,\n    "${propKey}": [`;
-                                            await writeTextFile(savePath, propStart, { append: true });
-
-                                            // 逐个处理数组元素
-                                            for (let i = 0; i < propValue.length; i++) {
-                                                try {
-                                                    // 检查数组元素的大小，避免 JSON.stringify 内存溢出
-                                                    const item = propValue[i];
-                                                    let itemString;
-                                                    
-                                                    // 如果元素是对象或数组，尝试简化处理
-                                                    if (typeof item === 'object' && item !== null) {
-                                                        try {
-                                                            // 尝试正常序列化
-                                                            itemString = JSON.stringify(item, replacer, 1);
-                                                            
-                                                            // 检查序列化后的大小
-                                                            if (itemString.length > 100000) { // 100KB限制
-                                                                itemString = JSON.stringify({ 
-                                                                    _type: 'large_object', 
-                                                                    _size: itemString.length 
-                                                                });
-                                                            }
-                                                        } catch (stringifyError) {
-                                                            // 如果序列化失败（可能是循环引用），使用简化表示
-                                                            if (stringifyError.message.includes('circular') || stringifyError.message.includes('循环')) {
-                                                                itemString = JSON.stringify({ 
-                                                                    _type: 'circular_object', 
-                                                                    _error: '循环引用无法序列化',
-                                                                    _keys: Object.keys(item).slice(0, 10) // 只显示前10个键
-                                                                });
-                                                            } else {
-                                                                // 其他错误，使用错误信息
-                                                                itemString = JSON.stringify({ 
-                                                                    _type: 'error_object', 
-                                                                    _error: stringifyError.message 
-                                                                });
-                                                            }
-                                                        }
-                                                    } else {
-                                                        itemString = JSON.stringify(item, replacer, 1);
-                                                    }
-                                                    
-                                                    const prefix = i === 0 ? '\n      ' : ',\n      ';
-                                                    await writeTextFile(savePath, prefix + itemString, { append: true });
-                                                } catch (itemError) {
-                                                    console.error(`属性 ${propKey} 的元素 ${i} 序列化失败:`, itemError);
-                                                    // 更健壮的错误处理
-                                                    const errorMessage = `"序列化失败: ${itemError instanceof Error ? itemError.message : '未知错误'}"`;
-                                                    const prefix = i === 0 ? '\n      ' : ',\n      ';
-                                                    await writeTextFile(savePath, prefix + errorMessage, { append: true });
-                                                }
-                                            }
-
-                                            await writeTextFile(savePath, '\n    ]', { append: true });
-                                        } else {
-                                            // 普通属性
-                                            const propString = JSON.stringify(propValue, replacer, 1);
-                                            const propLine = isFirstProp ? `\n    "${propKey}": ${propString}` : `,\n    "${propKey}": ${propString}`;
-                                            await writeTextFile(savePath, propLine, { append: true });
-                                        }
-                                        isFirstProp = false;
-                                    } catch (propError) {
-                                        console.error(`属性 ${propKey} 序列化失败:`, propError);
-                                        const errorMessage = isFirstProp ? `\n    "${propKey}": "序列化失败"` : `,\n    "${propKey}": "序列化失败"`;
-                                        await writeTextFile(savePath, errorMessage, { append: true });
-                                        isFirstProp = false;
-                                    }
-                                }
-
-                                await writeTextFile(savePath, '\n  }', { append: true });
-                            } else if (Array.isArray(value)) {
-                                // 处理小数组
-                                const arrayStart = isFirstField ? `  "${key}": [` : `,\n  "${key}": [`;
-                                await writeTextFile(savePath, arrayStart, { append: true });
-
-                                for (let i = 0; i < value.length; i++) {
-                                    try {
-                                        // 检查数组元素的大小，避免 JSON.stringify 内存溢出
-                                        const item = value[i];
-                                        let itemString;
-                                        
-                                        // 如果元素是对象或数组，尝试简化处理
-                                        if (typeof item === 'object' && item !== null) {
-                                            try {
-                                                // 尝试正常序列化
-                                                itemString = JSON.stringify(item, replacer, 1);
-                                                
-                                                // 检查序列化后的大小
-                                                if (itemString.length > 100000) { // 100KB限制
-                                                    itemString = JSON.stringify({ 
-                                                        _type: 'large_object', 
-                                                        _size: itemString.length 
-                                                    });
-                                                }
-                                            } catch (stringifyError) {
-                                                // 如果序列化失败（可能是循环引用），使用简化表示
-                                                if (stringifyError.message.includes('circular') || stringifyError.message.includes('循环')) {
-                                                    itemString = JSON.stringify({ 
-                                                        _type: 'circular_object', 
-                                                        _error: '循环引用无法序列化',
-                                                        _keys: Object.keys(item).slice(0, 10) // 只显示前10个键
-                                                    });
-                                                } else {
-                                                    // 其他错误，使用错误信息
-                                                    itemString = JSON.stringify({ 
-                                                        _type: 'error_object', 
-                                                        _error: stringifyError.message 
-                                                    });
-                                                }
-                                            }
-                                        } else {
-                                            itemString = JSON.stringify(item, replacer, 1);
-                                        }
-                                        
-                                        const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                        await writeTextFile(savePath, prefix + itemString, { append: true });
-                                    } catch (itemError) {
-                                        console.error(`小数组元素 ${i} 序列化失败:`, itemError);
-                                        // 更健壮的错误处理
-                                        const errorMessage = `"序列化失败: ${itemError instanceof Error ? itemError.message : '未知错误'}"`;
-                                        const prefix = i === 0 ? '\n    ' : ',\n    ';
-                                        await writeTextFile(savePath, prefix + errorMessage, { append: true });
-                                    }
-                                }
-
-                                await writeTextFile(savePath, '\n  ]', { append: true });
-                            } else {
-                                // 非对象类型，写入错误信息
-                                const errorLine = isFirstField ? `  "${key}": "序列化失败: ${error instanceof Error ? error.message : '未知错误'}"` : `,\n  "${key}": "序列化失败: ${error instanceof Error ? error.message : '未知错误'}"`;
-                                await writeTextFile(savePath, errorLine, { append: true });
-                            }
-                        }
-                    }
-
-                    isFirstField = false;
-
-                } catch (error) {
-                    console.error(`字段 ${key} 序列化失败:`, error);
-                    // 记录错误但继续处理其他字段
-                    const errorLine = isFirstField ? `  "${key}": "序列化失败"` : `,\n  "${key}": "序列化失败"`;
-                    await writeTextFile(savePath, errorLine, { append: true });
-                    isFirstField = false;
+            // 统一写入集合数据
+            for (const key of Object.keys(collections)) {
+                const data = collections[key as keyof typeof collections];
+                if (data.length > 0) {
+                    writeBuffer += `  "${key}": `;
+                    await stringifyToBufferAsync(data, '  ', 0);
+                    writeBuffer += ',\n';
+                    await flushBuffer();
                 }
             }
 
-            await writeTextFile(savePath, "\n}", { append: true });
+            // 流式写入 meshes（逐个处理，序列化后立即写入）
+            let hasMeshes = false;
+
+            for (const mesh of scene.meshes) {
+                // 逐个序列化 mesh
+                const meshInfo = mesh.serialize({});
+                if (meshInfo) {
+                    if (meshInfo.metadata && meshInfo.metadata.originalMeshData) {
+                        // 将 originalMeshData 中的每个元素替换为其 metadata
+                        meshInfo.metadata.originalMeshData = meshInfo.metadata.originalMeshData.map((data: any) => data?.metadata);
+                    }
+                    if (!hasMeshes) {
+                        await writeTextFile(savePath, '  "meshes": [\n', { append: true });
+                        hasMeshes = true;
+                    }
+                    // 写入单个 mesh
+                    writeBuffer += '    ';
+                    await stringifyToBufferAsync(meshInfo, '    ', 0);
+                    writeBuffer += ',\n';
+                    await flushBuffer();
+                }
+            }
+
+            // 关闭 meshes 数组
+            if (hasMeshes) {
+                writeBuffer = writeBuffer.replace(/,\n$/, '\n');
+                await writeTextFile(savePath, '  ],\n', { append: true });
+                await flushBuffer();
+            }
+
+            // 流式写入 geometries（对象格式，包含多个数组）
+            await writeTextFile(savePath, '  "geometries": {\n', { append: true });
+
+            // 初始化各个类型的数组
+            const geometriesData: any = { boxes: [], spheres: [], cylinders: [], toruses: [], grounds: [], planes: [], torusKnots: [], geometryData: [] };
+
+            for (const mesh of scene.meshes) {
+                const meshGeometries = mesh.geometry?.serialize();
+                if (meshGeometries && meshGeometries.id) {
+                    geometriesData.geometryData.push(meshGeometries);
+                }
+            }
+
+            // 统一写入 geometries 字段
+            const geometryKeys = Object.keys(geometriesData);
+            for (let i = 0; i < geometryKeys.length; i++) {
+                const key = geometryKeys[i];
+                writeBuffer += `    "${key}": `;
+                await stringifyToBufferAsync(geometriesData[key], '    ', 0);
+                writeBuffer += i < geometryKeys.length - 1 ? ',\n' : '\n';
+                await flushBuffer();
+            }
+
+            // 写入 geometryData
+            writeBuffer += '    "geometryData": ';
+            await stringifyToBufferAsync(geometriesData.geometryData, '    ', 0);
+            writeBuffer += '\n';
+            await flushBuffer();
+
+            // 关闭 geometries 对象
+            await writeTextFile(savePath, '  },\n', { append: true });
+            await writeTextFile(savePath, '}', { append: true });
+
             MessagePlugin.closeAll();
             MessagePlugin.success({ content: '导出成功！', duration: 2000 });
-        } catch (error) {
-            console.error('Tauri 导出失败:', error);
-            MessagePlugin.error({ content: '导出失败', duration: 3000 });
         }
+    } catch (error) {
+        console.error('Tauri 导出失败:', error);
+        MessagePlugin.error({ content: '导出失败', duration: 3000 });
     }
 }
-
-
 
 export async function exportDB(modelStore: any, fileNameWithoutExtension: string, isTauriEnv: boolean, saveDialogConfig: any) {
     if (!modelStore.file) return;
@@ -624,3 +515,5 @@ export const saveAsDB = async (file: File, inputPath: string, outputPath: string
         throw new Error(`数据库导出失败: ${error}`);
     }
 };
+
+
