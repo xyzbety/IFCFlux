@@ -100,10 +100,10 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
             closeBtn: true
         });
     }
-    // 流式处理：逐字段序列化并写入文件
+
     try {
-        // 定义要导出的字段获取函数，按需序列化
-        const exportFieldGetters = [
+        // 定义要导出的字段
+        const exportFields = [
             { key: 'autoClear', value: scene.autoClear },
             { key: 'clearColor', value: scene.clearColor },
             { key: 'ambientColor', value: scene.ambientColor },
@@ -126,162 +126,71 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
             { key: 'particleSystems', value: scene.particleSystems }
         ];
 
-        // 同步构建 JSON 字符串到缓冲区，然后批量写入
-        let writeBuffer = '';
-        const flushBuffer = async (): Promise<void> => {
-            if (isTauriEnv && writeBuffer.length > 0) {
-                await writeTextFile(savePath, writeBuffer, { append: true });
-                await new Promise(resolve => setTimeout(resolve, 0));
-                writeBuffer = '';
-            }
+        // 统一收集所有集合数据
+        const collections = {
+            lights: scene.lights.map((light: any) => light.serialize().lights?.[0]).filter(Boolean),
+            cameras: scene.cameras.map((camera: any) => camera.serialize().cameras?.[0]).filter(Boolean),
+            materials: scene.materials.map((material: any) => material.serialize()).filter(Boolean),
+            postProcesses: scene.postProcesses.map((postProcesses: any) => postProcesses.serialize()).filter(Boolean),
+            shadowGenerators: scene.lights.flatMap((light: any) => {
+                const generators = light._shadowGenerators;
+                if (!generators) return [];
+                const list = generators instanceof Map ? Array.from(generators.values()) : Object.values(generators);
+                return list.map((generators: any) => generators.serialize());
+            })
         };
-        const stringifyBabylonValue = (value: any): string | null => {
-            if (value && typeof value === 'object') {
+
+        // 序列化函数：将 Babylon 对象转换为可序列化的纯数据
+        const cleanValue = (value: any, depth: number = 0, maxDepth: number = 100): any => {
+            if (depth > maxDepth) {
+                return '[深度限制]';
+            }
+            if (value === null || value === undefined) return null;
+            if (typeof value === 'string') return value;
+            if (typeof value === 'number') return value;
+            if (typeof value === 'boolean') return value;
+            if (Array.isArray(value)) return value.map((item: any) => cleanValue(item, depth + 1, maxDepth));
+            if (typeof value === 'object') {
+                // 处理 Babylon 的 Color3/Color4
                 if (value.r !== undefined && value.g !== undefined && value.b !== undefined) {
                     if (value.a !== undefined) {
-                        return `[${value.r},${value.g},${value.b},${value.a}]`;
+                        return [value.r, value.g, value.b, value.a];
                     }
-                    return `[${value.r},${value.g},${value.b}]`;
+                    return [value.r, value.g, value.b];
                 }
+                // 处理 Babylon 的 Vector3
                 if (value.x !== undefined && value.y !== undefined && value.z !== undefined && value.w === undefined) {
-                    return `[${value.x},${value.y},${value.z}]`;
+                    return [value.x, value.y, value.z];
                 }
+                // 处理普通对象
+                const result: any = {};
+                for (const key in value) {
+                    if (value.hasOwnProperty(key) && typeof value[key] !== 'function') {
+                        result[key] = cleanValue(value[key], depth + 1, maxDepth);
+                    }
+                }
+                return result;
             }
             return null;
         };
-        // 异步分块序列化到缓冲区
-        const stringifyToBufferAsync = async (value: any, indent: string = '', depth: number = 0): Promise<void> => {
-            const babylonStr = stringifyBabylonValue(value);
-            if (babylonStr) {
-                writeBuffer += babylonStr;
-                return;
-            }
 
-            if (value === null || value === undefined) {
-                writeBuffer += 'null';
-                return;
-            }
-            if (typeof value === 'string') {
-                writeBuffer += `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`;
-                return;
-            }
-            if (typeof value === 'number') {
-                writeBuffer += String(value);
-                return;
-            }
-            if (typeof value === 'boolean') {
-                writeBuffer += String(value);
-                return;
-            }
-            if (Array.isArray(value)) {
-                if (value.length === 0) {
-                    writeBuffer += '[]';
-                    return;
-                }
-                const nextIndent = indent + '  ';
-                writeBuffer += '[\n' + nextIndent;
-                for (let i = 0; i < value.length; i++) {
-                    await stringifyToBufferAsync(value[i], nextIndent, depth + 1);
-                    if (i < value.length - 1) writeBuffer += ',\n' + nextIndent;
-                }
-                writeBuffer += '\n' + indent + ']';
-                return;
-            }
-            if (typeof value === 'object') {
-                const keys = Object.keys(value);
-                if (keys.length === 0) {
-                    writeBuffer += '{}';
-                    return;
-                }
-                const nextIndent = indent + '  ';
-                writeBuffer += '{\n' + nextIndent;
-                for (let i = 0; i < keys.length; i++) {
-                    const key = keys[i];
-                    writeBuffer += `"${key}": `;
-                    await stringifyToBufferAsync(value[key], nextIndent, depth + 1);
-                    if (i < keys.length - 1) writeBuffer += ',\n' + nextIndent;
-                }
-                writeBuffer += '\n' + indent + '}';
-                return;
-            }
-            writeBuffer += 'null';
+        const formatValue = (value: any, indent: string = ''): string => {
+            const cleaned = cleanValue(value);
+            return JSON.stringify(cleaned, null, 2).split('\n').map((line, i, arr) => {
+                if (i === 0) return line;
+                if (i === arr.length - 1) return indent + line;
+                return indent + line;
+            }).join('\n');
         };
 
-        // 统一收集所有集合数据
-        const collections = {
-            lights: scene.lights.map((light: any) => {
-                const lightInfo = light.serialize();
-                return lightInfo.lights?.[0];
-            }).filter(Boolean),
-            cameras: scene.cameras.map((camera: any) => {
-                const cameraInfo = camera.serialize();
-                return cameraInfo.cameras?.[0];
-            }).filter(Boolean),
-            materials: scene.materials.map((mat: any) => {
-                const materialInfo = mat.serialize();
-                return materialInfo;
-            }).filter(Boolean),
-            postProcesses: (() => {
-                const postProcessesKeys = ['tags', 'name', 'width', 'height', 'renderTargetSamplingMode', 'autoClear', 'forceAutoClearInAlphaMode', 'alphaMode', 'enablePixelPerfectMode',
-                    'forceFullscreenViewport', 'scaleMode', 'alwaysForcePOT', 'samples', 'adaptScaleToCurrentViewport', 'customType', 'cameraId', '_reusable', '_textureType',
-                    '_fragmentUrl', '_parameters', '_samplers', '_uniformBuffers', '_options', 'defines', '_textureFormat', '_vertexUrl', '_indexParameters'];
-                const result: any[] = [];
-                scene.postProcesses.forEach((postProcess: any) => {
-                    const filteredPostProcess: any = {};
-                    for (const key of postProcessesKeys) {
-                        let saveKey = key.startsWith('_') ? key.substring(1) : key;
-                        filteredPostProcess[saveKey] = postProcess[key];
-                        if (key === 'cameraId' && postProcess['_camera']) {
-                            filteredPostProcess[saveKey] = postProcess['_camera'].id;
-                        }
-                        if (key === 'customType' && !postProcess['customType']) {
-                            filteredPostProcess[saveKey] = 'BABYLON.PostProcess';
-                        }
-                    }
-                    result.push(filteredPostProcess);
-                });
-                return result;
-            })(),
-            shadowGenerators: (() => {
-                const shadowGeneratorsKeys = ['className', 'lightId', 'cameraId', 'id', 'mapSize', 'forceBackFacesOnly', 'darkness', 'transparencyShadow', 'frustumEdgeFalloff',
-                    'bias', 'normalBias', 'usePercentageCloserFiltering', 'useContactHardeningShadow', 'contactHardeningLightSizeUVRatio', 'filteringQuality', 'useExponentialShadowMap',
-                    'useCloseExponentialShadowMap', 'useBlurCloseExponentialShadowMap', 'usePoissonSampling', 'depthScale', 'blurBoxOffset', 'blurKernel', 'blurScale', 'useKernelBlur', 'renderList'];
-                const result: any[] = [];
-                scene.lights.forEach((light: any) => {
-                    const lightShadowGenerators = light._shadowGenerators;
-                    if (!lightShadowGenerators) return;
-                    const processGenerator = (generator: any) => {
-                        const filteredGenerator: any = {};
-                        for (const key of shadowGeneratorsKeys) {
-                            if (key === 'className') {
-                                filteredGenerator.className = generator.getClassName();
-                            } else if (key === 'lightId') {
-                                filteredGenerator.lightId = generator.getLight()?.id;
-                            } else if (key === 'renderList') {
-                                const shadowMap = generator.getShadowMap?.();
-                                filteredGenerator.renderList = shadowMap?.renderList ? shadowMap.renderList.map((mesh: any) => mesh.name) : [];
-                            } else {
-                                filteredGenerator[key] = generator[key];
-                            }
-                        }
-                        result.push(filteredGenerator);
-                    };
-                    if (lightShadowGenerators instanceof Map) {
-                        lightShadowGenerators.forEach(processGenerator);
-                    } else {
-                        Object.values(lightShadowGenerators).forEach(processGenerator);
-                    }
-                });
-                return result;
-            })()
+        // 辅助函数：让出 UI 线程
+        const yieldUI = async () => {
+            await new Promise(resolve => setTimeout(resolve, 0));
         };
 
-        // 开始流式写入
         if (!isTauriEnv) {
             // 浏览器环境：不进行写入，只提供示例
-            let fullJson = '{}';
-
-            const blob = new Blob([fullJson], { type: "application/json" });
+            const blob = new Blob(['{}'], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -296,90 +205,78 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
 
             MessagePlugin.success({ content: '导出成功！', duration: 2000 });
         } else {
-            // Tauri 环境：流式写入，逐个处理每个字段
+            // 开始流式写入
             await writeTextFile(savePath, '{\n', { append: false });
-            writeBuffer = '';
 
-            // 写入简单字段
-            for (let i = 0; i < exportFieldGetters.length; i++) {
-                const field = exportFieldGetters[i];
-                writeBuffer += `  "${field.key}": `;
-                await stringifyToBufferAsync(field.value, '  ', 0);
-                writeBuffer += ',\n';
-                await flushBuffer();
+            //  写入简单字段
+            for (let i = 0; i < exportFields.length; i++) {
+                const field = exportFields[i];
+                const valueStr = formatValue(field.value, '  ');
+                await writeTextFile(savePath, `  "${field.key}": ${valueStr},\n`, { append: true });
+                if (i % 5 === 4) await yieldUI();
             }
 
-            // 统一写入集合数据
+            //  写入集合数据
             for (const key of Object.keys(collections)) {
                 const data = collections[key as keyof typeof collections];
                 if (data.length > 0) {
-                    writeBuffer += `  "${key}": `;
-                    await stringifyToBufferAsync(data, '  ', 0);
-                    writeBuffer += ',\n';
-                    await flushBuffer();
+                    const valueStr = formatValue(data, '  ');
+                    await writeTextFile(savePath, `  "${key}": ${valueStr},\n`, { append: true });
+                    await yieldUI();
                 }
             }
 
-            // 流式写入 meshes（逐个处理，序列化后立即写入）
+            //  写入 meshes
             let hasMeshes = false;
-
+            let meshCount = 0;
             for (const mesh of scene.meshes) {
-                // 逐个序列化 mesh
+                if (mesh.name.includes('highlight')) continue; // 跳过高亮网格
                 const meshInfo = mesh.serialize({});
                 if (meshInfo) {
-                    if (meshInfo.metadata && meshInfo.metadata.originalMeshData) {
-                        // 将 originalMeshData 中的每个元素替换为其 metadata
-                        meshInfo.metadata.originalMeshData = meshInfo.metadata.originalMeshData.map((data: any) => data?.metadata);
+                    // 创建副本用于导出，不修改原始数据
+                    const meshInfoForExport = { ...meshInfo };
+                    if (meshInfoForExport.metadata && meshInfoForExport.metadata.originalMeshData) {
+                        meshInfoForExport.metadata = {
+                            ...meshInfoForExport.metadata,
+                            originalMeshData: meshInfoForExport.metadata.originalMeshData.map((data: any) => data?.metadata)
+                        };
                     }
                     if (!hasMeshes) {
                         await writeTextFile(savePath, '  "meshes": [\n', { append: true });
                         hasMeshes = true;
                     }
-                    // 写入单个 mesh
-                    writeBuffer += '    ';
-                    await stringifyToBufferAsync(meshInfo, '    ', 0);
-                    writeBuffer += ',\n';
-                    await flushBuffer();
+                    const valueStr = formatValue(meshInfoForExport, '    ');
+                    await writeTextFile(savePath, `    ${valueStr},\n`, { append: true });
+                    if (meshCount++ % 5 === 4) await yieldUI();
                 }
             }
 
             // 关闭 meshes 数组
             if (hasMeshes) {
-                writeBuffer = writeBuffer.replace(/,\n$/, '\n');
                 await writeTextFile(savePath, '  ],\n', { append: true });
-                await flushBuffer();
             }
 
-            // 流式写入 geometries（对象格式，包含多个数组）
+            //  写入 geometries
             await writeTextFile(savePath, '  "geometries": {\n', { append: true });
 
-            // 初始化各个类型的数组
             const geometriesData: any = { boxes: [], spheres: [], cylinders: [], toruses: [], grounds: [], planes: [], torusKnots: [], geometryData: [] };
-
-            for (const mesh of scene.meshes) {
-                const meshGeometries = mesh.geometry?.serialize();
-                if (meshGeometries && meshGeometries.id) {
-                    geometriesData.geometryData.push(meshGeometries);
+            for (const geometry of scene.geometries) {
+                const geometryInfo = geometry.serialize();
+                if (geometryInfo && geometryInfo.id) {
+                    geometriesData.geometryData.push(geometryInfo);
                 }
             }
 
-            // 统一写入 geometries 字段
             const geometryKeys = Object.keys(geometriesData);
             for (let i = 0; i < geometryKeys.length; i++) {
                 const key = geometryKeys[i];
-                writeBuffer += `    "${key}": `;
-                await stringifyToBufferAsync(geometriesData[key], '    ', 0);
-                writeBuffer += i < geometryKeys.length - 1 ? ',\n' : '\n';
-                await flushBuffer();
+                const valueStr = formatValue(geometriesData[key], '    ');
+                const separator = i < geometryKeys.length - 1 ? ',\n' : '\n';
+                await writeTextFile(savePath, `    "${key}": ${valueStr}${separator}`, { append: true });
+                await yieldUI();
             }
 
-            // 写入 geometryData
-            writeBuffer += '    "geometryData": ';
-            await stringifyToBufferAsync(geometriesData.geometryData, '    ', 0);
-            writeBuffer += '\n';
-            await flushBuffer();
-
-            // 关闭 geometries 对象
+            // 关闭文件
             await writeTextFile(savePath, '  },\n', { append: true });
             await writeTextFile(savePath, '}', { append: true });
 
