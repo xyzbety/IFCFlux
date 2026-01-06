@@ -195,6 +195,7 @@ export class IfcLoader {
                     this.modelID = null;
                     this.ifcApi.Dispose();
                 }
+                const t0 = performance.now();
 
                 // 阶段3：处理几何数据 (45% - 70%)
                 await this.processGeometryDataWithProgress(onProgress)
@@ -203,7 +204,8 @@ export class IfcLoader {
                 if (this.geometryCache) {
                     this.geometryCache.clear();
                 }
-
+                const t1 = performance.now();
+                console.log('几何处理耗时：', t1 - t0);
                 console.log('IFC模型已加载,分批处理完成');
 
                 // 执行实际的合并操作并获取预计算的边框数据
@@ -218,6 +220,7 @@ export class IfcLoader {
                 // 清理材质映射表以释放内存
                 this.materialCache.clear();
                 this.materialsMap.clear();
+                console.log('合并材质耗时', performance.now() - t1);
 
                 // 使用预计算的边框数据渲染边框
                 // 边框阶段进度：90-99%

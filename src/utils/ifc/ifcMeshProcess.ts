@@ -184,135 +184,162 @@ export function simplifyGeometry(
   return result;
 }
 
+/**
+ * 边缘计算函数（优化版）
+ * 使用数字哈希+直接数组操作，性能最大化
+ */
 export function calculateEdges(indexAttr: number[], indexCount: number, positionAttr: number[], thresholdAngle = 15): BABYLON.Vector3[][] {
-  // 预计算阈值和精度
+  // 预计算阈值
   const thresholdDot = Math.cos(BABYLON.Angle.FromDegrees(thresholdAngle).radians());
-  const precision = 10000; // 减少精度位数，提高性能
+  const precision = 10000;
 
-  // 使用 Map 替代 Object，提高查找性能
-  const edgeMap = new Map<string, { normal: number[]; triangleIndex: number }>();
-  const edges: BABYLON.Vector3[][] = [];
+  // 使用 Map 存储边信息（避免 Vector3 克隆，改用索引）
+  const edgeMap = new Map<number, { normalX: number; normalY: number; normalZ: number; v0Index: number; v1Index: number }>();
 
-  // 重用临时变量，减少对象创建
-  const tempVectors = {
-    a: new BABYLON.Vector3(),
-    b: new BABYLON.Vector3(),
-    c: new BABYLON.Vector3(),
-    edge1: new BABYLON.Vector3(),
-    edge2: new BABYLON.Vector3(),
-    normal: new BABYLON.Vector3()
+  // 预分配 edges 数组
+  const estimatedEdgeCount = Math.floor(indexCount / 3 * 0.6);
+  const edges: BABYLON.Vector3[][] = new Array(estimatedEdgeCount);
+  let edgesIndex = 0;
+
+  // 重用临时变量（避免 Vector3 对象创建）
+  let ax = 0, ay = 0, az = 0;
+  let bx = 0, by = 0, bz = 0;
+  let cx = 0, cy = 0, cz = 0;
+  let nx = 0, ny = 0, nz = 0;
+
+  /**
+   * 计算顶点的数字哈希（使用位运算，避免字符串拼接）
+   */
+  const getVertexHash = (x: number, y: number, z: number): number => {
+    const qx = Math.round(x * precision) + 2097151; // 偏移到非负
+    const qy = Math.round(y * precision) + 2097151;
+    const qz = Math.round(z * precision) + 2097151;
+    // 使用 MurmurHash 风格混合，避免字符串拼接
+    return ((qx * 31 + qy) * 31 + qz) >>> 0;
   };
 
-  // 顶点坐标缓存，避免重复计算
-  const vertexCache = new Map<number, number[]>();
-
-  // 计算顶点坐标的哈希值
-  const getVertexHash = (vertexIndex: number): string => {
-    if (vertexCache.has(vertexIndex)) {
-      const coords = vertexCache.get(vertexIndex)!;
-      return `${Math.round(coords[0] * precision)},${Math.round(coords[1] * precision)},${Math.round(coords[2] * precision)}`;
-    }
-
-    const posIndex = vertexIndex * 3;
-    const coords = [
-      positionAttr[posIndex],
-      positionAttr[posIndex + 1],
-      positionAttr[posIndex + 2]
-    ];
-    vertexCache.set(vertexIndex, coords);
-
-    return `${Math.round(coords[0] * precision)},${Math.round(coords[1] * precision)},${Math.round(coords[2] * precision)}`;
-  };
-
-  // 计算三角形法线
-  const computeTriangleNormal = (v1: BABYLON.Vector3, v2: BABYLON.Vector3, v3: BABYLON.Vector3, normal: BABYLON.Vector3) => {
-    tempVectors.edge1.copyFrom(v2).subtractInPlace(v1);
-    tempVectors.edge2.copyFrom(v3).subtractInPlace(v1);
-    BABYLON.Vector3.CrossToRef(tempVectors.edge1, tempVectors.edge2, normal);
-    normal.normalize();
-  };
-
-  // 处理每个三角形
+  // 主循环：处理每个三角形
   for (let i = 0; i < indexCount; i += 3) {
-    const vertexIndices = [indexAttr[i], indexAttr[i + 1], indexAttr[i + 2]];
+    const i0 = indexAttr[i] * 3;
+    const i1 = indexAttr[i + 1] * 3;
+    const i2 = indexAttr[i + 2] * 3;
 
-    // 获取顶点位置
-    for (let j = 0; j < 3; j++) {
-      const posIndex = vertexIndices[j] * 3;
-      const coords = [positionAttr[posIndex], positionAttr[posIndex + 1], positionAttr[posIndex + 2]];
+    // 直接读取顶点坐标（无 Vector3 对象）
+    ax = positionAttr[i0];
+    ay = positionAttr[i0 + 1];
+    az = positionAttr[i0 + 2];
+    bx = positionAttr[i1];
+    by = positionAttr[i1 + 1];
+    bz = positionAttr[i1 + 2];
+    cx = positionAttr[i2];
+    cy = positionAttr[i2 + 1];
+    cz = positionAttr[i2 + 2];
 
-      switch (j) {
-        case 0: tempVectors.a.copyFromFloats(coords[0], coords[1], coords[2]); break;
-        case 1: tempVectors.b.copyFromFloats(coords[0], coords[1], coords[2]); break;
-        case 2: tempVectors.c.copyFromFloats(coords[0], coords[1], coords[2]); break;
-      }
-    }
-
-    // 计算法线
-    computeTriangleNormal(tempVectors.a, tempVectors.b, tempVectors.c, tempVectors.normal);
-
-    // 获取顶点哈希
-    const hashes = vertexIndices.map(getVertexHash);
+    // 计算顶点哈希（避免重复计算）
+    const hash0 = getVertexHash(ax, ay, az);
+    const hash1 = getVertexHash(bx, by, bz);
+    const hash2 = getVertexHash(cx, cy, cz);
 
     // 跳过退化三角形
-    if (hashes[0] === hashes[1] || hashes[1] === hashes[2] || hashes[2] === hashes[0]) {
+    if (hash0 === hash1 || hash1 === hash2 || hash2 === hash0) {
       continue;
     }
+
+    // 计算三角形法线（直接数学运算）
+    const edge1x = bx - ax, edge1y = by - ay, edge1z = bz - az;
+    const edge2x = cx - ax, edge2y = cy - ay, edge2z = cz - az;
+    nx = edge1y * edge2z - edge1z * edge2y;
+    ny = edge1z * edge2x - edge1x * edge2z;
+    nz = edge1x * edge2y - edge1y * edge2x;
+
+    // 归一化法线
+    const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+    if (len < 1e-6) continue; // 退化三角形
+    nx /= len;
+    ny /= len;
+    nz /= len;
+
+    const hashes = [hash0, hash1, hash2];
 
     // 处理每条边
     for (let j = 0; j < 3; j++) {
       const jNext = (j + 1) % 3;
-      const vecHash0 = hashes[j];
-      const vecHash1 = hashes[jNext];
+      const hashA = hashes[j];
+      const hashB = hashes[jNext];
 
-      const hash = `${vecHash0}_${vecHash1}`;
-      const reverseHash = `${vecHash1}_${vecHash0}`;
+      // 生成边键（顺序无关，数字运算）
+      const small = hashA < hashB ? hashA : hashB;
+      const large = hashA < hashB ? hashB : hashA;
+      const edgeKey = (small * 31 + large) >>> 0;
 
-      // 检查是否存在反向边
-      if (edgeMap.has(reverseHash)) {
-        const existingEdge = edgeMap.get(reverseHash)!;
+      if (edgeMap.has(edgeKey)) {
+        // 找到匹配的边，检查法线夹角
+        const existingEdge = edgeMap.get(edgeKey)!;
 
         // 计算法线点积
-        const dot = tempVectors.normal.x * existingEdge.normal[0] +
-          tempVectors.normal.y * existingEdge.normal[1] +
-          tempVectors.normal.z * existingEdge.normal[2];
+        const dot = nx * existingEdge.normalX +
+          ny * existingEdge.normalY +
+          nz * existingEdge.normalZ;
 
-        // 如果夹角大于阈值，创建边
+        // 如果夹角大于阈值，创建边缘线段
         if (dot <= thresholdDot) {
-          const v0 = j === 0 ? tempVectors.a : j === 1 ? tempVectors.b : tempVectors.c;
-          const v1 = jNext === 0 ? tempVectors.a : jNext === 1 ? tempVectors.b : tempVectors.c;
+          // 根据边的索引选择顶点
+          let v0x, v0y, v0z, v1x, v1y, v1z;
+          if (j === 0) {
+            v0x = ax; v0y = ay; v0z = az;
+            v1x = bx; v1y = by; v1z = bz;
+          } else if (j === 1) {
+            v0x = bx; v0y = by; v0z = bz;
+            v1x = cx; v1y = cy; v1z = cz;
+          } else {
+            v0x = cx; v0y = cy; v0z = cz;
+            v1x = ax; v1y = ay; v1z = az;
+          }
 
-          edges.push([
-            new BABYLON.Vector3(v0.x, v0.y, v0.z),
-            new BABYLON.Vector3(v1.x, v1.y, v1.z)
-          ]);
+          edges[edgesIndex++] = [
+            new BABYLON.Vector3(v0x, v0y, v0z),
+            new BABYLON.Vector3(v1x, v1y, v1z)
+          ];
         }
 
         // 移除已处理的边
-        edgeMap.delete(reverseHash);
-      } else if (!edgeMap.has(hash)) {
-        // 存储新边
-        edgeMap.set(hash, {
-          normal: [tempVectors.normal.x, tempVectors.normal.y, tempVectors.normal.z],
-          triangleIndex: i
+        edgeMap.delete(edgeKey);
+      } else {
+        // 存储新边（使用索引，避免 Vector3 克隆）
+        edgeMap.set(edgeKey, {
+          normalX: nx,
+          normalY: ny,
+          normalZ: nz,
+          v0Index: indexAttr[i + j],
+          v1Index: indexAttr[i + jNext]
         });
       }
     }
   }
 
   // 处理剩余的边界边
-  for (const [hash, edgeInfo] of edgeMap) {
-    const [hash0, hash1] = hash.split('_');
+  const remainingEdges = edgeMap.size;
 
-    // 解析顶点坐标
-    const coords0 = hash0.split(',').map(Number).map(v => v / precision);
-    const coords1 = hash1.split(',').map(Number).map(v => v / precision);
+  if (remainingEdges > 0) {
+    // 扩展 edges 数组（一次性分配）
+    if (edgesIndex + remainingEdges > edges.length) {
+      edges.length = edgesIndex + remainingEdges;
+    }
 
-    edges.push([
-      new BABYLON.Vector3(coords0[0], coords0[1], coords0[2]),
-      new BABYLON.Vector3(coords1[0], coords1[1], coords1[2])
-    ]);
+    // 添加边界边
+    for (const [edgeKey, edgeInfo] of edgeMap) {
+      const v0Index = edgeInfo.v0Index * 3;
+      const v1Index = edgeInfo.v1Index * 3;
+
+      edges[edgesIndex++] = [
+        new BABYLON.Vector3(positionAttr[v0Index], positionAttr[v0Index + 1], positionAttr[v0Index + 2]),
+        new BABYLON.Vector3(positionAttr[v1Index], positionAttr[v1Index + 1], positionAttr[v1Index + 2])
+      ];
+    }
   }
+
+  // 截断数组到实际大小
+  edges.length = edgesIndex;
 
   return edges;
 }
