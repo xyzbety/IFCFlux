@@ -353,7 +353,7 @@ export async function mergeMeshesByMaterial(
   materialCache: Map<number, BABYLON.StandardMaterial>,
   scene: BABYLON.Scene,
   model: BABYLON.Mesh,
-  onProgress?: (percent: number, message: string, loaded: number, total: number) => void
+  onProgress?: (percent: number) => void
 ): Promise<void> {
   // 创建按材质分组的几何体映射表（使用新的数据结构）
   const geometriesByMaterials = new Map<number, any[]>();
@@ -403,8 +403,8 @@ export async function mergeMeshesByMaterial(
     // 更新收集阶段的进度（收集阶段占总进度的30%）
     processedMaterials++;
     if (onProgress) {
-      const collectProgress = 70 + (processedMaterials / totalMaterials) * 5; // 70%-75%
-      onProgress(collectProgress, "正在合并网格...", Math.floor(collectProgress), 100);
+      const collectProgress = (processedMaterials / totalMaterials) * 30;
+      onProgress(collectProgress);
       // console.log(`合并网格阶段 - 收集进度: ${processedMaterials}/${totalMaterials} -> ${collectProgress}%`);
 
       // 添加微小延迟，让进度条有足够时间显示
@@ -665,8 +665,8 @@ export async function mergeMeshesByMaterial(
     // 更新合并阶段的进度（合并阶段占总进度的16%）
     processedMergeGroups++;
     if (onProgress) {
-      const mergeProgress = 75 + (processedMergeGroups / totalMergeGroups) * 15; // 75%-90%
-      onProgress(mergeProgress, "正在合并网格...", Math.floor(mergeProgress), 100);
+      const mergeProgress = 30 + (processedMergeGroups / totalMergeGroups) * 70; // 75%-90%
+      onProgress(mergeProgress);
       // console.log(`合并网格阶段 - 合并进度: ${processedMergeGroups}/${totalMergeGroups} -> ${mergeProgress}%`);
 
       // 添加微小延迟，让进度条有足够时间显示

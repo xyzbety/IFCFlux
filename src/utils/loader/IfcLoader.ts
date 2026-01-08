@@ -148,19 +148,52 @@ export class IfcLoader {
         console.log('IFC文件已加载,开始解析IFC模型');
 
         this.ifcParser = new IfcParser(this.ifcApi);
+        const collectResult = await this.ifcParser.collectNonGeometryElements(this.modelID!);
+        const { total: totalNonGeometryElements, elements: allNonGeometryIds } = collectResult;
+        console.log(`开始解析`, totalNonGeometryElements);
+
+        // 根据 totalNonGeometryElements 动态计算 initialProgress
+        // 几千个元素 -> initialProgress 较小（约0.05-0.15）
+        // 八九百万元素 -> initialProgress 较大（约0.4-0.6）
+        // 使用对数函数平滑过渡
+        const initialProgress = Math.max(
+            0.05,  // 最小值 5%（针对小模型）
+            Math.min(
+                0.60,  // 最大值 60%（针对超大模型）
+                0.05 + 0.55 * Math.log10(totalNonGeometryElements / 1000 + 1) / 4
+            )
+        );
+        console.log(`属性解析阶段进度占比: ${(initialProgress * 100).toFixed(1)}%`);
+
+        // 计算剩余进度 (0.99 - initialProgress)
+        const remainingProgress = 0.99 - initialProgress;
+
+        // 剩余进度按权重分配：materialProgress 增加最多，然后 geometryProgress，最后 edgeProcess
+        // 原始比例：geometry=0.25, material=0.20, edge=0.09 (总和=0.54)
+        // 分配权重：material=5, geometry=3, edge=1
+        const totalWeight = 5 + 3 + 1; // 9
+        const materialWeight = 5;
+        const geometryWeight = 3;
+        const edgeWeight = 1;
+
+        // 按权重分配剩余进度，保持原比例关系
+        const geometryProgress = remainingProgress * (geometryWeight / totalWeight);
+        const materialProgress = remainingProgress * (materialWeight / totalWeight);
+        const edgeProcess = remainingProgress * (edgeWeight / totalWeight);
 
         if (this.isParser) {
-            // 阶段2：解析属性 (0% - 50%)
+            // 阶段2：解析属性 (0% - 45%)
             const parsedData: any = await this.ifcParser.loadWithProgress(
                 (percent) => {
-                    // 将解析进度映射到0%-50%的范围
-                    const mappedPercent = percent * 0.45;
+                    const mappedPercent = percent * initialProgress;
 
                     if (onProgress) {
                         onProgress(mappedPercent, "正在解析模型...", Math.floor(mappedPercent), 100);
                     }
                 },
-                this.modelID!
+                this.modelID!,
+                totalNonGeometryElements,
+                allNonGeometryIds
             );
 
             this.ifcTree = parsedData.tree;
@@ -197,8 +230,14 @@ export class IfcLoader {
                 }
                 const t0 = performance.now();
 
-                // 阶段3：处理几何数据 (45% - 70%)
-                await this.processGeometryDataWithProgress(onProgress)
+                // 阶段3：处理几何数据 (45% - 70%)          
+                await this.processGeometryDataWithProgress((percent) => {
+                    const mappedPercent = initialProgress * 100 + percent * geometryProgress;
+
+                    if (onProgress) {
+                        onProgress(mappedPercent, "正在处理几何数据...", Math.floor(mappedPercent), 100);
+                    }
+                })
 
                 // 清理几何缓存
                 if (this.geometryCache) {
@@ -210,9 +249,10 @@ export class IfcLoader {
 
                 // 执行实际的合并操作并获取预计算的边框数据
                 // 合并阶段进度：70-90%
-                await mergeMeshesByMaterial(this.materialsMap, this.materialCache, this.scene, this.model, (percent, message) => {
+                await mergeMeshesByMaterial(this.materialsMap, this.materialCache, this.scene, this.model, (percent) => {
+                    const mappedPercent = (initialProgress + geometryProgress) * 100 + percent * materialProgress;
                     if (onProgress) {
-                        onProgress(percent, message, Math.floor(percent), 100);
+                        onProgress(mappedPercent, '正在合并网格...', Math.floor(mappedPercent), 100);
                     }
                 });
 
@@ -227,7 +267,7 @@ export class IfcLoader {
                 await this.renderEdgesFromPrecomputedData((progress) => {
                     if (onProgress) {
                         // 将边框进度映射到90-99%区间
-                        const mappedProgress = 90 + (progress * 0.09); // 0-100% -> 90-99%
+                        const mappedProgress = (initialProgress + geometryProgress + materialProgress) * 100 + (progress * edgeProcess); // 0-100% -> 90-99%
                         onProgress(mappedProgress, `正在计算边界...`, Math.floor(mappedProgress), 100);
                     }
                 });
@@ -597,9 +637,9 @@ export class IfcLoader {
 
     /**
      * 带进度回调的几何数据处理方法（优化版本 - 保持实时进度）
-     * @param onProgress 进度回调函数
+     * @param onProgress 进度回调函数（内部进度 0-100）
      */
-    private async processGeometryDataWithProgress(onProgress: ProgressCallback | null): Promise<void> {
+    private async processGeometryDataWithProgress(onProgress: ((percent: number) => void) | null): Promise<void> {
         const rawGeometries = this.geometryCache.get('rawGeometries') || [];
         const totalGeometries = rawGeometries.length;
 
@@ -631,7 +671,7 @@ export class IfcLoader {
 
         if (validGeometriesCount === 0) {
             if (onProgress) {
-                onProgress(70, "没有有效的几何体数据", 70, 100);
+                onProgress(100);
             }
             return;
         }
@@ -648,8 +688,8 @@ export class IfcLoader {
 
                 // 优化进度更新频率：每处理500个几何体更新一次进度
                 if (onProgress && (processedGeometryCount % 500 === 0 || i === batchEnd - 1)) {
-                    const progressPercent = 45 + (processedGeometryCount / validGeometriesCount) * 25;
-                    onProgress(progressPercent, "正在处理几何数据...", Math.floor(progressPercent), 100);
+                    const progressPercent = (processedGeometryCount / validGeometriesCount) * 100;
+                    onProgress(progressPercent);
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
@@ -663,7 +703,7 @@ export class IfcLoader {
 
         // 处理完成，更新最终进度
         if (onProgress) {
-            onProgress(70, "几何数据处理完成", 70, 100);
+            onProgress(100);
         }
 
         console.log(`几何数据处理完成，共处理 ${processedGeometryCount} 个几何体`);
