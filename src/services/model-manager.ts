@@ -130,6 +130,11 @@ export class ModelManager {
       }
       this.scene.materials.slice().forEach(mat => mat.dispose());
       this.scene.textures.slice().forEach(tex => tex.dispose());
+
+      // 清除后处理
+      this.scene.postProcesses.forEach(postProcess => postProcess.dispose());
+      this.scene.postProcesses = [];
+
       this.modelStore.clearModel();
       this.modelStore.clearModelInspectData();
     }

@@ -172,6 +172,10 @@ export class EffectManager {
       if (mesh.name.includes('highlight'))
         mesh.dispose()
     });
+    this.scene.materials.forEach((mat) => {
+      if (mat.name.includes('highlight'))
+        mat.dispose()
+    });
 
     console.log(`高亮效果清除完成，处理了 ${meshesToClear.length} 个网格`, meshesToClear);
   }
