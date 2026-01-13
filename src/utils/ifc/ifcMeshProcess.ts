@@ -5,27 +5,6 @@ export interface EdgeData {
 }
 
 /**
- * 几何简化函数（已禁用，直接返回原始数据）
- * 为了提升性能，完全跳过顶点简化
- * @param positions 原始顶点位置
- * @param normals 原始法线
- * @param indices 原始索引
- */
-export function simplifyGeometry(
-  positions: Float32Array,
-  normals: Float32Array,
-  indices: Uint32Array
-): { positions: Float32Array; normals: Float32Array; indices: Uint32Array } {
-  // 完全跳过简化，直接返回原始数据
-  // 这样可以大幅提升合并网格的性能
-  return {
-    positions: positions,
-    normals: normals,
-    indices: indices
-  };
-}
-
-/**
  * 边缘计算函数（优化版）
  * 使用数字哈希+直接数组操作，性能最大化
  */
@@ -319,6 +298,7 @@ export async function mergeMeshesByMaterial(
           }
         }
 
+        // console.log(`合并材质 ${colorID} 的几何体`, positions, normals, indices);
         // 设置合并后的顶点数据
         // 【优化】直接使用 TypedArray，避免 Array.from() 转换
         // Babylon.js VertexData 支持直接使用 TypedArray
@@ -479,20 +459,63 @@ export async function mergeMeshesByMaterial(
 
 /**
  * 创建隐藏子网格的函数（通过expressID）
+ * 使用全局队列确保合并网格串行处理，避免内存峰值
+ * 优化：批量处理提高速度
  * @param mergedMesh 合并后的网格
  * @param originalMeshData 原始网格数据
  */
 function createHideSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): (expressID: number) => void {
-  // 全局批处理机制，所有网格共享同一个批处理
-  if (!(globalThis as any).globalBatchHandler) {
-    (globalThis as any).globalBatchHandler = {
-      timeout: null,
-      pendingOperations: new Map<BABYLON.Mesh, Set<number>>(),
-      pendingMeshData: new Map<BABYLON.Mesh, any[]>()
+  // 全局串行队列，确保同一时间只处理一个合并网格
+  if (!(globalThis as any).globalRebuildQueue) {
+    (globalThis as any).globalRebuildQueue = {
+      isProcessing: false,
+      queue: [] as Array<{ mesh: BABYLON.Mesh }>,
+      meshDirtyFlags: new Map<BABYLON.Mesh, boolean>() // 优化：跟踪哪些网格需要重建
     };
   }
 
-  const batchHandler = (globalThis as any).globalBatchHandler;
+  const rebuildQueue = (globalThis as any).globalRebuildQueue;
+  const batchHandler = {
+    pendingExpressIDs: new Set<number>()
+  };
+
+  const processQueue = () => {
+    if (rebuildQueue.isProcessing || rebuildQueue.queue.length === 0) {
+      return;
+    }
+
+    rebuildQueue.isProcessing = true;
+
+    try {
+      // 收集所有需要重建的网格
+      const meshesToRebuild = new Set<BABYLON.Mesh>();
+      while (rebuildQueue.queue.length > 0) {
+        const task = rebuildQueue.queue.shift()!;
+        if (rebuildQueue.meshDirtyFlags.get(task.mesh)) {
+          meshesToRebuild.add(task.mesh);
+        }
+      }
+
+      // 批量重建网格
+      for (const mesh of meshesToRebuild) {
+        rebuildMergedMesh(mesh);
+        rebuildQueue.meshDirtyFlags.set(mesh, false);
+      }
+    } catch (error) {
+      console.error('处理重建任务时发生错误:', error);
+    }
+
+    // 使用 setTimeout 延迟处理下一个任务，给 GC 更多时间回收内存
+    // 优化：减少延迟到 10ms，提高响应速度
+    setTimeout(() => {
+      rebuildQueue.isProcessing = false;
+      processQueue();
+      // 显式触发垃圾回收（如果可用）
+      if (window.gc) {
+        window.gc();
+      }
+    }, 10);
+  };
 
   return (expressID: number) => {
     // 立即标记为隐藏
@@ -509,60 +532,84 @@ function createHideSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData: a
       return;
     }
 
-    // 添加到全局批处理队列
-    if (!batchHandler.pendingOperations.has(mergedMesh)) {
-      batchHandler.pendingOperations.set(mergedMesh, new Set());
-      batchHandler.pendingMeshData.set(mergedMesh, originalMeshData);
-    }
-    batchHandler.pendingOperations.get(mergedMesh)!.add(expressID);
+    // 标记网格为脏，需要重建
+    rebuildQueue.meshDirtyFlags.set(mergedMesh, true);
 
-    // 清除之前的定时器
-    if (batchHandler.timeout) {
-      clearTimeout(batchHandler.timeout);
-    }
+    // 添加到待处理集合
+    batchHandler.pendingExpressIDs.add(expressID);
 
-    // 设置新的定时器（收集所有操作，延迟重建）
-    batchHandler.timeout = setTimeout(() => {
-      let totalHidden = 0;
+    // 将任务添加到队列
+    rebuildQueue.queue.push({ mesh: mergedMesh });
 
-      // 处理所有待处理的网格
-      batchHandler.pendingOperations.forEach((expressIDs, mesh) => {
-        const meshData = batchHandler.pendingMeshData.get(mesh);
-        if (meshData && expressIDs.size > 0) {
-          totalHidden += expressIDs.size;
-          rebuildMergedMesh(mesh, meshData);
-        }
-      });
-
-      if (totalHidden > 0) {
-        console.log(`批量隐藏 ${totalHidden} 个模型`);
+    // 延迟后触发重建
+    setTimeout(() => {
+      if (batchHandler.pendingExpressIDs.size > 0) {
+        processQueue();
+        batchHandler.pendingExpressIDs.clear();
       }
-
-      // 清空批处理队列
-      batchHandler.pendingOperations.clear();
-      batchHandler.pendingMeshData.clear();
-    }, 10); // 进一步缩短延迟时间到10ms，更快响应
+    }, 5);
   };
 }
 
 
 /**
  * 创建恢复子网格的函数（通过expressID）
+ * 使用全局队列确保合并网格串行处理，避免内存峰值
+ * 优化：批量处理提高速度
  * @param mergedMesh 合并后的网格
  * @param originalMeshData 原始网格数据
  */
 function createRestoreSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): (expressID?: number) => void {
-  // 全局批处理机制，所有网格共享同一个批处理
-  if (!(globalThis as any).globalRestoreBatchHandler) {
-    (globalThis as any).globalRestoreBatchHandler = {
-      timeout: null,
-      pendingOperations: new Map<BABYLON.Mesh, Set<number>>(),
-      pendingMeshData: new Map<BABYLON.Mesh, any[]>(),
-      pendingFullRestore: new Set<BABYLON.Mesh>() // 用于全量恢复
+  // 全局串行队列，确保同一时间只处理一个合并网格
+  if (!(globalThis as any).globalRebuildQueue) {
+    (globalThis as any).globalRebuildQueue = {
+      isProcessing: false,
+      queue: [] as Array<{ mesh: BABYLON.Mesh }>,
+      meshDirtyFlags: new Map<BABYLON.Mesh, boolean>() // 优化：跟踪哪些网格需要重建
     };
   }
 
-  const batchHandler = (globalThis as any).globalRestoreBatchHandler;
+  const rebuildQueue = (globalThis as any).globalRebuildQueue;
+  const batchHandler = {
+    pendingExpressIDs: new Set<number>()
+  };
+
+  const processQueue = () => {
+    if (rebuildQueue.isProcessing || rebuildQueue.queue.length === 0) {
+      return;
+    }
+
+    rebuildQueue.isProcessing = true;
+
+    try {
+      // 收集所有需要重建的网格
+      const meshesToRebuild = new Set<BABYLON.Mesh>();
+      while (rebuildQueue.queue.length > 0) {
+        const task = rebuildQueue.queue.shift()!;
+        if (rebuildQueue.meshDirtyFlags.get(task.mesh)) {
+          meshesToRebuild.add(task.mesh);
+        }
+      }
+
+      // 批量重建网格
+      for (const mesh of meshesToRebuild) {
+        rebuildMergedMesh(mesh);
+        rebuildQueue.meshDirtyFlags.set(mesh, false);
+      }
+    } catch (error) {
+      console.error('处理重建任务时发生错误:', error);
+    }
+
+    // 优化：减少延迟到 10ms，提高响应速度
+    setTimeout(() => {
+      rebuildQueue.isProcessing = false;
+      processQueue();
+      // 显式触发垃圾回收（如果可用）
+      if (window.gc) {
+        window.gc();
+      }
+    }, 10);
+  };
 
   return (expressID?: number) => {
     if (expressID === undefined) {
@@ -571,41 +618,20 @@ function createRestoreSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData
         meshData.isVisible = true;
       });
 
-      // 添加到全量恢复队列
-      batchHandler.pendingFullRestore.add(mergedMesh);
-      batchHandler.pendingMeshData.set(mergedMesh, originalMeshData);
+      // 标记网格为脏，需要重建
+      rebuildQueue.meshDirtyFlags.set(mergedMesh, true);
 
-      // 清除之前的定时器
-      if (batchHandler.timeout) {
-        clearTimeout(batchHandler.timeout);
-      }
+      // 将任务添加到队列
+      rebuildQueue.queue.push({ mesh: mergedMesh });
 
-      // 设置新的定时器（批量处理，延迟重建）
-      batchHandler.timeout = setTimeout(() => {
-        let totalRestored = batchHandler.pendingFullRestore.size;
-
-        // 处理所有待处理的全量恢复
-        batchHandler.pendingFullRestore.forEach(mesh => {
-          const meshData = batchHandler.pendingMeshData.get(mesh);
-          if (meshData) {
-            rebuildMergedMesh(mesh, meshData);
-          }
-        });
-
-        if (totalRestored > 0) {
-          console.log(`批量全量恢复 ${totalRestored} 个模型`);
-        }
-
-        // 清空批处理队列
-        batchHandler.pendingFullRestore.clear();
-        batchHandler.pendingOperations.clear();
-        batchHandler.pendingMeshData.clear();
-      }, 10); // 缩短延迟时间到10ms
-
+      // 延迟后触发重建
+      setTimeout(() => {
+        processQueue();
+      }, 10);
       return;
     }
 
-    // 立即标记为显示
+    // 恢复单个子网格
     let foundAny = false;
     originalMeshData.forEach((meshData) => {
       if (meshData.metadata?.originalExpressID === expressID) {
@@ -619,146 +645,117 @@ function createRestoreSubMeshFunction(mergedMesh: BABYLON.Mesh, originalMeshData
       return;
     }
 
-    // 添加到全局批处理队列
-    if (!batchHandler.pendingOperations.has(mergedMesh)) {
-      batchHandler.pendingOperations.set(mergedMesh, new Set());
-      batchHandler.pendingMeshData.set(mergedMesh, originalMeshData);
-    }
-    batchHandler.pendingOperations.get(mergedMesh)!.add(expressID);
+    // 标记网格为脏，需要重建
+    rebuildQueue.meshDirtyFlags.set(mergedMesh, true);
 
-    // 清除之前的定时器
-    if (batchHandler.timeout) {
-      clearTimeout(batchHandler.timeout);
-    }
+    // 添加到待处理集合
+    batchHandler.pendingExpressIDs.add(expressID);
 
-    // 设置新的定时器（收集所有操作，延迟重建）
-    batchHandler.timeout = setTimeout(() => {
-      let totalRestored = 0;
+    // 将任务添加到队列
+    rebuildQueue.queue.push({ mesh: mergedMesh });
 
-      // 处理所有待处理的网格
-      batchHandler.pendingOperations.forEach((expressIDs, mesh) => {
-        const meshData = batchHandler.pendingMeshData.get(mesh);
-        if (meshData && expressIDs.size > 0) {
-          totalRestored += expressIDs.size;
-          rebuildMergedMesh(mesh, meshData);
-        }
-      });
-
-      // 处理全量恢复
-      batchHandler.pendingFullRestore.forEach(mesh => {
-        const meshData = batchHandler.pendingMeshData.get(mesh);
-        if (meshData) {
-          rebuildMergedMesh(mesh, meshData);
-        }
-      });
-
-      if (totalRestored > 0 || batchHandler.pendingFullRestore.size > 0) {
-        console.log(`批量恢复 ${totalRestored + batchHandler.pendingFullRestore.size} 个模型`);
+    // 延迟后触发重建
+    setTimeout(() => {
+      if (batchHandler.pendingExpressIDs.size > 0) {
+        processQueue();
+        batchHandler.pendingExpressIDs.clear();
       }
-
-      // 清空批处理队列
-      batchHandler.pendingOperations.clear();
-      batchHandler.pendingFullRestore.clear();
-      batchHandler.pendingMeshData.clear();
-    }, 10); // 缩短延迟时间到10ms
+    }, 5);
   };
 }
 
 /**
  * 重新构建合并网格
+ * 优化：预计算可见子网格，减少重复判断，使用更高效的索引偏移算法
  * @param mergedMesh 合并后的网格
  * @param originalMeshData 原始网格数据
  */
-function rebuildMergedMesh(mergedMesh: BABYLON.Mesh, originalMeshData: any[]): void {
+function rebuildMergedMesh(mergedMesh: BABYLON.Mesh): void {
   try {
-    console.log('重新构建合并网格');
-    // 性能优化：预计算总顶点和索引数量
-    let totalVertexCount = 0;
-    let totalIndexCount = 0;
-
-    // 第一遍遍历：计算总大小
-    for (let i = 0; i < originalMeshData.length; i++) {
-      const meshData = originalMeshData[i];
-      const expressID = meshData.metadata?.originalExpressID;
-      if (!expressID) continue;
-
-      if (meshData.isVisible !== false) {
-        if (meshData.positions) {
-          totalVertexCount += meshData.positions.length / 3;
-        }
-        if (meshData.indices) {
-          totalIndexCount += meshData.indices.length;
-        }
-      }
-    }
-
-    if (totalVertexCount === 0) {
-      // 没有可见的几何数据，隐藏合并网格
-      mergedMesh.isVisible = false;
+    const originalMeshData = mergedMesh.metadata?.originalMeshData;
+    if (!originalMeshData || originalMeshData.length === 0) {
       return;
     }
 
-    // 预分配数组大小，避免动态扩容
-    const positions: number[] = new Array(totalVertexCount * 3);
-    const normals: number[] = new Array(totalVertexCount * 3);
-    const indices: number[] = new Array(totalIndexCount);
+    // 优化：先筛选出可见的子网格，避免在循环中重复判断
+    const visibleGeometries: Array<{ positions: Float32Array; normals: Float32Array; indices: Uint32Array }> = [];
+    for (const geometryData of originalMeshData) {
+      if (geometryData.isVisible !== false) { // 使用 !== false 确保 undefined 也会被处理
+        visibleGeometries.push({
+          positions: geometryData.positions,
+          normals: geometryData.normals,
+          indices: geometryData.indices
+        });
+      }
+    }
+
+    // 如果没有可见的子网格，清空网格数据
+    if (visibleGeometries.length === 0) {
+      mergedMesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, new Float32Array(0));
+      mergedMesh.setVerticesData(BABYLON.VertexBuffer.NormalKind, new Float32Array(0));
+      mergedMesh.setIndices([]);
+      console.log('已清空合并网格数据');
+      return;
+    }
+
+    // 预计算总大小，避免动态扩容
+    let totalPositions = 0;
+    let totalNormals = 0;
+    let totalIndices = 0;
+
+    // 优化：只遍历可见的子网格
+    for (const geo of visibleGeometries) {
+      if (geo.positions) totalPositions += geo.positions.length;
+      if (geo.normals) totalNormals += geo.normals.length;
+      if (geo.indices) totalIndices += geo.indices.length;
+    }
+
+    // 预分配数组 - 优化：使用TypedArray提高性能
+    const positions = new Float32Array(totalPositions);
+    const normals = new Float32Array(totalNormals);
+    const indices = new Uint32Array(totalIndices);
 
     let positionIndex = 0;
     let normalIndex = 0;
     let indexIndex = 0;
     let vertexOffset = 0;
 
-    // 第二遍遍历：填充数据
-    for (let i = 0; i < originalMeshData.length; i++) {
-      const meshData = originalMeshData[i];
-      const expressID = meshData.metadata?.originalExpressID;
-      if (!expressID) continue;
+    // 优化：批量复制数据
+    for (const geo of visibleGeometries) {
+      // 使用set方法批量复制数组数据，比循环更快
+      if (geo.positions) {
+        positions.set(geo.positions, positionIndex);
+        positionIndex += geo.positions.length;
+      }
 
-      if (meshData.isVisible !== false) {
-        // 复制位置数据
-        if (meshData.positions) {
-          for (let j = 0; j < meshData.positions.length; j++) {
-            positions[positionIndex++] = meshData.positions[j];
-          }
-        }
+      if (geo.normals) {
+        normals.set(geo.normals, normalIndex);
+        normalIndex += geo.normals.length;
+      }
 
-        // 复制法线数据
-        if (meshData.normals) {
-          for (let j = 0; j < meshData.normals.length; j++) {
-            normals[normalIndex++] = meshData.normals[j];
-          }
-        } else {
-          // 如果没有法线数据，填充默认值
-          const vertexCount = meshData.positions ? meshData.positions.length / 3 : 0;
-          for (let j = 0; j < vertexCount * 3; j++) {
-            normals[normalIndex++] = 0;
-          }
-        }
+      // 索引需要偏移，使用循环处理
+      if (geo.indices) {
+        const indicesArray = geo.indices;
+        const length = indicesArray.length;
 
-        // 复制并偏移索引数据
-        if (meshData.indices) {
-          for (let j = 0; j < meshData.indices.length; j++) {
-            indices[indexIndex++] = meshData.indices[j] + vertexOffset;
-          }
+        // 优化：使用更高效的索引偏移算法
+        // 直接循环比 set + map 更快
+        for (let i = 0; i < length; i++) {
+          indices[indexIndex++] = indicesArray[i] + vertexOffset;
         }
+      }
 
-        // 更新顶点偏移量
-        if (meshData.positions) {
-          vertexOffset += meshData.positions.length / 3;
-        }
+      // 更新顶点偏移量
+      if (geo.positions) {
+        vertexOffset += geo.positions.length / 3;
       }
     }
 
-    // 确保网格设置为可更新
-    // mergedMesh.isVisible = true;
-
-    // 使用updateVerticesData更新现有网格数据
-    mergedMesh.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions, true);
-    mergedMesh.updateVerticesData(BABYLON.VertexBuffer.NormalKind, normals, true);
+    // 更新网格数据
+    mergedMesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
+    mergedMesh.setVerticesData(BABYLON.VertexBuffer.NormalKind, normals);
     mergedMesh.setIndices(indices);
-
-    // 刷新边界框
-    mergedMesh.refreshBoundingInfo();
+    console.log('重新构建合并网格完成');
 
   } catch (error) {
     console.error('重新构建合并网格时发生错误:', error);
