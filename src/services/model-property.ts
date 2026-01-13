@@ -9,6 +9,7 @@ export interface MeshHighlightConfig {
 
 export class IfcPropertyUtils {
   private static instance: IfcPropertyUtils | null = null;
+  public isRoot: boolean = false;
 
   private hiddenNodeIds = new Set<number>();
   private effectManager: EffectManager | null = null;
@@ -473,8 +474,8 @@ export class IfcPropertyUtils {
       const { scene, isFocus } = meshConfig;
       const result = this.findAllChildExpressIds(treeData ?? [], expressID);
       result.push(String(expressID));
-      const isRootNode = treeData && treeData.length > 0 ? this.isRootNode(treeData[0], expressID) : false;
-      if (isRootNode) {
+      this.isRoot = treeData && treeData.length > 0 ? this.isRootNode(treeData[0], expressID) : false;
+      if (this.isRoot) {
         if (!this.effectManager) {
           this.effectManager = EffectManager.getInstance(scene);
         }
@@ -500,8 +501,6 @@ export class IfcPropertyUtils {
       if (!this.effectManager) {
         this.effectManager = EffectManager.getInstance(scene);
       }
-      console.log('匹配的网格数据列表:', meshDataList);
-
       if (meshDataList.length > 0) {
         // 创建需要高亮的expressID集合
         const targetExpressIds = new Set<string>();
@@ -649,10 +648,10 @@ export class IfcPropertyUtils {
         }
       });
 
-      // 预分配数组，避免动态扩容
-      const allPositions: number[] = new Array(totalPositions);
-      const allIndices: number[] = new Array(totalIndices);
-      const allNormals: number[] = new Array(totalNormals);
+      // 预分配数组，避免动态扩容（使用TypedArray节省内存）
+      const allPositions = new Float32Array(totalPositions);
+      const allIndices = new Uint32Array(totalIndices);
+      const allNormals = new Float32Array(totalNormals);
 
       let positionIndex = 0;
       let indexIndex = 0;
@@ -661,21 +660,19 @@ export class IfcPropertyUtils {
 
       groupDataList.forEach((meshData) => {
         if (meshData.positions && meshData.indices) {
-          // 添加顶点位置数据（使用循环而不是展开运算符）
-          for (let i = 0; i < meshData.positions.length; i++) {
-            allPositions[positionIndex++] = meshData.positions[i];
-          }
+          // 添加顶点位置数据（使用set方法批量复制）
+          allPositions.set(meshData.positions, positionIndex);
+          positionIndex += meshData.positions.length;
 
-          // 添加索引数据（需要偏移，使用循环而不是展开运算符）
+          // 添加索引数据（需要偏移，使用循环）
           for (let i = 0; i < meshData.indices.length; i++) {
             allIndices[indexIndex++] = meshData.indices[i] + vertexOffset;
           }
 
-          // 添加法线数据（如果有，使用循环而不是展开运算符）
+          // 添加法线数据（如果有，使用set方法批量复制）
           if (meshData.normals) {
-            for (let i = 0; i < meshData.normals.length; i++) {
-              allNormals[normalIndex++] = meshData.normals[i];
-            }
+            allNormals.set(meshData.normals, normalIndex);
+            normalIndex += meshData.normals.length;
           }
 
           // 更新顶点偏移量
@@ -685,6 +682,7 @@ export class IfcPropertyUtils {
 
       // 创建合并后的网格
       const mergedMesh = new BABYLON.Mesh(`merged_highlight_${expressID}_${materialKey}`, scene);
+      mergedMesh.parent = scene.meshes[0]
 
       // 创建顶点数据并应用到合并后的网格
       const vertexData = new BABYLON.VertexData();

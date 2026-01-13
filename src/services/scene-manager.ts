@@ -466,7 +466,7 @@ export class SceneManager {
   public handleVisibility(
     mode: 'showAll' | 'hideSelected' | 'isolateSelected' | 'transparentSelected',
     selectedMeshIds: Set<number>,
-    expressID: string
+    expressID: string,
   ) {
     if (!this.scene) return;
 
@@ -480,7 +480,7 @@ export class SceneManager {
         this.handleHideSelected(selectedMeshIds);
         break;
       case 'isolateSelected':
-        this.handleIsolateSelected();
+        this.handleIsolateSelected(selectedMeshIds, expressID);
         break;
       case 'transparentSelected':
         this.handleTransparentSelected(selectedMeshIds);
@@ -529,15 +529,20 @@ export class SceneManager {
   /**
    * 处理隔离选中网格
    */
-  private handleIsolateSelected() {
-    this.scene!.meshes.forEach(mesh => {
-      if (mesh.name.includes('highlight')) {
-        mesh.isVisible = true;
-      } else {
-        mesh.isVisible = false;
-        // 如果是合并网格被隐藏，也标记为修改过
-        if (mesh.metadata?.isMergedMesh) {
-          this.modifiedMergedMeshes.add(mesh);
+  private handleIsolateSelected(selectedMeshIds: Set<number>, expressID: string) {
+    if (this.ifcPropertyUtils.isRoot) {
+      this.handleShowAll(selectedMeshIds, expressID);
+    }
+    this.scene!.meshes.forEach((mesh, index) => {
+      if (index !== 0) {
+        if (mesh.metadata?.isHighlightMesh) {
+          mesh.isVisible = true;
+        } else {
+          mesh.isVisible = false;
+          // 如果是合并网格被隐藏，也标记为修改过
+          if (mesh.metadata?.isMergedMesh) {
+            this.modifiedMergedMeshes.add(mesh);
+          }
         }
       }
     });

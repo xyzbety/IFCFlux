@@ -94,6 +94,7 @@ export class EffectManager {
           // 使用自定义后处理实现边框渲染
           this.maskTarget.renderList?.push(mesh);
           this.maskTarget.setMaterialForRendering(mesh, this.materialmask);
+          mesh.metadata.isHighlightMesh = true;
         }
       });
     });
@@ -175,6 +176,11 @@ export class EffectManager {
     this.scene.materials.forEach((mat) => {
       if (mat.name.includes('highlight'))
         mat.dispose()
+    });
+    this.scene.meshes.forEach(mesh => {
+      if (mesh.metadata?.isHighlightMesh) {
+        delete mesh.metadata.isHighlightMesh
+      }
     });
 
     console.log(`高亮效果清除完成，处理了 ${meshesToClear.length} 个网格`, meshesToClear);
