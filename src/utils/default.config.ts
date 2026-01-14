@@ -417,19 +417,19 @@ export default {
           direction: 'vertical',
           ribbonItems: [{
             label: 'X',
-            itemTemplate: '<smart-slider value="1" id="horizontalSliderX" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
+            itemTemplate: '<smart-slider value="0" id="horizontalSliderX" show-tooltip tooltip-position="far" orientation="horizontal" min="-2" max="2" scale-position="none"></smart-slider>',
             cssClass: 'normal',
             allowedSizes: ['normal']
           },
           {
             label: 'Y',
-            itemTemplate: '<smart-slider value="-0.5" id="horizontalSliderY" show-tooltip tooltip-position="far" orientation="horizontal" min="-5" max="5" scale-position="none"></smart-slider>',
+            itemTemplate: '<smart-slider value="-1" id="horizontalSliderY" show-tooltip tooltip-position="far" orientation="horizontal" min="-2" max="2" scale-position="none"></smart-slider>',
             cssClass: 'normal',
             allowedSizes: ['normal']
           },
           {
             label: 'Z',
-            itemTemplate: '<smart-slider value="0.5" id="horizontalSliderZ" show-tooltip orientation="horizontal" min="-5" max="5"  scale-position="none"></smart-slider>',
+            itemTemplate: '<smart-slider value="-1" id="horizontalSliderZ" show-tooltip orientation="horizontal" min="-2" max="2"  scale-position="none"></smart-slider>',
             cssClass: 'normal',
             allowedSizes: ['normal']
           }]
@@ -451,7 +451,7 @@ export default {
         direction: 'vertical',
         ribbonItems: [{
           label: '光照强度',
-          itemTemplate: '<smart-number-input id="inputIndensity"  step="0.05" min="0.0" value="0.75"></smart-number-input>',
+          itemTemplate: '<smart-number-input id="inputIndensity"  step="0.05" min="0.0" value="0.9"></smart-number-input>',
           cssClass: 'small',
           allowedSizes: ['small']
         },

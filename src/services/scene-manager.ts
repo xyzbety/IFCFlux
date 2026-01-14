@@ -103,20 +103,22 @@ export class SceneManager {
     this.scene.enableDepthRenderer();
 
     // --- Light Creation ---
-    const mainlight = new BABYLON.DirectionalLight("mainLight", new BABYLON.Vector3(-1, -1, -1), this.scene);
-    mainlight.intensity = 0.5;
-    mainlight.shadowEnabled = false;
+    // 主光源
+    const mainLight = new BABYLON.DirectionalLight('mainLight', new BABYLON.Vector3(0, -1, -1), this.scene);
+    mainLight.intensity = 0.9
+    this.light = mainLight; // 设置为场景的默认光照
 
+    const frontLight = new BABYLON.DirectionalLight("frontLight", new BABYLON.Vector3(-1, 1, 0.5), this.scene);
+    frontLight.intensity = 0.75;
+    frontLight.shadowEnabled = false;
 
-    const fillLight = new BABYLON.DirectionalLight('fillLight', new BABYLON.Vector3(1, -0.5, 0.5), this.scene);
-    fillLight.intensity = 0.75;
-    this.light = fillLight; // Assign main light for shadows
+    const backLight = new BABYLON.DirectionalLight("backLight", new BABYLON.Vector3(1, 0, 0.5), this.scene);
+    backLight.intensity = 0.5;
+    backLight.shadowEnabled = false;
 
-    const ambientLight = new BABYLON.HemisphericLight("ambientLight", new BABYLON.Vector3(0, 1, 0), this.scene);
-    ambientLight.intensity = 0.1;
-
-    const bottomLight = new BABYLON.HemisphericLight("bottomLight", new BABYLON.Vector3(0, -1, 0), this.scene);
-    bottomLight.intensity = 0.5;
+    // 环境光：提供基础照明
+    const ambientLight = new BABYLON.HemisphericLight("ambientLight", new BABYLON.Vector3(0, 0, 1), this.scene);
+    ambientLight.intensity = 0.2;
 
     // --- Pointer Events ---
     let isDragging = false;
@@ -252,8 +254,8 @@ export class SceneManager {
     // 创建阴影生成器（如果需要）
     let shadowGenerator: BABYLON.ShadowGenerator | null = null;
     if (this.light && this.effectManager?.simpleTarget) {
-      shadowGenerator = new BABYLON.ShadowGenerator(2048, this.light);
-      shadowGenerator.usePoissonSampling = true;
+      shadowGenerator = new BABYLON.ShadowGenerator(1024, this.light);
+      shadowGenerator.setDarkness(0.5);
 
       // 初始化渲染列表
       if (!this.effectManager.simpleTarget.renderList) {
@@ -919,8 +921,8 @@ export class SceneManager {
     if (data.type === 'direction-z')
       this.light.direction.z = Number(data.value);
     if (data.type === 'reset') {
-      this.light.direction = new BABYLON.Vector3(1, -0.5, 0.5);
-      this.light.intensity = 0.75;
+      this.light.direction = new BABYLON.Vector3(0, -1, -1);
+      this.light.intensity = 0.9;
       this.light.shadowEnabled = true;
 
       const handleSliderX = document.getElementById("horizontalSliderX") as any;
