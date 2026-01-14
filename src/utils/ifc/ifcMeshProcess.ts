@@ -308,7 +308,7 @@ export async function mergeMeshesByMaterial(
 
         // 创建合并后的网格
         const mergedMesh = new BABYLON.Mesh(`merged_material_${colorID}`, scene);
-        mergedVertexData.applyToMesh(mergedMesh, true);
+        mergedVertexData.applyToMesh(mergedMesh);
 
         // 设置材质（保持原有的材质缓存机制）
         const material = materialCache.get(colorID)
@@ -1163,10 +1163,10 @@ export function createMergedTransparentMesh(groupDataList: any[], materialKey: s
     }
   });
 
-  // 预分配数组
-  const allPositions: number[] = new Array(totalPositions);
-  const allIndices: number[] = new Array(totalIndices);
-  const allNormals: number[] = new Array(totalNormals);
+  // 预分配数组（使用TypedArray节省内存）
+  const allPositions = new Float32Array(totalPositions);
+  const allIndices = new Uint32Array(totalIndices);
+  const allNormals = new Float32Array(totalNormals);
 
   let positionIndex = 0;
   let indexIndex = 0;
@@ -1175,21 +1175,19 @@ export function createMergedTransparentMesh(groupDataList: any[], materialKey: s
 
   groupDataList.forEach(({ subMeshInfo }) => {
     if (subMeshInfo.positions && subMeshInfo.indices) {
-      // 添加顶点位置数据
-      for (let i = 0; i < subMeshInfo.positions.length; i++) {
-        allPositions[positionIndex++] = subMeshInfo.positions[i];
-      }
+      // 添加顶点位置数据（使用set方法批量复制）
+      allPositions.set(subMeshInfo.positions, positionIndex);
+      positionIndex += subMeshInfo.positions.length;
 
-      // 添加索引数据（需要偏移）
+      // 添加索引数据（需要偏移，使用循环）
       for (let i = 0; i < subMeshInfo.indices.length; i++) {
         allIndices[indexIndex++] = subMeshInfo.indices[i] + vertexOffset;
       }
 
-      // 添加法线数据
+      // 添加法线数据（使用set方法批量复制）
       if (subMeshInfo.normals) {
-        for (let i = 0; i < subMeshInfo.normals.length; i++) {
-          allNormals[normalIndex++] = subMeshInfo.normals[i];
-        }
+        allNormals.set(subMeshInfo.normals, normalIndex);
+        normalIndex += subMeshInfo.normals.length;
       }
 
       // 更新顶点偏移量
