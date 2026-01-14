@@ -32,8 +32,8 @@ export class IfcExplosion {
       boxPosition = this.modelDict[mesh.id]['boxPosition']
       // 每次都用初始位置和boxCenter重新计算
       mesh.position.x = boxPosition.x + boxCenter.x * axis.x;
-      mesh.position.y = boxPosition.y + boxCenter.y * axis.y;
-      mesh.position.z = boxPosition.z + boxCenter.z * axis.z;
+      mesh.position.y = boxPosition.y + boxCenter.y * axis.z;
+      mesh.position.z = boxPosition.z + boxCenter.z * axis.y;
     });
   }
 
