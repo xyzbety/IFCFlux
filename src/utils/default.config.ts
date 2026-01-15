@@ -451,7 +451,7 @@ export default {
         direction: 'vertical',
         ribbonItems: [{
           label: '光照强度',
-          itemTemplate: '<smart-number-input id="inputIndensity"  step="0.05" min="0.0" value="0.9"></smart-number-input>',
+          itemTemplate: '<smart-number-input id="inputIndensity"  step="0.05" min="0.0" value="1.0"></smart-number-input>',
           cssClass: 'small',
           allowedSizes: ['small']
         },

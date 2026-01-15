@@ -105,7 +105,7 @@ export class SceneManager {
     // --- Light Creation ---
     // 主光源
     const mainLight = new BABYLON.DirectionalLight('mainLight', new BABYLON.Vector3(0, -1, -1), this.scene);
-    mainLight.intensity = 0.9
+    mainLight.intensity = 1.0
     this.light = mainLight; // 设置为场景的默认光照
 
     const frontLight = new BABYLON.DirectionalLight("frontLight", new BABYLON.Vector3(-1, 1, 0.5), this.scene);
@@ -255,6 +255,7 @@ export class SceneManager {
     let shadowGenerator: BABYLON.ShadowGenerator | null = null;
     if (this.light && this.effectManager?.simpleTarget) {
       shadowGenerator = new BABYLON.ShadowGenerator(1024, this.light);
+      shadowGenerator.useContactHardeningShadow = true;
       shadowGenerator.setDarkness(0.5);
 
       // 初始化渲染列表
@@ -922,7 +923,7 @@ export class SceneManager {
       this.light.direction.z = Number(data.value);
     if (data.type === 'reset') {
       this.light.direction = new BABYLON.Vector3(0, -1, -1);
-      this.light.intensity = 0.9;
+      this.light.intensity = 1.0;
       this.light.shadowEnabled = true;
 
       const handleSliderX = document.getElementById("horizontalSliderX") as any;
