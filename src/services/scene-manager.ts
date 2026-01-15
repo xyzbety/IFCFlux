@@ -83,7 +83,7 @@ export class SceneManager {
 
     // --- Scene Properties ---
     this.scene.useRightHandedSystem = true;
-    this.scene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 0);
+    this.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
     this.scene.autoClear = true;
     // this.scene.debugLayer.show();
 
