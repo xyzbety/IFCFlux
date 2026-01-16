@@ -73,7 +73,7 @@ export class ModelManager {
         };
 
         await ifcLoader.load(onProgressCallback);
-        console.log("IFC模型加载完成,模型数据为", ifcLoader);
+        // console.log("IFC模型加载完成,模型数据为", ifcLoader);
         this.modelStore.setModel(file, {
           tree: ifcLoader.ifcTree,
           properties: ifcLoader.properties,
@@ -151,13 +151,13 @@ export class ModelManager {
 
   public setupInspectDataListener(file: File, type: number): void {
     const ifcInspect = new IfcInspect(file, type);
-    console.log("开始监听模型检查数据...", file);
+    // console.log("开始监听模型检查数据...", file);
     const checkInterval = setInterval(() => {
       if (ifcInspect.ifcData) {
         clearInterval(checkInterval);
         this.modelStore.clearModelInspectData();
         this.modelStore.setModelInspectData(markRaw(ifcInspect.ifcData));
-        console.log("模型检查数据已更新", ifcInspect.ifcData, this.modelStore.modelInspectData);
+        // console.log("模型检查数据已更新", ifcInspect.ifcData, this.modelStore.modelInspectData);
       }
     }, 100);
     setTimeout(() => clearInterval(checkInterval), 100000);

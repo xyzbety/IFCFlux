@@ -838,9 +838,17 @@ export class SceneManager {
         this.slicePlane.destroy();
         this.slicePlane = null;
       }
+
+      // 清理 Geometry 的所有缓存
       this.scene.meshes.forEach(mesh => {
-        mesh.isPickable = true
+        if (mesh.geometry) {
+          // 清空顶点缓存
+          mesh.geometry._positions = null;
+          mesh.geometry._positionsCache = [];
+        }
+        mesh.isPickable = true;
       });
+
       return;
     }
 
