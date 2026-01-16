@@ -793,10 +793,11 @@ export class IfcLoader {
             if (allEdgeData.length > 0) {
                 const edges = BABYLON.MeshBuilder.CreateLineSystem("meshEdge", {
                     lines: allEdgeData,
-                    updatable: true,
+                    updatable: false,
                 }, this.scene);
                 edges.color = new BABYLON.Color3(0, 0, 0);
                 edges.setEnabled(false);
+                edges.isPickable = false;
             } else {
                 console.warn('没有预计算的边框数据可渲染');
             }
