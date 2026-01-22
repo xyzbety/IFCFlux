@@ -66,7 +66,7 @@ const ifcPropertyUtils = IfcPropertyUtils.getInstance();
 const descriptions = ref<string[]>([]);
 const selectedKey = ref<string | null>(null);
 const tableData = ref<any[]>([]);
-const currentDataObj = ref<any>(null);
+const currentDataObj = ref<string | null>(null);  // 改为存储 key 而不是数据对象
 // 弹框控制和数据
 const dialogVisible = ref(false);
 const dialogTableData = ref<any[]>([]);
@@ -126,15 +126,10 @@ watch(
     (val) => {
         if (val) {
             const data = modelStore.modelInspectData?.data;
-            console.log("模型检查数据为", data);
+            // console.log("模型检查数据为", data);
             if (data && typeof data === 'object') {
-                // 将英文键替换为中文
-                const translatedData: { [key: string]: any } = {};
-                for (const [key, value] of Object.entries(data)) {
-                    translatedData[categoryMapDict[key] || key] = value;
-                }
-                // 更新 descriptions
-                descriptions.value = Object.keys(translatedData);
+                // 将英文键替换为中文（只保存键的引用，不创建新对象）
+                descriptions.value = Object.keys(data).map(key => categoryMapDict[key] || key);
                 if (descriptions.value.length > 0) {
                     loading.value = false;
                     handleListClick(descriptions.value[0]);
@@ -143,6 +138,7 @@ watch(
                 descriptions.value = [];
                 tableData.value = [];
                 selectedKey.value = null;
+                currentDataObj.value = null;
             }
             searchText.value = '';
             console.log("数据已更新");
@@ -215,7 +211,8 @@ const handleListClick = (key: string) => {
     )?.[1]?.en || key;
     selectedKey.value = categoryMapDict[englishKey];
     const dataObj = modelStore.modelInspectData?.data?.[englishKey];
-    currentDataObj.value = dataObj; // 保存当前dataObj
+    // 不保存 dataObj 的引用，只保存键值，通过 watch 中的 modelInspectData 获取
+    currentDataObj.value = englishKey;
 
     if (Array.isArray(dataObj)) {
         tableData.value = dataObj.map(item => ({
@@ -277,12 +274,15 @@ const handleView = (row: any) => {
     // 假设 row 是你要展示的对象，将其属性转为 [{key, value}] 数组
     // 通过 guid 查找完整数据
     let detail = null;
-    if (Array.isArray(currentDataObj.value)) {
-        detail = currentDataObj.value.find((item: any) => item.Guid === row.guid);
+    // 从 modelInspectData 中获取数据，而不是从 currentDataObj
+    const dataKey = currentDataObj.value;
+    const currentData = modelStore.modelInspectData?.data?.[dataKey as string];
+    if (Array.isArray(currentData)) {
+        detail = currentData.find((item: any) => item.Guid === row.guid);
         console.log("detail", detail);
-    } else if (currentDataObj.value && typeof currentDataObj.value === 'object') {
+    } else if (currentData && typeof currentData === 'object') {
         // 只有一个对象时直接用
-        detail = currentDataObj.value;
+        detail = currentData;
     }
     if (detail) {
         dialogTableData.value = convertToTreeData(detail);
@@ -367,9 +367,14 @@ onMounted(() => {
 
 });
 
-// 组件卸载时移除监听器
+// 组件卸载时移除监听器并清理数据
 onUnmounted(() => {
     eventManager.remove('click');
+    // 清理可能造成内存泄漏的数据引用
+    currentDataObj.value = null;
+    tableData.value = [];
+    dialogTableData.value = [];
+    descriptions.value = [];
 });
 
 

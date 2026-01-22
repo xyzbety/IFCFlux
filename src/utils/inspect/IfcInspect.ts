@@ -52,6 +52,7 @@ export class IfcInspect {
   private url: string | File;          // 输入的 URL 或 File
   private ifcPset?: IfcMapping;      // 当前选择的规则映射
   public ifcData?: IfcInspectResult;   // 最终的检查结果
+  private worker: Worker | null = null; // worker 实例引用
 
   constructor(url: string | File, type: number = 1) {
     this.url = url;
@@ -104,7 +105,7 @@ export class IfcInspect {
    * 执行提取：
    * - 启动 worker 进行解析
    * - 记录耗时
-   * - 完成后“让出一帧”给 UI 渲染，再写入 ifcData
+   * - 完成后"让出一帧"给 UI 渲染，再写入 ifcData
    */
   private async run(): Promise<void> {
     if (!this.file || !this.ifcPset) return;
@@ -112,19 +113,20 @@ export class IfcInspect {
     this.processing = true;
     const t0 = performance.now();
 
-    const worker = new Worker(`${this.baseUrl}/extractor.worker.js`);
+    this.worker = new Worker(`${this.baseUrl}/extractor.worker.js`);
 
     const result = await new Promise<IfcInspectResult>((resolve) => {
-      worker.postMessage({
+      this.worker!.postMessage({
         name: 'start',
         file: this.file as File,
         mapping: this.ifcPset as IfcMapping,
         ifcTypes: IfcTypes,
       });
 
-      worker.onmessage = (e: MessageEvent<any>) => {
+      this.worker!.onmessage = (e: MessageEvent<any>) => {
         if (e.data && e.data.complete) {
-          worker.terminate();
+          this.worker?.terminate();
+          this.worker = null;
           resolve(e.data.result as IfcInspectResult);
         }
       };
@@ -138,6 +140,17 @@ export class IfcInspect {
 
     this.processing = false;
     this.ifcData = result;
+  }
+
+  /**
+   * 终止当前正在运行的 worker
+   */
+  public terminate(): void {
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+    this.processing = false;
   }
 
   /**

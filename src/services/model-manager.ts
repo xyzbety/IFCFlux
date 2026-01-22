@@ -19,6 +19,7 @@ export class ModelManager {
     text: string;
   }>;
   private modelStore = useModelStore();
+  private inspectingInstance: IfcInspect | null = null;
 
   private constructor() {
     this.loading = ref(false);
@@ -137,6 +138,7 @@ export class ModelManager {
 
       this.modelStore.clearModel();
       this.modelStore.clearModelInspectData();
+      this.inspectingInstance = null; // 清理检查实例引用
     }
   }
 
@@ -150,16 +152,27 @@ export class ModelManager {
   }
 
   public setupInspectDataListener(file: File, type: number): void {
+    // 如果已有实例在运行，先终止其 worker
+    if (this.inspectingInstance) {
+      console.warn('已有检查任务正在运行，终止前一个任务');
+      this.inspectingInstance.terminate();
+    }
+
     const ifcInspect = new IfcInspect(file, type);
+    this.inspectingInstance = ifcInspect;
     // console.log("开始监听模型检查数据...", file);
     const checkInterval = setInterval(() => {
       if (ifcInspect.ifcData) {
         clearInterval(checkInterval);
         this.modelStore.clearModelInspectData();
         this.modelStore.setModelInspectData(markRaw(ifcInspect.ifcData));
+        this.inspectingInstance = null; // 重置实例引用
         // console.log("模型检查数据已更新", ifcInspect.ifcData, this.modelStore.modelInspectData);
       }
     }, 100);
-    setTimeout(() => clearInterval(checkInterval), 100000);
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      this.inspectingInstance = null;
+    }, 100000);
   }
 }

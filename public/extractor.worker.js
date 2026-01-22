@@ -34,10 +34,6 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
     const regexEntityCatpture = `(.*)=[\\s]?(${entitiesRegex})\\([^;](.*?)'[^;]+?,(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),(?:.+?),(?:.+?),(\w+|'.*?'|[$])(?:,(.*?))?[\\)|,]`
 
     const regexRel = new RegExp(/=[\s]?IFCRELDEFINESBYPROPERTIES/)
-
-
-
-
     const regexRelCapture = new RegExp(/IFCRELDEFINESBYPROPERTIES[^;]*\((.*)\),(.*)\)/)
 
     const regexPset = new RegExp(/=[\s]?(IFCPROPERTYSET|IFCELEMENTQUANTITY)/)
@@ -51,9 +47,9 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
     const relMap = new Map();
     const entityMap = new Map()
     const psetMap = new Map()
-    const valueMap = new Map()
     const lineMap = new Map()
     const ifcResult = []
+    const psetToEntityMap = new Map()  // psetID -> entityID 映射
 
     async function firstPass() {
         // let totalLines = 0
@@ -117,8 +113,9 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
                         array: match[3].split(',')
                     })
 
-                    match[3].split(',').map(x => {
-                        lineMap.set(x, true)
+                    // 保存 propID -> psetID 的映射
+                    match[3].split(',').forEach(x => {
+                        lineMap.set(x, { psetID: match[1] })
                     })
                 }
                 psetCount++
@@ -126,18 +123,43 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
             }
         }
         // console.log(totalLines);
+
+        // firstPass 结束后，构建 pset -> entity 反向映射
+        for (const [entityID, psetIDs] of relMap) {
+            for (const psetID of psetIDs) {
+                psetToEntityMap.set(psetID, entityID);
+            }
+        }
     }
 
 
+    const logs = {
+        psets: [],
+        pset: [],
+        prop: []
+    }
+
     async function secondPass() {
+        // console.log('lineMap size:', lineMap.size, 'keys:', Array.from(lineMap.keys()).slice(0, 10));
         await readFile(file, line => {
-            processline(line);
+            const value = processline(line);
+            if (value && value.size > 0) {
+                // 立即处理获取到的属性值
+                for (const [propID, propData] of value) {
+                    const psetID = lineMap.get(propID)?.psetID;
+                    if (psetID) {
+                        processPropertyValue(propID, propData, psetID);
+                    }
+                }
+            }
         });
 
         function processline(line) {
             //get id
-            let thisLine = false
+            // let thisLine = false
             const id = line.match(/(.*)=/) || []
+            let value;
+            let obj = new Map()
 
             if (lineMap.has(id[1])) {
                 valueCount++
@@ -152,7 +174,7 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
                         const property = match[2]
                         let dataType = match[3]
                         let rawValue = match[4]
-                        let value;
+
 
                         if (!dataType) {
                             const propertyFromEnum = rawValue.match(new RegExp(/(\w+)\('([^']+)'\)/))
@@ -185,15 +207,12 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
                         } else if (stringDataTypes.includes(dataType)) {
                             value = rawValue.slice(1, -1)
                         }
-
-                        valueMap.set(index, {
+                        obj.set(index, {
                             property: property,
                             value: value
                         })
                     }
-
-                    lineMap.delete(id[1]);
-                    return;
+                    return obj;
                 }
 
                 //match as numbers
@@ -204,23 +223,46 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
                         const index = matchNumeric[1]
                         const property = matchNumeric[2]
                         const value = matchNumeric[3]
-                        valueMap.set(index, {
+                        obj.set(index, {
                             property: property,
                             value: convertScientificToDecimal(value)
                         })
                     }
 
-                    lineMap.delete(id[1]);
-                    return;
+                    return obj;
                 }
-
-
             }
             if (lineMap.size === 0) {
                 return
             }
+            return obj;
 
         }
+    }
+
+    function processPropertyValue(propID, propData, psetID) {
+        const pset = psetMap.get(psetID);
+        if (!pset) {
+            logs.pset.push(`Unknown pset: ${psetID}`);
+            console.log('propData:', propData);
+            return;
+        }
+
+        // 通过反向映射直接获取 entityID，无需遍历 entityMap
+        const entityID = psetToEntityMap.get(psetID);
+        if (!entityID) {
+            return;
+        }
+
+        const obj = entityMap.get(entityID);
+        if (!obj) {
+            return;
+        }
+
+        if (!obj[ifcToText(pset.pset)]) {
+            obj[ifcToText(pset.pset)] = {};
+        }
+        obj[ifcToText(pset.pset)][ifcToText(propData.property)] = propData.value;
     }
 
     await firstPass()
@@ -229,17 +271,16 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
     // console.log('Entity', entityCount, entityMap.size);
     // console.log('RelDef', relDefCount, relMap.size);
     // console.log('Pset', psetCount, psetMap.size);
-    // console.log('Value', valueCount, valueMap.size);
+
+    // secondPass 完成后，清空不再需要的数据
+    lineMap.clear();  // 清空属性行映射
+    psetToEntityMap.clear();  // 清空 pset->entity 反向映射
+    psetMap.clear();  // 清空 pset 映射
 
     const t1 = performance.now()
     console.log('map in:', convertToFloat((t1 - t0) / 1000), 's');
 
-
-    const logs = {
-        psets: [],
-        pset: [],
-        prop: []
-    }
+    // 构建 ifcResult，属性已经在 secondPass 中增量填充
     for (const [key, obj] of entityMap) {
         const pascalCaseEntity = entities.filter(x => x.toUpperCase() == obj.Entity)
         obj.Entity = pascalCaseEntity[0]
@@ -250,39 +291,20 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
             continue;
         }
 
-        for (const psetID of psets) {
-            const pset = psetMap.get(psetID)
-            if (!pset) {
-                logs.pset.push(`${key}, ${psetID}`)
-                continue;
-            }
-
-            const pset_result = {}
-            for (const propID of pset.array) {
-                const map = valueMap.get(propID);
-                if (!map || map.value == undefined) {
-                    const d = {
-                        propid: propID,
-                        array: pset.array,
-                        psetid: psetID
-                    }
-                    logs.prop.push(d)
-                    continue;
-                }
-
-                pset_result[ifcToText(map.property)] = map.value
-            }
-            obj[ifcToText(pset.pset)] = pset_result
-        }
         ifcResult.push(obj)
+        relMap.delete(key)  // 使用后立即清空
     }
+
+    // 数据已转移到 ifcResult，清空 entityMap
+    entityMap.clear();
 
     const t2 = performance.now()
     console.log('completed in:', convertToFloat((t2 - t0) / 1000), 's');
 
     const checkResult = {}
 
-    for (const item of ifcResult) {
+    for (let i = 0; i < ifcResult.length; i++) {
+        const item = ifcResult[i]
         const nweItem = {
             Entity: item.Entity,
             Guid: ifcGuidToUuid(item.Guid),
@@ -320,13 +342,18 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
             nweItem[pset] = value
         }
 
-
         if (!checkResult[item.Entity]) {
             checkResult[item.Entity] = [nweItem]
         } else {
             checkResult[item.Entity].push(nweItem)
         }
+
+        // 处理完一个 item 后，从 ifcResult 中删除对应数据
+        ifcResult[i] = null
     }
+
+    // 压缩 ifcResult 数组，移除所有 null 元素
+    ifcResult.length = 0
 
     const result = {
         metadata: {
