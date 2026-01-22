@@ -35,7 +35,7 @@ export class IFCParser2DB {
     private fileNames: any
 
     private uuid: any;
-    private elementPsets:{ [key: number]: Set<string> } = {};
+    private elementPsets: { [key: number]: Set<string> } = {};
 
     // 构造函数，初始化一些配置项
     constructor() {
@@ -59,16 +59,16 @@ export class IFCParser2DB {
     }
 
     // 创建或打开DuckDB数据库
-    private async initDb(dbName:string) {
+    private async initDb(dbName: string) {
         const baseUrl = window.location.origin
         const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
-        mvp: {
-            mainModule: `${baseUrl}/duckdb/duckdb_mvp.wasm`,
-            mainWorker: `${baseUrl}/duckdb/duckdb-browser-mvp.worker.js`,
-        },
-        eh: {
-            mainModule: `${baseUrl}/duckdb/duckdb-eh.wasm`,
-            mainWorker: `${baseUrl}/duckdb/duckdb-browser-eh.worker.js`,
+            mvp: {
+                mainModule: `${baseUrl}/duckdb/duckdb_mvp.wasm`,
+                mainWorker: `${baseUrl}/duckdb/duckdb-browser-mvp.worker.js`,
+            },
+            eh: {
+                mainModule: `${baseUrl}/duckdb/duckdb-eh.wasm`,
+                mainWorker: `${baseUrl}/duckdb/duckdb-browser-eh.worker.js`,
             },
         };
         // Select a bundle based on browser checks
@@ -359,12 +359,12 @@ export class IFCParser2DB {
             if (this.cnn) await this.cnn.close();
             const opfsRoot = await navigator.storage.getDirectory();
             // Get handle to the .db file
-            const fileHandle =  await opfsRoot.getFileHandle(`${memoryDbName}.db`, {create: false});
+            const fileHandle = await opfsRoot.getFileHandle(`${memoryDbName}.db`, { create: false });
             return await fileHandle.getFile();
         } catch (error) {
             console.error('创建数据库时出错：', error);
         } finally {
-            this.fileNames.forEach((item:string) => {
+            this.fileNames.forEach((item: string) => {
                 this.db.dropFile(item)
             });
             if (this.db) await this.db.terminate();
@@ -407,14 +407,14 @@ function chunkJson<T>(objects: T[], maxSize: number = 31457280): string[] {
     return chunks;
 }
 
-async function insertFromJsonChunks(tableName: string, chunks: string[], db: any, cnn:any, fileNames: any): Promise<number> {
+async function insertFromJsonChunks(tableName: string, chunks: string[], db: any, cnn: any, fileNames: any): Promise<number> {
     for (let i = 0; i < chunks.length; i++) {
-        console.log('chunks[i]', chunks[i]);
+        // console.log('chunks[i]', chunks[i]);
         const fileName = `temp_${tableName}_${i}.json`;
         fileNames.push(fileName);
         await db.registerFileText(fileName, chunks[i]);
         const query = `INSERT INTO scene_${tableName} FROM (SELECT * FROM read_json_auto('${fileName}', maximum_object_size = 167772160));`
-        console.log('DB1:', db, query);
+        // console.log('DB1:', db, query);
         try {
             const prepared = await cnn.prepare(query);
             await prepared.send();
@@ -422,10 +422,10 @@ async function insertFromJsonChunks(tableName: string, chunks: string[], db: any
             console.log('Inserted data from json chunk to table Successfully!');
         } catch (error) {
             console.error('Failed to insert data from json chunk to table!', error, fileName, tableName);
-        // } finally {
-        //     await db.dropFile(fileName);
+            // } finally {
+            //     await db.dropFile(fileName);
         }
-    
+
     }
     return 1;
 }
@@ -533,21 +533,21 @@ async function insertElementsProps(parser: any, allElementsPropsIdMap: { [key: s
         const propertySet = await parser.getLineById(psetsId);
         // const propertySet = ifcapi.GetLine(modelId, keyAsNumber);
         // console.log('PropertySet:', propertySet.Name.value, propertySet.HasProperties, entityIds);
-        if(propertySet.HasProperties == undefined){
+        if (propertySet.HasProperties == undefined) {
             continue;
         }
-        for ( const propertyId of propertySet.HasProperties) {
+        for (const propertyId of propertySet.HasProperties) {
             const psetSingleValue = await parser.getLineById(propertyId.value);
 
             // 对每个属性集合中的元素ID进行进一步处理
             for (const entityId of entityIds) {
-                if(elementPsets[entityId]){
+                if (elementPsets[entityId]) {
                     elementPsets[entityId].add(propertySet.Name.value);
-                }else{
+                } else {
                     elementPsets[entityId] = new Set([propertySet.Name.value]);
                 }
                 const entity = await parser.getLineById(entityId);
-                if (entity.GlobalId && entity.GlobalId.value) {
+                if (entity?.GlobalId && entity.GlobalId.value) {
                     let attValue = psetSingleValue.NominalValue?.value ?? null;
                     // TODO 先注释掉，后续再处理
                     // if (attValue === 'F') {
@@ -604,7 +604,7 @@ async function appendDefindsByTypeProps(parser: any, existProprs: any[], element
         const psetsId = Number(psetId);
         const propertySet = await parser.getLineById(psetsId);
 
-        if(propertySet.HasProperties == undefined){
+        if (propertySet.HasProperties == undefined) {
             continue;
         }
         for (const entityId of entityIds) {
@@ -651,21 +651,21 @@ async function appendDefindsByTypeProps(parser: any, existProprs: any[], element
         }
 
     }
-    return ;
+    return;
 }
 
 async function appendRelProps(parser: any, existProprs: any[]): Promise<void> {
     let index = existProprs.length + 1;
-    const merged: {[key:string]: any[]} = {}
-    for (const item of Object.values(parser.relationElements)){
+    const merged: { [key: string]: any[] } = {}
+    for (const item of Object.values(parser.relationElements)) {
         const key = item.relating_object + "|" + item.rel_type;
-        if (merged[key]){
+        if (merged[key]) {
             merged[key] = merged[key].concat(item.related_objects);
         } else {
             merged[key] = item.related_objects;
         }
     }
-    for (const [key, value] of Object.entries(merged)){
+    for (const [key, value] of Object.entries(merged)) {
         const [relating_object, rel_type] = key.split("|");
         existProprs.push({
             "id": index,
@@ -676,24 +676,24 @@ async function appendRelProps(parser: any, existProprs: any[]): Promise<void> {
             "attribute_key": rel_type,
             "attribute_name": RelationElementInfo[rel_type]?.name ?? rel_type,
             "attribute_value": value.join(','),
-            "value_type": value.length > 1? 'LIST' : 'VARCHAR',
+            "value_type": value.length > 1 ? 'LIST' : 'VARCHAR',
             "value_unit": null
         });
         index++;
     }
-    return ;
+    return;
 }
 
-async function appendClassficationProps(parser: any, existProprs: any[]): Promise<void>{
+async function appendClassficationProps(parser: any, existProprs: any[]): Promise<void> {
     let index = existProprs.length + 1;
-    for(const lineId of parser.classficationLines){
+    for (const lineId of parser.classficationLines) {
         const line = await parser.getLineById(lineId);
         const entityIds = line.RelatedObjects;
         const classification = await parser.getLineById(line.RelatingClassification.value);
-        if(classification.Identification){
-            for(const entityId of entityIds){
+        if (classification.Identification) {
+            for (const entityId of entityIds) {
                 const entity = await parser.getLineById(entityId.value);
-                if(entity.GlobalId){
+                if (entity.GlobalId) {
                     existProprs.push({
                         "id": index,
                         "guid": formatGuid(entity.GlobalId.value),
@@ -715,7 +715,7 @@ async function appendClassficationProps(parser: any, existProprs: any[]): Promis
                         "attribute_group": 'Pset_RelAssociatesClassification',
                         "attribute_key": 'ClassificationReferenceName',
                         "attribute_name": '分类名称',
-                        "attribute_value": classification.Name? classification.Name.value : null,
+                        "attribute_value": classification.Name ? classification.Name.value : null,
                         "value_type": 'VARCHAR',
                         "value_unit": null
                     })
@@ -725,7 +725,7 @@ async function appendClassficationProps(parser: any, existProprs: any[]): Promis
         }
 
     }
-    return ;
+    return;
 }
 
 
