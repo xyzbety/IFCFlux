@@ -76,9 +76,10 @@ export class IFCParser {
     const buffer = await data.arrayBuffer()
     this.modelId = this.ifcapi.OpenModel(new Uint8Array(buffer), {
       COORDINATE_TO_ORIGIN: false, // 不将坐标系移动到原点
-      // OPTIMIZE_PROFILES: true, // 优化轮廓
+      OPTIMIZE_PROFILES: true, // 优化轮廓
+      USE_FAST_BOOLS: true,
       CIRCLE_SEGMENTS: detail_level, // 设置圆的线段数，影响几何精细度
-      // MEMORY_LIMIT: 8294967296, // 内存限制
+      MEMORY_LIMIT: 8294967296, // 内存限制
       // TAPE_SIZE: 6, // 磁带大小
       // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
     })
@@ -198,7 +199,8 @@ export class IFCParser {
     let storeys: { [key: string]: any } = {} // 用于存储楼层信息
     // 遍历所有键
     let entityId = 1;
-    for (const key of keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       const value = this.properties[key];
       if (DummyElementsSet.includes(value.type)) {
         // 如果元素是虚拟元素 (如 IfcSpace), 存入 dummyElements
@@ -292,6 +294,7 @@ export class IFCParser {
         this.physicalElements[key] = dic;
         entityId++;
       }
+
     }
     // 根据空间包含关系，更新物理和虚拟元素的楼层信息
     Object.entries(this.ifcRelContainedInSpatialStructure).forEach(([key, value]) => {
@@ -559,7 +562,7 @@ export class IFCParser {
       const element = elements[i]
       const lines = await this.ifcapi.GetLineIDsWithType(this.modelId as number, element)
       const size = lines.size()
-      for (let i = 0; i < size; i++) result[lines.get(i)] = element
+      for (let j = 0; j < size; j++) result[lines.get(j)] = element
     }
     return result
   }
@@ -624,8 +627,8 @@ export class IFCParser {
               properties[id] = props;
             }
           }
-        }
 
+        }
         // console.log(`Processed ${processCount} elements of type ${elementType}`);
       } catch (error) {
         console.error(`Error processing element type ${elementType}:`, error);

@@ -310,7 +310,7 @@ export async function exportDB(modelStore: any, fileNameWithoutExtension: string
         y: 0,
         z: 0,
         a: 0,
-        detail_level: 12
+        detail_level: 8
     };
     const parser = new IFCParser2DB();
     const result = await parser.start(modelStore.file, fileNameWithoutExtension, envConfig);
@@ -399,7 +399,7 @@ export const saveAsDB = async (file: File, inputPath: string, outputPath: string
             y: 0, // 纬度
             z: 0,
             a: 0,
-            detail_level: 12
+            detail_level: 8
         };
         const parser = new IFCParser2DB();
         const result = await parser.start(file, fileName, envConfig);
