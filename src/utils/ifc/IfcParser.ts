@@ -241,9 +241,11 @@ export class IFCParser {
         const relating_object = obj ? formatGuid(obj.GlobalId.value) : null;
         let related_objects = []
         for (const line_id of related_object_ids) {
-          const obj = await this.ifcapi.GetLine(this.modelId, line_id);
-          if (!obj) continue;
-          related_objects.push(formatGuid(obj.GlobalId.value));
+          if (this.ifcapi.GetLineType(this.modelId, line_id) !== 0) {
+            const obj = await this.ifcapi.GetLine(this.modelId, line_id);
+            if (!obj) continue;
+            related_objects.push(formatGuid(obj.GlobalId.value));
+          }
         }
 
         const dic = {
@@ -640,8 +642,10 @@ export class IFCParser {
     }
 
     try {
-      const line = await this.ifcapi.GetLine(this.modelId, lineId);
-      return line;
+      if (this.ifcapi.GetLineType(this.modelId, lineId) !== 0) {
+        const line = await this.ifcapi.GetLine(this.modelId, lineId);
+        return line;
+      }
     } catch (error) {
       console.error("Failed to get line:", error);
       throw error; // 或者处理错误，返回null/undefined或特定错误信息
