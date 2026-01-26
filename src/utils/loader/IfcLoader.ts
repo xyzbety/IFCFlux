@@ -543,6 +543,7 @@ export class IfcLoader {
     private createBabylonMaterial(color: IColor): BABYLON.StandardMaterial {
         const [r, g, b, a] = [color.x, color.y, color.z, color.w];
         const materialID = `mat_shader_${this.calculateColorID(color)}`;
+        // console.log(`计算颜色唯一标识，颜色：${color.x}, ${color.y}, ${color.z}, ${color.w}`, `标识：${materialID}`);
         const material = new BABYLON.StandardMaterial(materialID, this.scene);
 
         // 设置基础颜色和透明度
@@ -573,12 +574,14 @@ export class IfcLoader {
      * @param color 颜色对象
      */
     private calculateColorID(color: IColor): number {
-        return (
-            Math.floor(color.x * 255) +
-            Math.floor(color.y * 255) +
-            Math.floor(color.z * 255) +
-            Math.floor(color.w * 255)
-        );
+        const r = Math.floor(color.x * 255);
+        const g = Math.floor(color.y * 255);
+        const b = Math.floor(color.z * 255);
+        const a = Math.floor(color.w * 255);
+
+        // 使用位运算确保唯一性：RGBA 各占 8 位，共 32 位
+        // 使用 >>> 0 强制转为无符号整数，避免负数
+        return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
     }
     private async streamGetData(onProgress?: (percent: number) => void) {
         const allPropertyElementTypes = this.ifcApi.GetAllTypesOfModel(this.modelID as number);
