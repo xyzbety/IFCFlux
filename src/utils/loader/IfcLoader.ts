@@ -143,9 +143,10 @@ export class IfcLoader {
      * @returns 返回包含模型的根网格或null（加载失败时）
      */
     public async load(onProgress: ProgressCallback | null = null, detail_level: number = 12): Promise<void> {
-
+        // const startTime = performance.now();
         await this.loadFileToArrayBuffer(detail_level, onProgress);
-        console.log('IFC文件已加载,开始解析IFC模型');
+        // const loadTime = performance.now() - startTime;
+        // console.log('IFC文件已加载,开始解析IFC模型', ((loadTime) / 1000).toFixed(2));
 
         this.ifcParser = new IfcParser(this.ifcApi);
         const collectResult = await this.ifcParser.collectNonGeometryElements(this.modelID!);
@@ -168,15 +169,16 @@ export class IfcLoader {
         // 计算剩余进度 (0.99 - initialProgress)
         const remainingProgress = 0.99 - initialProgress;
 
-        // 剩余进度按权重分配：materialProgress 增加最多，然后 geometryProgress，最后 edgeProcess
-        // 原始比例：geometry=0.25, material=0.20, edge=0.09 (总和=0.54)
-        // 分配权重：material=5, geometry=3, edge=1
-        const totalWeight = 5 + 3 + 1; // 9
+        // 剩余进度按权重分配：materialProgress 增加最多，然后 geometryProgress，streamGetData，最后 edgeProcess
+        // 分配权重：material=5, geometry=3, stream=2, edge=1
+        const totalWeight = 5 + 3 + 2 + 1; // 11
         const materialWeight = 5;
-        const geometryWeight = 3;
+        const streamWeight = 3;
+        const geometryWeight = 2;
         const edgeWeight = 1;
 
         // 按权重分配剩余进度，保持原比例关系
+        const streamProgress = remainingProgress * (streamWeight / totalWeight);
         const geometryProgress = remainingProgress * (geometryWeight / totalWeight);
         const materialProgress = remainingProgress * (materialWeight / totalWeight);
         const edgeProcess = remainingProgress * (edgeWeight / totalWeight);
@@ -218,9 +220,16 @@ export class IfcLoader {
         return new Promise(async (resolve, reject) => {
             try {
                 this.model.setEnabled(false);
-                // StreamAllMeshes是同步操作，无法在中间更新UI，不更新进度条
-                this.streamGetData()
-                console.log('IFC模型已加载,流式处理完成');
+                // StreamAllMeshes现在是异步操作，逐个类型处理
+                // const tStart = performance.now();
+                await this.streamGetData((percent) => {
+                    const mappedPercent = initialProgress * 100 + percent * streamProgress;
+                    if (onProgress) {
+                        onProgress(mappedPercent, "正在处理几何数据...", Math.floor(mappedPercent), 100);
+                    }
+                });
+                // const tEnd = performance.now();
+                // console.log('IFC模型已加载,流式处理完成', (tEnd - tStart).toFixed(2));
                 // 关闭模型并清理API
                 if (this.modelID !== null) {
                     console.log('关闭模型...');
@@ -230,9 +239,9 @@ export class IfcLoader {
                 }
                 const t0 = performance.now();
 
-                // 阶段3：处理几何数据 (45% - 70%)          
+                // 阶段3：处理几何数据
                 await this.processGeometryDataWithProgress((percent) => {
-                    const mappedPercent = initialProgress * 100 + percent * geometryProgress;
+                    const mappedPercent = (initialProgress + streamProgress) * 100 + percent * geometryProgress;
 
                     if (onProgress) {
                         onProgress(mappedPercent, "正在处理几何数据...", Math.floor(mappedPercent), 100);
@@ -248,9 +257,9 @@ export class IfcLoader {
                 console.log('IFC模型已加载,分批处理完成');
 
                 // 执行实际的合并操作并获取预计算的边框数据
-                // 合并阶段进度：70-90%
+                // 合并阶段进度
                 await mergeMeshesByMaterial(this.materialsMap, this.materialCache, this.scene, this.model, (percent) => {
-                    const mappedPercent = (initialProgress + geometryProgress) * 100 + percent * materialProgress;
+                    const mappedPercent = (initialProgress + streamProgress + geometryProgress) * 100 + percent * materialProgress;
                     if (onProgress) {
                         onProgress(mappedPercent, '正在合并网格...', Math.floor(mappedPercent), 100);
                     }
@@ -263,11 +272,11 @@ export class IfcLoader {
                 console.log('合并材质耗时', performance.now() - t1);
 
                 // 使用预计算的边框数据渲染边框
-                // 边框阶段进度：90-99%
+                // 边框阶段进度
                 await this.renderEdgesFromPrecomputedData((progress) => {
                     if (onProgress) {
-                        // 将边框进度映射到90-99%区间
-                        const mappedProgress = (initialProgress + geometryProgress + materialProgress) * 100 + (progress * edgeProcess); // 0-100% -> 90-99%
+                        // 将边框进度映射到最后区间
+                        const mappedProgress = (initialProgress + streamProgress + geometryProgress + materialProgress) * 100 + (progress * edgeProcess);
                         onProgress(mappedProgress, `正在计算边界...`, Math.floor(mappedProgress), 100);
                     }
                 });
@@ -348,8 +357,12 @@ export class IfcLoader {
                 USE_FAST_BOOLS: this.geometryOptimization.useFastBooleans, // 启用快速布尔运算
                 CIRCLE_SEGMENTS: this.geometryOptimization.detailLevel, // 设置圆的线段数，影响几何精细度
                 MEMORY_LIMIT: 8294967296, // 内存限制
-                // TAPE_SIZE: 6, // 磁带大小
-                // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
+                // TAPE_SIZE: 134217728, // 磁带大小
+                // // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
+                // BOOLEAN_UNION_THRESHOLD: 500,    // 从默认150提高到200  
+                // TOLERANCE_PLANE_INTERSECTION: 1.0e-3,    // 放宽容差  
+                // TOLERANCE_PLANE_DEVIATION: 1.0e-3,       // 放宽容差  
+                // TOLERANCE_SCALAR_EQUALITY: 1.0e-3,       // 放宽容差  
             };
 
             this.modelID = this.ifcApi.OpenModel(new Uint8Array(buffer), config);
@@ -567,72 +580,105 @@ export class IfcLoader {
             Math.floor(color.w * 255)
         );
     }
+    private async streamGetData(onProgress?: (percent: number) => void) {
+        const allPropertyElementTypes = this.ifcApi.GetAllTypesOfModel(this.modelID as number);
 
-    private streamGetData() {
-        this.ifcApi.StreamAllMeshes(this.modelID!, (flatMesh: any) => {
-            const placedGeometries = flatMesh.geometries;
+        // 同时过滤：只保留 IFC 元素类型，并跳过指定的不需要的类型
+        const existingTypes: number[] = [];
+        const skippedTypes = new Set([
+            WEBIFC.IFCOPENINGELEMENT,
+            WEBIFC.IFCSPACE,
+            WEBIFC.IFCOPENINGSTANDARDCASE
+        ]);
 
-            for (let i = 0; i < placedGeometries.size(); i++) {
-                const placedGeometry = placedGeometries.get(i);
+        for (const type of allPropertyElementTypes) {
+            const typeID = type.typeID;
+            if (this.ifcApi.IsIfcElement(typeID) && !skippedTypes.has(typeID)) {
+                existingTypes.push(typeID);
+            }
+        }
 
-                let meshData = null;
+        console.log(`开始收集几何体数据，共 ${existingTypes.length} 种类型`);
 
-                try {
-                    // 在收集阶段只获取原始几何数据
-                    const geometryExpressID = placedGeometry.geometryExpressID;
-                    meshData = this.ifcApi.GetGeometry(this.modelID!, geometryExpressID);
+        // 初始化原始几何数据缓存
+        this.geometryCache.set('rawGeometries', []);
 
-                    if (meshData && meshData.GetVertexDataSize() > 0) {
-                        // 只获取顶点和索引数组，不创建VertexData对象
-                        const vertexArray = this.ifcApi.GetVertexArray(
-                            meshData.GetVertexData(),
-                            meshData.GetVertexDataSize()
-                        );
-                        const indexArray = this.ifcApi.GetIndexArray(
-                            meshData.GetIndexData(),
-                            meshData.GetIndexDataSize()
-                        );
-                        const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, flatMesh.expressID) as IIfcEntity;
+        // 逐个类型处理，每处理完一个类型让出CPU
+        for (let i = 0; i < existingTypes.length; i++) {
+            const typeID = existingTypes[i];
 
-                        // 存储原始几何数据，延迟创建顶点数据
-                        const rawGeometryData = {
-                            expressID: flatMesh.expressID,
-                            placedGeometry: placedGeometry,
-                            vertexArray: vertexArray,
-                            indexArray: indexArray,
-                            entity: entity
-                        };
+            this.ifcApi.StreamAllMeshesWithTypes(this.modelID!, [typeID], (flatMesh: any) => {
+                const placedGeometries = flatMesh.geometries;
 
-                        // 临时存储原始数据
-                        if (!this.geometryCache.has('rawGeometries')) {
-                            this.geometryCache.set('rawGeometries', []);
+                for (let j = 0; j < placedGeometries.size(); j++) {
+                    const placedGeometry = placedGeometries.get(j);
+
+                    let meshData = null;
+
+                    try {
+                        // 在收集阶段只获取原始几何数据
+                        const geometryExpressID = placedGeometry.geometryExpressID;
+                        meshData = this.ifcApi.GetGeometry(this.modelID!, geometryExpressID);
+
+                        if (meshData && meshData.GetVertexDataSize() > 0) {
+                            // 只获取顶点和索引数组，不创建VertexData对象
+                            const vertexArray = this.ifcApi.GetVertexArray(
+                                meshData.GetVertexData(),
+                                meshData.GetVertexDataSize()
+                            );
+                            const indexArray = this.ifcApi.GetIndexArray(
+                                meshData.GetIndexData(),
+                                meshData.GetIndexDataSize()
+                            );
+                            const entity: IIfcEntity = this.ifcApi.GetLine(this.modelID!, flatMesh.expressID) as IIfcEntity;
+
+                            // 存储原始几何数据，延迟创建顶点数据
+                            const rawGeometryData = {
+                                expressID: flatMesh.expressID,
+                                placedGeometry: placedGeometry,
+                                vertexArray: vertexArray,
+                                indexArray: indexArray,
+                                entity: entity
+                            };
+
+                            // 临时存储原始数据
+                            this.geometryCache.get('rawGeometries').push(rawGeometryData);
+                        } else {
+                            if (meshData) {
+                                meshData.delete();
+                            }
+                            // 跳过无效的几何数据
+                            continue;
                         }
-                        this.geometryCache.get('rawGeometries').push(rawGeometryData);
-                    } else {
+                    } catch (error) {
+                        console.warn(`收集几何体 ${flatMesh.expressID} 数据时出错:`, error);
                         if (meshData) {
-                            meshData.delete();
+                            try {
+                                meshData.delete();
+                            } catch (e) { }
                         }
-                        // 跳过无效的几何数据
                         continue;
-                    }
-                } catch (error) {
-                    console.warn(`收集几何体 ${flatMesh.expressID} 数据时出错:`, error);
-                    if (meshData) {
-                        try {
-                            meshData.delete();
-                        } catch (e) { }
-                    }
-                    continue;
-                } finally {
-                    if (meshData) {
-                        try {
-                            meshData.delete();
-                        } catch (e) { }
+                    } finally {
+                        if (meshData) {
+                            try {
+                                meshData.delete();
+                            } catch (e) { }
+                        }
                     }
                 }
-            }
+            });
 
-        });
+            // 每处理完一个类型让出CPU，以便UI更新
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            // 更新进度
+            if (onProgress && existingTypes.length > 0) {
+                const progressPercent = ((i + 1) / existingTypes.length) * 100;
+                onProgress(progressPercent);
+            }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 0));
     }
 
     /**
