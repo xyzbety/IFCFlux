@@ -335,6 +335,7 @@ export class IfcLoader {
     private async loadFileToArrayBuffer(detail_level: number, onProgress: ProgressCallback | null): Promise<null> {
         // 初始化web-ifc API
         await this.ifcApi.Init();
+        this.ifcApi.SetLogLevel(WEBIFC.LogLevel.LOG_LEVEL_OFF);// 关闭日志输出
 
         // 处理不同类型的输入（URL或File对象）
         let buffer: ArrayBuffer | null = null;
