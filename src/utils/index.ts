@@ -44,15 +44,9 @@ export function createGround(scene: BABYLON.Scene, bbox: any, isGrid: boolean) {
     );
     const gridMaterial = new GridMaterial("gridMaterial", scene);
     gridMaterial.majorUnitFrequency = 1; // 主线每1格
-    gridMaterial.minorUnitVisibility = 1; // 次线可见度
     gridMaterial.gridRatio = gridWidth / 20; // 减小网格大小，增加网格密度
-    gridMaterial.lineColor = new BABYLON.Color3(0.0, 1.0, 1.0);
-    gridMaterial.mainColor = new BABYLON.Color3(0.5, 0.5, 0.5);
     gridMaterial.opacity = 0.99;
-    gridMaterial.alphaMode = BABYLON.Engine.ALPHA_COMBINE;
-    gridMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; // 允许alpha混合
     gridMaterial.backFaceCulling = false;
-    gridMaterial.useMaxLine = true;
     grid.material = gridMaterial;
     grid.position = bbox.center;
     grid.position.y = gridY;
