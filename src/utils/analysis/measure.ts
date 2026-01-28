@@ -1,10 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 import { EffectManager } from "../../services/scene-effect";
 
-// 常量定义
-const LINE_COLOR = new BABYLON.Color3(1.0, 0.5, 0);
-const TEMP_LINE_COLOR = new BABYLON.Color3(1.0, 0.5, 0);
-
 export class Measure {
     private markSize: number;
     private points: BABYLON.Vector3[];
@@ -48,7 +44,7 @@ export class Measure {
     }
 
     // 创建 Tube
-    private createTube(name: string, points: BABYLON.Vector3[], color: BABYLON.Color3, updatable: boolean = false): BABYLON.Mesh {
+    private createTube(name: string, points: BABYLON.Vector3[], updatable: boolean = true): BABYLON.Mesh {
         const tube = BABYLON.MeshBuilder.CreateTube(name, {
             path: points,
             radius: this.markSize * 0.3,
@@ -134,6 +130,7 @@ export class Measure {
         if (this.pointMarkers.length === 2) {
             this.pointMarkers.forEach(marker => marker.dispose(true));
             this.pointMarkers = [];
+            this.lineDistance = 0;
         }
         this.createMarker(point);
         if (this.line) {
@@ -144,7 +141,7 @@ export class Measure {
             this.tempLine?.dispose(true);
             this.tempLine = undefined;
             this.lineDistance = BABYLON.Vector3.Distance(this.points[0], this.points[1]);
-            this.line = this.createTube('measureLine', this.points, LINE_COLOR);
+            this.line = this.createTube('measureLine', this.points);
             this.points = [];
         }
     }
@@ -173,7 +170,7 @@ export class Measure {
             if (pickResult.pickedMesh.parent?.name === "modelMesh") {
                 // 如果临时 Tube 不存在，则创建一个可更新的
                 if (!this.tempLine) {
-                    this.tempLine = this.createTube('tempLine', [point, pickResult.pickedPoint], TEMP_LINE_COLOR, true);
+                    this.tempLine = this.createTube('tempLine', [point, pickResult.pickedPoint]);
                 } else {
                     // 更新现有 Tube 的路径
                     this.updateTubePath(this.tempLine, point, pickResult.pickedPoint);
@@ -277,7 +274,7 @@ export class Measure {
         for (let i = 0; i < this.areaPoints.length; i++) {
             const startPoint = this.areaPoints[i];
             const endPoint = (i === this.areaPoints.length - 1) ? this.areaPoints[0] : this.areaPoints[i + 1];
-            const boundaryLine = this.createTube(`areaBoundary_${i}`, [startPoint, endPoint], LINE_COLOR);
+            const boundaryLine = this.createTube(`areaBoundary_${i}`, [startPoint, endPoint]);
             this.areaLines.push(boundaryLine);
         }
     }
@@ -339,7 +336,7 @@ export class Measure {
                 if (this.areaPoints.length === 1) {
                     // 第一个点到鼠标的线
                     if (!this.tempLine) {
-                        this.tempLine = this.createTube('tempLine', [this.areaPoints[0], pickResult.pickedPoint], TEMP_LINE_COLOR, true);
+                        this.tempLine = this.createTube('tempLine', [this.areaPoints[0], pickResult.pickedPoint]);
                     } else {
                         this.updateTubePath(this.tempLine, this.areaPoints[0], pickResult.pickedPoint);
                     }
@@ -348,7 +345,7 @@ export class Measure {
                     // 获取或创建最后一点到鼠标位置的线
                     let lineToMouse = this.scene.getMeshByName('tempLine_toMouse') as BABYLON.Mesh;
                     if (!lineToMouse) {
-                        lineToMouse = this.createTube('tempLine_toMouse', [lastPoint, pickResult.pickedPoint], TEMP_LINE_COLOR, true);
+                        lineToMouse = this.createTube('tempLine_toMouse', [lastPoint, pickResult.pickedPoint]);
                     } else {
                         this.updateTubePath(lineToMouse, lastPoint, pickResult.pickedPoint);
                     }
@@ -356,7 +353,7 @@ export class Measure {
                     // 获取或创建鼠标位置到第一点的线
                     let mouseToFirstLine = this.scene.getMeshByName('tempLine_mouseToFirst') as BABYLON.Mesh;
                     if (!mouseToFirstLine) {
-                        mouseToFirstLine = this.createTube('tempLine_mouseToFirst', [pickResult.pickedPoint, this.areaPoints[0]], TEMP_LINE_COLOR, true);
+                        mouseToFirstLine = this.createTube('tempLine_mouseToFirst', [pickResult.pickedPoint, this.areaPoints[0]]);
                     } else {
                         this.updateTubePath(mouseToFirstLine, pickResult.pickedPoint, this.areaPoints[0]);
                     }
@@ -406,17 +403,18 @@ export class Measure {
             this.points.push(point.clone());
             this.pointMarkers.forEach(marker => marker.dispose());
             this.pointMarkers = [];
+            this.angle = 0;
         }
         this.createMarker(point);
         if (this.points.length === 2) {
             this.tempLine?.dispose(true);
             this.tempLine = undefined;
-            this.line = this.createTube('measureLine', this.points, LINE_COLOR);
+            this.line = this.createTube('measureLine', this.points);
         }
         if (this.points.length === 3) {
             this.tempLine?.dispose(true);
             this.tempLine = undefined;
-            this.line = this.createTube('measureLine', [this.points[1], this.points[2]], LINE_COLOR);
+            this.line = this.createTube('measureLine', [this.points[1], this.points[2]]);
 
             const pointA = this.points[0];
             const pointB = this.points[1];
@@ -433,19 +431,27 @@ export class Measure {
         this._pointerObservable = this.scene.onPointerObservable.add((pointerInfo) => {
             switch (pointerInfo.type) {
                 case BABYLON.PointerEventTypes.POINTERTAP:
-                    if (this.measureType === 'distance' && pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedPoint) {
-                        this.createMeasureLine(pointerInfo.pickInfo.pickedPoint);
+                    // 使用统一的拾取方法确保一致性
+                    const pickResultForTap = this.scene.pick(
+                        this.scene.pointerX,
+                        this.scene.pointerY,
+                        (mesh) => mesh.parent?.name === "modelMesh",
+                        true
+                    );
+
+                    if (this.measureType === 'distance' && pickResultForTap && pickResultForTap.hit && pickResultForTap.pickedMesh && pickResultForTap.pickedPoint) {
+                        this.createMeasureLine(pickResultForTap.pickedPoint);
                     }
                     // 修改面积测量逻辑
-                    if (this.measureType === 'area' && pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedPoint) {
-                        this.createAreaFromMultiplePoints(pointerInfo.pickInfo.pickedPoint);
+                    if (this.measureType === 'area' && pickResultForTap && pickResultForTap.hit && pickResultForTap.pickedMesh && pickResultForTap.pickedPoint) {
+                        this.createAreaFromMultiplePoints(pickResultForTap.pickedPoint);
                     }
-                    if (this.measureType === 'angle' && pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedPoint) {
-                        this.createMeasureAngleLine(pointerInfo.pickInfo.pickedPoint);
+                    if (this.measureType === 'angle' && pickResultForTap && pickResultForTap.hit && pickResultForTap.pickedMesh && pickResultForTap.pickedPoint) {
+                        this.createMeasureAngleLine(pickResultForTap.pickedPoint);
                     }
                     // 坐标测量逻辑
-                    if (this.measureType === 'coordinate' && pointerInfo.pickInfo && pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedPoint) {
-                        this.createCoordinateMarker(pointerInfo.pickInfo.pickedPoint);
+                    if (this.measureType === 'coordinate' && pickResultForTap && pickResultForTap.hit && pickResultForTap.pickedMesh && pickResultForTap.pickedPoint) {
+                        this.createCoordinateMarker(pickResultForTap.pickedPoint);
                     }
                     // 单击鼠标右键完成面积测量
                     if (pointerInfo.event.button === 2) {

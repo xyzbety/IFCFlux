@@ -805,6 +805,7 @@ export class SceneManager {
     container.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
     container.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
     advancedTexture.addControl(container);
+    container.linkOffsetY = -50;
 
     const distanceLabel = new GUI.TextBlock();
     distanceLabel.color = "red";
