@@ -22,6 +22,8 @@ export class Measure {
     private effectManager: any;
     private lastUpdateTime: number = 0;
     private updateThrottle: number = 16; // 约60fps的更新频率
+    private gpuPickingEnabled: boolean = true; // 启用GPU拾取
+    private gpuPicker: BABYLON.GPUPicker | null = null;
 
     constructor(scene: BABYLON.Scene, type: 'distance' | 'area' | 'angle' | 'coordinate', markSize?: number) {
         this.markSize = markSize || 1; // 默认标记点大小
@@ -146,7 +148,7 @@ export class Measure {
         }
     }
 
-    private createMeasureLineToMouse(point: BABYLON.Vector3): void {
+    private async createMeasureLineToMouse(point: BABYLON.Vector3): Promise<void> {
         // 节流控制，避免过于频繁的更新
         const currentTime = Date.now();
         if (currentTime - this.lastUpdateTime < this.updateThrottle) {
@@ -161,10 +163,8 @@ export class Measure {
             this.scene.activeCamera
         );
 
-        // 优化：只检测modelMesh层级，忽略其他mesh
-        const pickResult = this.scene.pickWithRay(ray, (mesh) => {
-            return mesh.parent?.name === "modelMesh";
-        }, true);
+        // 使用GPU拾取 + 精确射线检测
+        const pickResult = await this.pickWithGPURay(ray);
 
         if (pickResult?.hit && pickResult.pickedPoint && pickResult.pickedMesh) {
             if (pickResult.pickedMesh.parent?.name === "modelMesh") {
@@ -191,6 +191,61 @@ export class Measure {
                     this.angle = BABYLON.Angle.FromRadians(radians).degrees();
                 }
             }
+        }
+    }
+
+    /**
+     * GPU拾取 + 精确射线检测
+     * 1. 先用GPU拾取快速找到网格
+     * 2. 再对该网格进行精确射线检测获取拾取点
+     */
+    private async pickWithGPURay(ray: BABYLON.Ray): Promise<BABYLON.Nullable<BABYLON.PickingInfo>> {
+        if (!this.gpuPickingEnabled) {
+            // 如果禁用GPU拾取，直接使用CPU拾取
+            return this.scene.pickWithRay(
+                ray,
+                (mesh) => mesh.parent?.name === "modelMesh",
+                false
+            );
+        }
+
+        // 第一步：GPU拾取
+        if (!this.gpuPicker) {
+            console.log('创建GPUPicker...');
+            this.gpuPicker = new BABYLON.GPUPicker();
+        }
+
+        // 获取可拾取的网格列表（每次更新，因为场景可能在变化）
+        const pickableMeshes = this.scene.meshes.filter(mesh =>
+            mesh.parent?.name === "modelMesh" && mesh.isPickable
+        );
+        this.gpuPicker.setPickingList(pickableMeshes);
+
+        try {
+            const pickResult = await this.gpuPicker.pickAsync(this.scene.pointerX, this.scene.pointerY, false)
+            if (!pickResult || !pickResult.mesh) {
+                return null;
+            }
+
+            const pickedMesh = pickResult.mesh;
+
+            // 第二步：对该网格进行精确的射线检测获取拾取点
+            const precisePickResult = this.scene.pickWithRay(
+                ray,
+                (mesh) => mesh === pickedMesh,
+                false
+            );
+            return precisePickResult;
+
+        } catch (error) {
+            console.error('GPU拾取失败，回退到CPU拾取:', error);
+            this.gpuPicker.dispose();
+            // 如果GPU拾取失败，回退到CPU拾取
+            return this.scene.pickWithRay(
+                ray,
+                (mesh) => mesh.parent?.name === "modelMesh",
+                true
+            );
         }
     }
 
@@ -307,7 +362,7 @@ export class Measure {
     }
 
     // 面积测量时的鼠标跟随线
-    private createAreaLineToMouse(): void {
+    private async createAreaLineToMouse(): Promise<void> {
         if (this.areaPoints.length === 0) return;
 
         // 节流控制
@@ -324,10 +379,8 @@ export class Measure {
             this.scene.activeCamera
         );
 
-        // 优化：只检测modelMesh层级，忽略其他mesh
-        const pickResult = this.scene.pickWithRay(ray, (mesh) => {
-            return mesh.parent?.name === "modelMesh";
-        }, true);
+        // 使用GPU拾取 + 精确射线检测
+        const pickResult = await this.pickWithGPURay(ray);
 
         if (pickResult?.hit && pickResult.pickedPoint && pickResult.pickedMesh) {
             if (pickResult.pickedMesh.parent?.name === "modelMesh") {
@@ -428,16 +481,17 @@ export class Measure {
     }
     // 修改事件监听
     private addObserver(): void {
-        this._pointerObservable = this.scene.onPointerObservable.add((pointerInfo) => {
+        this._pointerObservable = this.scene.onPointerObservable.add(async (pointerInfo) => {
             switch (pointerInfo.type) {
                 case BABYLON.PointerEventTypes.POINTERTAP:
-                    // 使用统一的拾取方法确保一致性
-                    const pickResultForTap = this.scene.pick(
+                    // 点击事件，需要独立进行拾取
+                    const ray = this.scene.createPickingRay(
                         this.scene.pointerX,
                         this.scene.pointerY,
-                        (mesh) => mesh.parent?.name === "modelMesh",
-                        true
+                        BABYLON.Matrix.Identity(),
+                        this.scene.activeCamera
                     );
+                    const pickResultForTap = await this.pickWithGPURay(ray);
 
                     if (this.measureType === 'distance' && pickResultForTap && pickResultForTap.hit && pickResultForTap.pickedMesh && pickResultForTap.pickedPoint) {
                         this.createMeasureLine(pickResultForTap.pickedPoint);
@@ -455,17 +509,18 @@ export class Measure {
                     }
                     // 单击鼠标右键完成面积测量
                     if (pointerInfo.event.button === 2) {
-                        if (this.measureType === 'area' && this.areaMeasurementActive) {
+                        if (this.measureType === 'area' && this.areaMeasurementActive && pickResultForTap && pickResultForTap.pickedPoint) {
+                            this.createAreaFromMultiplePoints(pickResultForTap.pickedPoint);
                             this.finishAreaMeasurement();
                         }
                     }
                     break;
                 case BABYLON.PointerEventTypes.POINTERMOVE:
                     if (this.points.length === 1 && (this.measureType === 'distance' || this.measureType === 'angle')) {
-                        this.createMeasureLineToMouse(this.points[0]);
+                        await this.createMeasureLineToMouse(this.points[0]);
                     }
                     if (this.measureType === 'angle' && this.points.length === 2) {
-                        this.createMeasureLineToMouse(this.points[1]);
+                        await this.createMeasureLineToMouse(this.points[1]);
                     }
                     // 修改面积测量的鼠标跟随
                     if (this.measureType === 'area' && this.areaPoints.length > 0 && this.areaMeasurementActive) {
@@ -572,6 +627,21 @@ export class Measure {
 
     public getMeasureType(): 'distance' | 'area' | 'angle' | 'coordinate' {
         return this.measureType;
+    }
+
+    /**
+     * 设置GPU拾取开关
+     * @param enabled 是否启用GPU拾取
+     */
+    public setGPUPickingEnabled(enabled: boolean): void {
+        this.gpuPickingEnabled = enabled;
+    }
+
+    /**
+     * 获取GPU拾取状态
+     */
+    public isGPUPickingEnabled(): boolean {
+        return this.gpuPickingEnabled;
     }
 
     public destroy(): void {
