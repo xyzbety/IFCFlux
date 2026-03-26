@@ -35,7 +35,7 @@
     "tdesign-icons-vue-next": "^0.4.1",
     "tdesign-vue-next": "^1.17.1",
     "vue": "^3.5.22",
-    "web-ifc": "~0.0.72",
+    "web-ifc": "0.0.72",
     "xe-utils": "^3.7.9"
   },
   "devDependencies": {
