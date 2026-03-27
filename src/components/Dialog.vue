@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, toRefs, watch, ref } from 'vue';
+import { reactive, toRefs, watch, ref } from 'vue'
 
 interface Props {
   visible: boolean
@@ -8,7 +8,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  activeTab: 'property' // 默认激活"结构"选项卡
+  activeTab: 'property', // 默认激活"结构"选项卡
 })
 
 const emit = defineEmits<{
@@ -26,13 +26,16 @@ const pageState = reactive({
     { id: 'location', name: '地点' },
 
     { id: 'catalog', name: '分类' },
-    { id: 'relation', name: '关系' }
-  ]
+    { id: 'relation', name: '关系' },
+  ],
 })
 
-watch(() => props.visible, () => {
-  pageState.visible = props.visible
-})
+watch(
+  () => props.visible,
+  () => {
+    pageState.visible = props.visible
+  }
+)
 
 const dialogClose = () => {
   pageState.visible = false
@@ -103,7 +106,7 @@ const handleTabClick = (tabId: string) => {
   cursor: pointer;
 }
 
-.dialog-action+.dialog-action {
+.dialog-action + .dialog-action {
   margin-left: 5px;
 }
 
@@ -143,7 +146,6 @@ const handleTabClick = (tabId: string) => {
   /* height: calc(100% - 50px); 显示tab时用这个 */
   height: calc(100% - 30px);
   position: relative;
-  overflow: auto;
+  overflow: hidden;
 }
-
 </style>
