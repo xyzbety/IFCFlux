@@ -47,7 +47,6 @@ const ifcPset2: Record<number, IfcMapping> = {
  */
 export class IfcInspect {
   private processing = false;          // 是否正在处理
-  private baseUrl = '';                // 站点根路径（用于加载 worker）
   private file: File | null = null;    // 规范化后的文件对象
   private url: string | File;          // 输入的 URL 或 File
   private ifcPset?: IfcMapping;      // 当前选择的规则映射
@@ -56,7 +55,6 @@ export class IfcInspect {
 
   constructor(url: string | File, type: number = 1) {
     this.url = url;
-    this.baseUrl = window.location.origin;
     this.ifcPset = ifcPset2[type];
     this.init();
   }
@@ -113,7 +111,7 @@ export class IfcInspect {
     this.processing = true;
     const t0 = performance.now();
 
-    this.worker = new Worker(`${this.baseUrl}/extractor.worker.js`);
+    this.worker = new Worker(new URL('./extractor.worker.ts', import.meta.url), { type: 'module' });
 
     const result = await new Promise<IfcInspectResult>((resolve) => {
       this.worker!.postMessage({

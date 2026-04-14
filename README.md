@@ -160,7 +160,7 @@ IFCFlux/
 │   ├── duckdb/             # DuckDB相关文件
 │   ├── fonts/              # 字体文件
 │   ├── icons/              # SVG图标
-│   └── web-ifc/            # Web-IFC库相关文件
+│   └── 由 Vite 映射 web-ifc wasm/worker 资源
 ├── src/                    # 前端源代码目录
 │   ├── App.vue             # 主应用组件
 │   ├── main.ts             # 应用入口文件

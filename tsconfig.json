@@ -23,6 +23,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "src/components/Load", "src/utils/loader/IfcLoader.ts", "src/utils/ifc/ifcparse2db.ts", "src/utils/ifc/parser.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "src/components/Load", "src/utils/loader/IfcLoader.ts", "src/utils/exporter/IfcParserToDb.ts", "src/utils/exporter/IfcExportParser.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

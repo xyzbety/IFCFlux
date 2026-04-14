@@ -3,7 +3,7 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import * as BABYLON from '@babylonjs/core';
 import { GLTF2Export } from "@babylonjs/serializers";
-import { IFCParser2DB } from '../utils/ifc/IfcParserToDb';
+import { IFCParser2DB } from '../utils/exporter/IfcParserToDb';
 export async function exportGLB(scene: any, fileNameWithoutExtension: string, isTauriEnv: boolean, saveDialogConfig: any) {
     let savePath: string | null = '';
 
@@ -29,6 +29,9 @@ export async function exportGLB(scene: any, fileNameWithoutExtension: string, is
         const options = {
             shouldExportNode: (node: any) => {
                 if (node instanceof BABYLON.Mesh) {
+                    if (node.metadata?.isAnnotationMesh || node.name.startsWith('annotation-')) {
+                        return false;
+                    }
                     return node.isEnabled() && node.getTotalVertices() > 0;
                 }
                 return true;
@@ -130,7 +133,14 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
         const collections = {
             lights: scene.lights.map((light: any) => light.serialize().lights?.[0]).filter(Boolean),
             cameras: scene.cameras.map((camera: any) => camera.serialize().cameras?.[0]).filter(Boolean),
-            materials: scene.materials.map((material: any) => material.serialize()).filter(Boolean),
+            materials: scene.materials
+                .filter((material: any) => {
+                    const materialName = String(material?.name ?? '');
+                    return !materialName.startsWith('annotation-')
+                        && !materialName.startsWith('AdvancedDynamicTextureMaterial for annotation-');
+                })
+                .map((material: any) => material.serialize())
+                .filter(Boolean),
             postProcesses: scene.postProcesses.map((postProcesses: any) => postProcesses.serialize()).filter(Boolean),
             shadowGenerators: scene.lights.flatMap((light: any) => {
                 const generators = light._shadowGenerators;
@@ -231,6 +241,7 @@ export async function exportJSON(scene: any, fileNameWithoutExtension: string, i
             let meshCount = 0;
             for (const mesh of scene.meshes) {
                 if (mesh.name.includes('highlight')) continue; // 跳过高亮网格
+                if (mesh.metadata?.isAnnotationMesh || mesh.name.startsWith('annotation-')) continue; // 跳过注释网格
                 const meshInfo = mesh.serialize({});
                 if (meshInfo) {
                     // 创建副本用于导出，不修改原始数据
@@ -412,5 +423,3 @@ export const saveAsDB = async (file: File, inputPath: string, outputPath: string
         throw new Error(`数据库导出失败: ${error}`);
     }
 };
-
-

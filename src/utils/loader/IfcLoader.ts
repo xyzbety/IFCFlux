@@ -1,9 +1,13 @@
 import * as WEBIFC from "web-ifc";
 import * as BABYLON from "@babylonjs/core";
+import { CreateGreasedLine } from "@babylonjs/core/Meshes/Builders/greasedLineBuilder.js";
+import { GreasedLineMeshMaterialType } from "@babylonjs/core/Materials/GreasedLine/greasedLineMaterialInterfaces.js";
 import { cacheDB } from './CacheDB';
-import { IfcParser } from "./IfcParser";
-import { ifcGuidToUuid } from '../ifc/ifcGuidConverter'
-import { calculateEdges, mergeMeshesByMaterial } from '../ifc/ifcMeshProcess';
+import { IfcLoaderParser, IAnnotationGeometry, IAnnotationText } from "./IfcLoaderParser";
+import { ifcGuidToUuid } from '../common/ifcGuidConverter'
+import { calculateEdges, mergeMeshesByMaterial } from '../common/ifcMeshProcess';
+import { isIfcElementType } from '../common/ifcTypes';
+import { getWebIfcWasmPath, resolveWebIfcWasmPath } from "../common/webIfcWasmPath";
 
 // 定义进度回调函数类型
 type ProgressCallback = (percent: number, message: string, loaded: number, total: number) => void;
@@ -82,12 +86,35 @@ export class IfcLoader {
     public ifcExpressIds: any;
     public psetLines: any;
     public psetRelations: any;
+    private annotationGeometries: IAnnotationGeometry[] = [];
+    private annotationMeshes: BABYLON.AbstractMesh[] = [];
+    private annotationFontLoadPromise: Promise<void> | null = null;
+
+    // 注释文字样式
+    private readonly annotationFontFamily = 'SarasaUiSC';
+    private readonly annotationLabelFontWeight = '1';
+    private readonly annotationLabelFontSize = 4;
+    private readonly annotationLabelRenderScale = 4;
+    private readonly annotationAccentColorHex = '#00ff26';
+
+    // 注释文字布局
+    private readonly annotationLabelPaddingX = 24;
+    private readonly annotationLabelPaddingY = 12;
+    private readonly annotationLabelLineHeight = 1.2;
+    private readonly annotationLabelPixelsPerUnit = 140;
+    private readonly annotationLabelMinWidth = 2;
+    private readonly annotationLabelMaxWidth = 12;
+    private readonly annotationLabelMinHeight = 0.9;
+    private readonly annotationLabelMaxHeight = 5;
+
+    // 注释线条样式
+    private readonly annotationLineWidth = 4;
 
     private url: string | File;
     private scene: BABYLON.Scene;
     public model: BABYLON.Mesh;
     public ifcApi: WEBIFC.IfcAPI;
-    private ifcParser: IfcParser;
+    private ifcParser: IfcLoaderParser;
 
     /**
      * 构造函数，初始化加载器
@@ -130,12 +157,15 @@ export class IfcLoader {
         this.ifcTree = null; // 用于存储解析后的IFC树
         this.properties = null;
         this.ifcExpressIds = null;
+        this.annotationGeometries = [];
+        this.annotationFontLoadPromise = null;
 
         this.url = url;
         this.scene = scene;
         this.model = new BABYLON.Mesh('modelMesh', this.scene);
         this.ifcApi = new WEBIFC.IfcAPI();
-        this.ifcApi.SetWasmPath('/web-ifc/', true);
+        const wasmDirectory = getWebIfcWasmPath();
+        this.ifcApi.SetWasmPath(wasmDirectory, true);
     }
     /**
      * 加载并解析IFC模型
@@ -148,7 +178,9 @@ export class IfcLoader {
         // const loadTime = performance.now() - startTime;
         // console.log('IFC文件已加载,开始解析IFC模型', ((loadTime) / 1000).toFixed(2));
 
-        this.ifcParser = new IfcParser(this.ifcApi);
+        this.ifcParser = new IfcLoaderParser(this.ifcApi);
+        this.disposeAnnotationMeshes();
+        this.annotationGeometries = [];
         const collectResult = await this.ifcParser.collectNonGeometryElements(this.modelID!);
         const { total: totalNonGeometryElements, elements: allNonGeometryIds } = collectResult;
         console.log(`开始解析`, totalNonGeometryElements);
@@ -201,6 +233,7 @@ export class IfcLoader {
             this.ifcTree = parsedData.tree;
             this.properties = parsedData.properties;
             this.ifcExpressIds = parsedData.ifcExpressIds;
+            this.annotationGeometries = parsedData.annotationGeometries || [];
 
             // 将 psetLines 从 web-ifc Vector 转换为普通数组，避免对象被删除后无法访问
             if (parsedData.psetLines && parsedData.psetLines.size) {
@@ -281,6 +314,8 @@ export class IfcLoader {
                     }
                 });
 
+                await this.renderAnnotationGeometries();
+
                 this.isComplete = true;
                 this.model.setEnabled(true);
                 this.model.isVisible = true;
@@ -333,6 +368,9 @@ export class IfcLoader {
     }
 
     private async loadFileToArrayBuffer(detail_level: number, onProgress: ProgressCallback | null): Promise<null> {
+        const wasmDirectory = await resolveWebIfcWasmPath();
+        this.ifcApi.SetWasmPath(wasmDirectory, true);
+
         // 初始化web-ifc API
         await this.ifcApi.Init();
         this.ifcApi.SetLogLevel(WEBIFC.LogLevel.LOG_LEVEL_OFF);// 关闭日志输出
@@ -357,7 +395,7 @@ export class IfcLoader {
                 OPTIMIZE_PROFILES: this.geometryOptimization.optimizeProfiles, // 优化轮廓
                 USE_FAST_BOOLS: this.geometryOptimization.useFastBooleans, // 启用快速布尔运算
                 CIRCLE_SEGMENTS: this.geometryOptimization.detailLevel, // 设置圆的线段数，影响几何精细度
-                MEMORY_LIMIT: 8294967296, // 内存限制
+                MEMORY_LIMIT: 4294967295, // 内存限制（uint32 最大值）
                 // TAPE_SIZE: 134217728, // 磁带大小
                 // // LINEWRITER_BUFFER: 4267296 // 行写入器缓冲区
                 // BOOLEAN_UNION_THRESHOLD: 500,    // 从默认150提高到200  
@@ -367,32 +405,6 @@ export class IfcLoader {
             };
 
             this.modelID = this.ifcApi.OpenModel(new Uint8Array(buffer), config);
-            // const worker = new Worker(new URL('/stream.worker.js', import.meta.url), { type: 'module' });
-
-            // // 等待Web Worker执行完成
-            // await new Promise<void>((resolve, reject) => {
-            //     worker.postMessage({ command: 'init', ifcData: buffer });
-
-            //     worker.onmessage = (event) => {
-            //         console.log("Web Worker返回数据", event.data);
-
-            //         if (event.data.command === 'progress') {
-            //             // 处理进度更新
-            //             console.log(`Web Worker进度更新: ${event.data.progress}%`);
-            //             if (onProgress)
-            //                 onProgress(event.data.progress, event.data.message, event.data.loaded, event.data.total);
-            //         } else if (event.data.command === 'init_complete') {
-            //             worker.terminate(); // 清理Worker
-            //             resolve();
-            //         }
-            //     };
-
-            //     worker.onerror = (error) => {
-            //         console.error('Web Worker发生错误:', error);
-            //         worker.terminate(); // 清理Worker
-            //         reject(error);
-            //     };
-            // });
 
         } else {
             console.error("无法获取IFC文件数据");
@@ -596,8 +608,8 @@ export class IfcLoader {
         ]);
 
         for (const type of allPropertyElementTypes) {
-            const typeID = type.typeID;
-            if (this.ifcApi.IsIfcElement(typeID) && !skippedTypes.has(typeID)) {
+            const typeID = Number(type.typeID);
+            if (Number.isFinite(typeID) && isIfcElementType(typeID) && !skippedTypes.has(typeID)) {
                 existingTypes.push(typeID);
             }
         }
@@ -871,8 +883,274 @@ export class IfcLoader {
         }
     }
 
+    private disposeAnnotationMeshes(): void {
+        for (const mesh of this.annotationMeshes) {
+            try {
+                mesh.dispose(false, true);
+            } catch (error) {
+                console.warn('释放注释几何时出错:', error);
+            }
+        }
+        this.annotationMeshes = [];
+    }
+
+    private async renderAnnotationGeometries(): Promise<void> {
+        if (!this.annotationGeometries || this.annotationGeometries.length === 0) {
+            return;
+        }
+
+        const lineColor = BABYLON.Color3.FromHexString(this.annotationAccentColorHex);
+        const hasTextAnnotations = this.annotationGeometries.some((annotation) =>
+            (annotation.texts || []).some((textItem) => Boolean(textItem.text?.trim()))
+        );
+        if (hasTextAnnotations) {
+            await this.ensureAnnotationFontLoaded();
+        }
+        let renderedCount = 0;
+        let renderedTextCount = 0;
+
+        for (const annotation of this.annotationGeometries) {
+            const lineSets = (annotation.lines || [])
+                .map((line: number[][]) => line
+                    .filter((point) => Array.isArray(point) && point.length >= 2)
+                    .map((point) => new BABYLON.Vector3(point[0], point[1], point[2] ?? 0)))
+                .filter((line: BABYLON.Vector3[]) => line.length >= 2);
+
+            if (lineSets.length > 0) {
+                const mesh = CreateGreasedLine(
+                    `annotation-${annotation.expressID}`,
+                    {
+                        points: lineSets,
+                    },
+                    {
+                        color: lineColor,
+                        width: this.annotationLineWidth,
+                        sizeAttenuation: true,
+                        materialType: GreasedLineMeshMaterialType.MATERIAL_TYPE_SIMPLE,
+                    },
+                    this.scene
+                );
+                mesh.parent = this.model;
+                mesh.isPickable = false;
+                mesh.isVisible = true;
+                mesh.metadata = {
+                    isAnnotationMesh: true,
+                    annotationKind: 'line',
+                    originalExpressID: annotation.expressID,
+                };
+                this.annotationMeshes.push(mesh);
+            }
+
+            const texts = annotation.texts || [];
+            if (texts.length > 0) {
+                renderedTextCount += await this.renderAnnotationTexts(annotation, texts);
+            }
+
+            if (lineSets.length > 0 || texts.length > 0) {
+                renderedCount++;
+            }
+        }
+
+        console.log(`注释几何已加载，共 ${renderedCount} 个对象，${renderedTextCount} 条文字`);
+    }
+
+    private async ensureAnnotationFontLoaded(): Promise<void> {
+        if (this.annotationFontLoadPromise) {
+            return this.annotationFontLoadPromise;
+        }
+
+        this.annotationFontLoadPromise = (async () => {
+            if (typeof document === 'undefined' || !document.fonts?.load) {
+                return;
+            }
+
+            await document.fonts.load(
+                `${this.annotationLabelFontWeight} ${this.annotationLabelFontSize}px ${this.annotationFontFamily}`
+            );
+
+            if (document.fonts.ready) {
+                await document.fonts.ready;
+            }
+        })().catch((error) => {
+            console.warn('加载注释字体失败:', error);
+        });
+
+        return this.annotationFontLoadPromise;
+    }
+
+    private async renderAnnotationTexts(
+        annotation: IAnnotationGeometry,
+        texts: IAnnotationText[],
+    ): Promise<number> {
+        let renderedTextCount = 0;
+
+        for (const textItem of texts) {
+            try {
+                const textValue = textItem.text.trim();
+                if (!textValue) continue;
+
+                const labelMesh = this.createAnnotationLabelMesh(annotation, textItem, textValue);
+                this.annotationMeshes.push(labelMesh);
+                renderedTextCount++;
+            } catch (error) {
+                console.warn(`渲染注释文字 ${annotation.expressID}/${textItem.expressID} 时出错:`, error);
+            }
+        }
+
+        return renderedTextCount;
+    }
+
+    private createAnnotationLabelMesh(
+        annotation: IAnnotationGeometry,
+        textItem: IAnnotationText,
+        textValue: string,
+    ): BABYLON.AbstractMesh {
+        const lines = textValue.split(/\r?\n/).map((line) => line.trimEnd());
+        const alignment = this.getAnnotationTextAlignment(textItem.boxAlignment);
+        const fontWeight = this.annotationLabelFontWeight;
+        const renderScale = this.annotationLabelRenderScale;
+        const baseFontSizePx = this.annotationLabelFontSize;
+        let drawFontSizePx = baseFontSizePx;
+        let drawLineHeightPx = Math.ceil(drawFontSizePx * this.annotationLabelLineHeight);
+        const paddingX = this.annotationLabelPaddingX;
+        const paddingY = this.annotationLabelPaddingY;
+
+        const measureCanvas = document.createElement('canvas');
+        const measureContext = measureCanvas.getContext('2d');
+        if (!measureContext) {
+            throw new Error('无法创建注释文字测量上下文');
+        }
+
+        measureContext.font = `${fontWeight} ${drawFontSizePx}px ${this.annotationFontFamily}, sans-serif`;
+        const measuredWidths = lines.map((line) => measureContext.measureText(line).width);
+        const textWidthPx = Math.ceil(Math.max(...measuredWidths, 0));
+        const textHeightPx = drawLineHeightPx * Math.max(1, lines.length);
+
+        let logicalTextureWidth = Math.ceil(textWidthPx + paddingX * 2);
+        let logicalTextureHeight = Math.ceil(textHeightPx + paddingY * 2);
+
+        let planeWidth = logicalTextureWidth / this.annotationLabelPixelsPerUnit;
+        let planeHeight = logicalTextureHeight / this.annotationLabelPixelsPerUnit;
+        const fitScale = Math.min(
+            1,
+            this.annotationLabelMaxWidth / Math.max(planeWidth, 1),
+            this.annotationLabelMaxHeight / Math.max(planeHeight, 1),
+        );
+
+        if (fitScale < 1) {
+            drawFontSizePx = Math.max(4, Math.floor(baseFontSizePx * fitScale));
+            drawLineHeightPx = Math.ceil(drawFontSizePx * this.annotationLabelLineHeight);
+            measureContext.font = `${fontWeight} ${drawFontSizePx}px ${this.annotationFontFamily}, sans-serif`;
+            const resizedWidths = lines.map((line) => measureContext.measureText(line).width);
+            const resizedTextWidthPx = Math.ceil(Math.max(...resizedWidths, 0));
+            const resizedTextHeightPx = drawLineHeightPx * Math.max(1, lines.length);
+            logicalTextureWidth = Math.ceil(resizedTextWidthPx + paddingX * 2);
+            logicalTextureHeight = Math.ceil(resizedTextHeightPx + paddingY * 2);
+            planeWidth = logicalTextureWidth / this.annotationLabelPixelsPerUnit;
+            planeHeight = logicalTextureHeight / this.annotationLabelPixelsPerUnit;
+        }
+
+        planeWidth = Math.min(this.annotationLabelMaxWidth, Math.max(this.annotationLabelMinWidth, planeWidth));
+        planeHeight = Math.min(this.annotationLabelMaxHeight, Math.max(this.annotationLabelMinHeight, planeHeight));
+
+        const textureWidth = Math.max(2, Math.ceil(logicalTextureWidth * renderScale));
+        const textureHeight = Math.max(2, Math.ceil(logicalTextureHeight * renderScale));
+
+        const texture = new BABYLON.DynamicTexture(
+            `annotation-texture-${annotation.expressID}-${textItem.expressID}`,
+            { width: textureWidth, height: textureHeight },
+            this.scene,
+            false,
+            BABYLON.Texture.TRILINEAR_SAMPLINGMODE,
+            BABYLON.Engine.TEXTUREFORMAT_RGBA,
+            true
+        );
+        texture.hasAlpha = true;
+        texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+        texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+
+        const context = texture.getContext() as unknown as CanvasRenderingContext2D;
+        const canvasWidth = texture.getSize().width;
+        const canvasHeight = texture.getSize().height;
+        const logicalCanvasWidth = canvasWidth / renderScale;
+        const logicalCanvasHeight = canvasHeight / renderScale;
+        context.clearRect(0, 0, canvasWidth, canvasHeight);
+        context.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+        context.font = `${fontWeight} ${drawFontSizePx}px ${this.annotationFontFamily}, sans-serif`;
+        context.fillStyle = this.annotationAccentColorHex;
+        context.textAlign = alignment;
+        context.textBaseline = 'middle';
+
+        const textX = alignment === 'left'
+            ? paddingX
+            : alignment === 'right'
+                ? logicalCanvasWidth - paddingX
+                : logicalCanvasWidth / 2;
+        const totalTextHeight = lines.length * drawLineHeightPx;
+        const startY = (logicalCanvasHeight - totalTextHeight) / 2 + drawLineHeightPx / 2;
+        lines.forEach((line, index) => {
+            context.fillText(line, Math.round(textX), Math.round(startY + index * drawLineHeightPx));
+        });
+        texture.update(true);
+
+        const plane = BABYLON.MeshBuilder.CreatePlane(
+            `annotation-text-${annotation.expressID}-${textItem.expressID}`,
+            {
+                width: planeWidth,
+                height: planeHeight,
+                sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+            },
+            this.scene
+        );
+        plane.parent = this.model;
+        plane.position = new BABYLON.Vector3(
+            textItem.position[0] ?? 0,
+            textItem.position[1] ?? 0,
+            textItem.position[2] ?? 0,
+        );
+        plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+        plane.isPickable = false;
+        plane.receiveShadows = false;
+        plane.metadata = {
+            isAnnotationMesh: true,
+            annotationKind: 'text',
+            originalExpressID: annotation.expressID,
+            originalTextExpressID: textItem.expressID,
+        };
+
+        const material = new BABYLON.StandardMaterial(
+            `annotation-text-material-${annotation.expressID}-${textItem.expressID}`,
+            this.scene
+        );
+        material.diffuseColor = BABYLON.Color3.White();
+        material.emissiveColor = BABYLON.Color3.White();
+        material.specularColor = BABYLON.Color3.Black();
+        material.backFaceCulling = false;
+        material.disableLighting = true;
+        material.useEmissiveAsIllumination = true;
+        material.alpha = 1;
+        material.useAlphaFromDiffuseTexture = true;
+        material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        material.diffuseTexture = texture;
+        material.emissiveTexture = texture;
+        plane.material = material;
+
+        return plane;
+    }
+
+    private getAnnotationTextAlignment(boxAlignment?: string): 'left' | 'center' | 'right' {
+        const alignment = (boxAlignment || '').toLowerCase();
+        if (alignment.includes('right')) {
+            return 'right';
+        }
+        if (alignment.includes('left')) {
+            return 'left';
+        }
+        return 'center';
+    }
+
     // 公共 getter 方法
-    public get MaterialsMap(): Map<number, BABYLON.AbstractMesh[]> {
+    public get MaterialsMap(): Map<number, IMergeGeometryData[]> {
         return this.materialsMap;
     }
 

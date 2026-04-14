@@ -48,7 +48,7 @@ import { useModelStore, useSelectedStore } from '../../store';
 import { SceneManager } from '../../services/scene-manager';
 import { IfcPropertyUtils, convertToTreeData } from '../../services/model-property.ts';
 import { eventManager } from '../../services/scene-event.ts';
-import { IfcCategoryMap } from '../../utils/ifc/ifcCategoryMap.ts'
+import { IfcTypeCnToEnMap, IfcTypeLabelMap } from '../../utils/common/ifcTypes.ts'
 import InspectionDialog from './InspectionDialog.vue';
 
 const props = defineProps<{ visible: boolean; inspectType: string }>();
@@ -70,10 +70,6 @@ const currentDataObj = ref<string | null>(null);  // 改为存储 key 而不是�
 // 弹框控制和数据
 const dialogVisible = ref(false);
 const dialogTableData = ref<any[]>([]);
-
-const categoryMapDict = Object.fromEntries(
-    Object.entries(IfcCategoryMap).map(([_, value]) => [value.en, value.cn])
-);
 
 const tableColumns = [
     { colKey: 'guid', title: 'GUID', width: 250, ellipsis: true },
@@ -129,7 +125,7 @@ watch(
             // console.log("模型检查数据为", data);
             if (data && typeof data === 'object') {
                 // 将英文键替换为中文（只保存键的引用，不创建新对象）
-                descriptions.value = Object.keys(data).map(key => categoryMapDict[key] || key);
+                descriptions.value = Object.keys(data).map(key => IfcTypeLabelMap[key] || key);
                 if (descriptions.value.length > 0) {
                     loading.value = false;
                     handleListClick(descriptions.value[0]);
@@ -198,7 +194,7 @@ const handleSearch = () => {
     }
 
     if (foundKey) {
-        selectedKey.value = categoryMapDict[foundKey];
+        selectedKey.value = IfcTypeLabelMap[foundKey] || foundKey;
         handleListClick(foundKey);
     } else {
         selectedKey.value = null;
@@ -206,10 +202,8 @@ const handleSearch = () => {
     }
 }
 const handleListClick = (key: string) => {
-    const englishKey = Object.entries(IfcCategoryMap).find(
-        ([_, value]) => value.cn === key
-    )?.[1]?.en || key;
-    selectedKey.value = categoryMapDict[englishKey];
+    const englishKey = IfcTypeCnToEnMap[key] || key;
+    selectedKey.value = IfcTypeLabelMap[englishKey] || englishKey;
     const dataObj = modelStore.modelInspectData?.data?.[englishKey];
     // 不保存 dataObj 的引用，只保存键值，通过 watch 中的 modelInspectData 获取
     currentDataObj.value = englishKey;

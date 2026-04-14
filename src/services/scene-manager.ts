@@ -12,7 +12,7 @@ import { useModelStore, useSceneStore } from '../store';
 import { exportGLB, exportDB, exportJSON } from './model-export';
 import { EffectManager } from './scene-effect';
 import { IfcPropertyUtils } from './model-property';
-import { findClickedSubMesh, collectTransparentMeshData, createMergedTransparentMesh, cleanupTransparentResources, findClosestSubMeshWithFallback } from '../utils/ifc/ifcMeshProcess';
+import { findClickedSubMesh, collectTransparentMeshData, createMergedTransparentMesh, cleanupTransparentResources, findClosestSubMeshWithFallback } from '../utils/common/ifcMeshProcess';
 
 export class SceneManager {
   private static instance: SceneManager | null = null;
@@ -253,6 +253,9 @@ export class SceneManager {
 
     // 创建阴影生成器（如果需要）
     let shadowGenerator: BABYLON.ShadowGenerator | null = null;
+    if (this.effectManager?.simpleTarget && !this.effectManager.simpleTarget.renderList) {
+      this.effectManager.simpleTarget.renderList = [];
+    }
     if (this.light && this.effectManager?.simpleTarget) {
       shadowGenerator = new BABYLON.ShadowGenerator(1024, this.light);
       shadowGenerator.useContactHardeningShadow = true;
@@ -272,6 +275,7 @@ export class SceneManager {
     let shadowCasters = 0;
     let shadowReceivers = 0;
     let invalidMeshes = 0;
+    let annotationMeshesSkipped = 0;
 
     // 优化批次处理
     const batchSize = Math.min(800, Math.max(200, Math.ceil(totalMeshes / 8)));
@@ -284,6 +288,19 @@ export class SceneManager {
       // 同步处理当前批次
       for (let i = start; i < end; i++) {
         const mesh = meshes[i];
+
+        if (mesh?.metadata?.isAnnotationMesh || mesh?.name?.startsWith('annotation-')) {
+          annotationMeshesSkipped++;
+          if (this.effectManager?.simpleTarget) {
+            if (!this.effectManager.simpleTarget.renderList.includes(mesh)) {
+              this.effectManager.simpleTarget.renderList.push(mesh);
+              if (mesh.material) {
+                this.effectManager.simpleTarget.setMaterialForRendering(mesh, mesh.material);
+              }
+            }
+          }
+          continue;
+        }
 
         // 跳过无效网格
         if (!mesh || !mesh.material) {
@@ -335,6 +352,7 @@ export class SceneManager {
     if (shadowGenerator) {
       console.log(`- 阴影：${shadowCasters}个投射器，${shadowReceivers}个接收器`);
     }
+    console.log(`- 注释网格：${annotationMeshesSkipped} 个`);
     console.log(`- 无效网格：${invalidMeshes} 个，总计 ${totalMeshes} 个网格`);
   }
 

@@ -110,7 +110,9 @@ export class EffectManager {
       'slicePlane', 'measureLine', 'tempLine',
       'measureRectangle', 'tempRectangle', 'rectangleMesh', 'pointMarker'
     ];
-    return skipMeshNames.includes(mesh.name);
+    return skipMeshNames.includes(mesh.name)
+      || mesh.name.startsWith('annotation-')
+      || Boolean(mesh.metadata?.isAnnotationMesh);
   }
 
   /**

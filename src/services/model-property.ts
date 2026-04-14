@@ -1,4 +1,4 @@
-import { IfcCategoryMap } from '../utils/ifc/ifcCategoryMap'
+import { IfcTypes } from '../utils/common/ifcTypes'
 import * as BABYLON from '@babylonjs/core';
 import { EffectManager } from './scene-effect';
 
@@ -176,6 +176,12 @@ export class IfcPropertyUtils {
         return;
       }
 
+      if (mesh.metadata?.isAnnotationMesh) {
+        const originalExpressID = mesh.metadata.originalExpressID;
+        mesh.isVisible = !this.hiddenNodeIds.has(Number(originalExpressID));
+        return;
+      }
+
       // 处理合并网格的可见性控制
       if (mesh.metadata?.isMergedMesh) {
         const originalMeshData = mesh.metadata.originalMeshData || [];
@@ -260,7 +266,7 @@ export class IfcPropertyUtils {
         if (key === 'type') {
           // 特殊处理 type 属性
           if (pset[key] !== undefined) {
-            v = IfcCategoryMap[pset[key]]?.en || '';
+            v = IfcTypes[pset[key]]?.en || IfcTypes[pset[key]]?.name || '';
           }
           value.push({
             id,
@@ -1033,4 +1039,3 @@ export function convertToTreeData(obj: any) {
   // 返回最终的树形结构数据
   return result;
 }
-

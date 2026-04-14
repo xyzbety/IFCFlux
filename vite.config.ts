@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 import path from "path";
 
 // 获取开发主机地址，用于Tauri开发环境
@@ -24,6 +25,34 @@ export default defineConfig(() => ({
           isCustomElement: tag => tag.startsWith('smart-')
         }
       }
+    }),
+    viteStaticCopy({
+      targets: [
+        {
+          // 从 web-ifc 包中拷贝 wasm 到 /web-ifc/
+          src: 'node_modules/web-ifc/*.wasm',
+          dest: 'web-ifc',
+          rename: { stripBase: true }
+        },
+        {
+          // 从 duckdb-wasm 包中拷贝 wasm 到 /duckdb/
+          src: [
+            'node_modules/@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm',
+            'node_modules/@duckdb/duckdb-wasm/dist/duckdb-eh.wasm'
+          ],
+          dest: 'duckdb',
+          rename: { stripBase: true }
+        },
+        {
+          // 从 duckdb-wasm 包中拷贝 worker 到 /duckdb/
+          src: [
+            'node_modules/@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js',
+            'node_modules/@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js'
+          ],
+          dest: 'duckdb',
+          rename: { stripBase: true }
+        }
+      ]
     })
   ],
 
@@ -32,11 +61,11 @@ export default defineConfig(() => ({
 
   // 基础路径配置，设置为相对路径，适配Tauri桌面应用
   base: "./",
-  
+
   // 依赖优化配置
   optimizeDeps: {
     include: ['blockly', '@blockly/field-colour'],
-    exclude: []
+    exclude: ['web-ifc']
   },
 
   // Tauri开发特定的Vite配置
