@@ -68,6 +68,12 @@ export default defineConfig(() => ({
     exclude: ['web-ifc']
   },
 
+  // smart-webcomponents 的样式在 lightningcss 压缩时会触发语法解析错误
+  // 切回 esbuild 可以稳定通过构建，同时保留 CSS 压缩。
+  build: {
+    cssMinify: 'esbuild',
+  },
+
   // Tauri开发特定的Vite配置
 
   // 禁用清屏，防止Vite掩盖Rust错误信息
