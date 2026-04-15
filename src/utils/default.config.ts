@@ -1,3 +1,49 @@
+const createSceneSettingGroup = ({
+  checkboxId,
+  checkboxLabel,
+  colorPickerId,
+  tooltip,
+  checkboxChecked = false,
+  colorValue,
+}: {
+  checkboxId: string;
+  checkboxLabel: string;
+  colorPickerId: string;
+  tooltip: string;
+  checkboxChecked?: boolean;
+  colorValue?: string;
+}) => ({
+  type: 'group',
+  direction: 'horizontal',
+  ribbonItems: [{
+    type: 'group',
+    direction: 'vertical',
+    ribbonItems: [
+      {
+        type: 'group',
+        direction: 'vertical',
+        ribbonItems: [
+          {
+            label: '',
+            itemTemplate: `<smart-check-box id="${checkboxId}" right-to-left${checkboxChecked ? ' checked' : ''}>${checkboxLabel}</smart-check-box>`
+          },
+          {
+            label: '',
+            tooltip,
+            itemTemplate: `<smart-color-picker edit-alpha-channel display-mode="palette" id="${colorPickerId}" ></smart-color-picker>`,
+            settings: {
+              ...(colorValue ? { value: colorValue } : {}),
+              valueDisplayMode: 'colorBox',
+              dropDownAppendTo: 'body',
+            },
+          },
+
+        ]
+      }
+    ]
+  }]
+});
+
 export default {
   dataSource: [{
     label: '查看',
@@ -493,104 +539,44 @@ export default {
       label: '场景设置',
       icon: 'scene_setting material-icons',
       ribbonItems: [
-        {
-          type: 'group',
-          direction: 'horizontal',
-          ribbonItems: [{
-            type: 'group',
-            direction: 'vertical',
-            ribbonItems: [
-              {
-                type: 'group',
-                direction: 'vertical',
-                ribbonItems: [
-                  {
-                    label: '',
-                    itemTemplate: '<smart-check-box id="gridCheckbox" right-to-left>地面网格</smart-check-box>'
-                  },
-                  {
-                    label: '',
-                    tooltip: '背景颜色',
-                    itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="colorPicker" ></smart-color-picker>',
-                    settings: {
-                      valueDisplayMode: 'colorBox',
-                      dropDownAppendTo: 'body',
-                    },
-                  },
-
-                ]
-              }
-            ]
-          }]
-        },
+        createSceneSettingGroup({
+          checkboxId: 'gridCheckbox',
+          checkboxLabel: '地面网格',
+          colorPickerId: 'colorPicker',
+          tooltip: '背景颜色',
+        }),
         {
           type: 'separator'
         },
-        {
-          type: 'group',
-          direction: 'horizontal',
-          ribbonItems: [{
-            type: 'group',
-            direction: 'vertical',
-            ribbonItems: [
-              {
-                type: 'group',
-                direction: 'vertical',
-                ribbonItems: [
-                  {
-                    label: '',
-                    itemTemplate: '<smart-check-box id="highlightCheckbox" right-to-left checked>选中高亮</smart-check-box>'
-                  },
-                  {
-                    label: '',
-                    tooltip: '高亮颜色',
-                    itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="highlightColorPicker" ></smart-color-picker>',
-                    settings: {
-                      value: '#99ffffff',
-                      valueDisplayMode: 'colorBox',
-                      dropDownAppendTo: 'body',
-                    },
-                  },
-
-                ]
-              }
-            ]
-          }]
-        },
+        createSceneSettingGroup({
+          checkboxId: 'highlightCheckbox',
+          checkboxLabel: '选中高亮',
+          colorPickerId: 'highlightColorPicker',
+          tooltip: '高亮颜色',
+          checkboxChecked: true,
+          colorValue: '#99ffffff',
+        }),
         {
           type: 'separator'
         },
+        createSceneSettingGroup({
+          checkboxId: 'edgeCheckbox',
+          checkboxLabel: '模型轮廓',
+          colorPickerId: 'edgeColorPicker',
+          tooltip: '轮廓颜色',
+          colorValue: '#000000ff',
+        }),
         {
-          type: 'group',
-          direction: 'horizontal',
-          ribbonItems: [{
-            type: 'group',
-            direction: 'vertical',
-            ribbonItems: [
-              {
-                type: 'group',
-                direction: 'vertical',
-                ribbonItems: [
-                  {
-                    label: '',
-                    itemTemplate: '<smart-check-box id="edgeCheckbox" right-to-left >模型轮廓</smart-check-box>'
-                  },
-                  {
-                    label: '',
-                    tooltip: '轮廓颜色',
-                    itemTemplate: '<smart-color-picker edit-alpha-channel display-mode="palette" id="edgeColorPicker" ></smart-color-picker>',
-                    settings: {
-                      value: '#000000ff',
-                      valueDisplayMode: 'colorBox',
-                      dropDownAppendTo: 'body',
-                    },
-                  },
-
-                ]
-              }
-            ]
-          }]
-        },]
+          type: 'separator'
+        },
+        createSceneSettingGroup({
+          checkboxId: 'annotationCheckbox',
+          checkboxLabel: '三维标注',
+          colorPickerId: 'annotationColorPicker',
+          tooltip: '标注颜色',
+          colorValue: '#00ff00',
+        }),
+      ]
     },
 
     ]

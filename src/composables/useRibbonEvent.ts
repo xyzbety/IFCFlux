@@ -326,6 +326,14 @@ export class RibbonEventManager {
             this.createEventHandler("edgeColorPicker", (event: any) => {
                 this.options?.emit('scene-settings', { type: 'edgeColor', value: event.detail.value });
             });
+
+            this.createEventHandler("annotationCheckbox", (event: any) => {
+                this.options?.emit('scene-settings', { type: 'annotationVisible', value: event.detail.value });
+            });
+
+            this.createEventHandler("annotationColorPicker", (event: any) => {
+                this.options?.emit('scene-settings', { type: 'annotationColor', value: event.detail.value });
+            });
         }
         catch (error) {
             console.log("error", error)

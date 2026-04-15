@@ -88,14 +88,19 @@ export class IfcLoader {
     public psetRelations: any;
     private annotationGeometries: IAnnotationGeometry[] = [];
     private annotationMeshes: BABYLON.AbstractMesh[] = [];
+    private annotationTextVisibilityLinks: Array<{
+        proxy: BABYLON.AbstractMesh;
+        display: BABYLON.AbstractMesh;
+    }> = [];
+    private annotationTextVisibilityObserver: BABYLON.Observer<BABYLON.Scene> | null = null;
     private annotationFontLoadPromise: Promise<void> | null = null;
 
     // 注释文字样式
     private readonly annotationFontFamily = 'SarasaUiSC';
     private readonly annotationLabelFontWeight = '1';
     private readonly annotationLabelFontSize = 4;
-    private readonly annotationLabelRenderScale = 4;
-    private readonly annotationAccentColorHex = '#00ff26';
+    private readonly annotationLabelRenderScale = 8;
+    private readonly annotationTextColorHex = '#00ff00';
 
     // 注释文字布局
     private readonly annotationLabelPaddingX = 24;
@@ -106,9 +111,19 @@ export class IfcLoader {
     private readonly annotationLabelMaxWidth = 12;
     private readonly annotationLabelMinHeight = 0.9;
     private readonly annotationLabelMaxHeight = 5;
+    private readonly annotationLabelOcclusionPaddingPx = 2;
+    private readonly annotationLabelOcclusionMinSize = 0.05;
 
     // 注释线条样式
+    private readonly annotationLineColorHex = '#00ff00';
     private readonly annotationLineWidth = 4;
+
+    // 注释文字遮挡策略
+    private readonly annotationTextDepthFunction = BABYLON.Engine.ALWAYS;
+    private readonly annotationTextOcclusionType = BABYLON.AbstractMesh.OCCLUSION_TYPE_STRICT;
+    private readonly annotationTextOcclusionAlgorithmType = BABYLON.AbstractMesh.OCCLUSION_ALGORITHM_TYPE_ACCURATE;
+    private readonly annotationTextOcclusionRetryCount = -1;
+    private readonly annotationTextRenderingGroupId = 2;
 
     private url: string | File;
     private scene: BABYLON.Scene;
@@ -884,6 +899,11 @@ export class IfcLoader {
     }
 
     private disposeAnnotationMeshes(): void {
+        if (this.annotationTextVisibilityObserver) {
+            this.scene.onBeforeRenderObservable.remove(this.annotationTextVisibilityObserver);
+            this.annotationTextVisibilityObserver = null;
+        }
+        this.annotationTextVisibilityLinks = [];
         for (const mesh of this.annotationMeshes) {
             try {
                 mesh.dispose(false, true);
@@ -899,7 +919,7 @@ export class IfcLoader {
             return;
         }
 
-        const lineColor = BABYLON.Color3.FromHexString(this.annotationAccentColorHex);
+        const lineColor = BABYLON.Color3.FromHexString(this.annotationLineColorHex);
         const hasTextAnnotations = this.annotationGeometries.some((annotation) =>
             (annotation.texts || []).some((textItem) => Boolean(textItem.text?.trim()))
         );
@@ -933,11 +953,16 @@ export class IfcLoader {
                 mesh.parent = this.model;
                 mesh.isPickable = false;
                 mesh.isVisible = true;
+                mesh.receiveShadows = false;
                 mesh.metadata = {
                     isAnnotationMesh: true,
                     annotationKind: 'line',
                     originalExpressID: annotation.expressID,
                 };
+                if (mesh.material) {
+                    mesh.material.disableDepthWrite = false;
+                    mesh.material.depthFunction = BABYLON.Engine.LEQUAL;
+                }
                 this.annotationMeshes.push(mesh);
             }
 
@@ -1014,6 +1039,7 @@ export class IfcLoader {
         let drawLineHeightPx = Math.ceil(drawFontSizePx * this.annotationLabelLineHeight);
         const paddingX = this.annotationLabelPaddingX;
         const paddingY = this.annotationLabelPaddingY;
+        const occlusionPaddingPx = this.annotationLabelOcclusionPaddingPx;
 
         const measureCanvas = document.createElement('canvas');
         const measureContext = measureCanvas.getContext('2d');
@@ -1025,16 +1051,18 @@ export class IfcLoader {
         const measuredWidths = lines.map((line) => measureContext.measureText(line).width);
         const textWidthPx = Math.ceil(Math.max(...measuredWidths, 0));
         const textHeightPx = drawLineHeightPx * Math.max(1, lines.length);
+        let contentTextWidthPx = textWidthPx;
+        let contentTextHeightPx = textHeightPx;
 
         let logicalTextureWidth = Math.ceil(textWidthPx + paddingX * 2);
         let logicalTextureHeight = Math.ceil(textHeightPx + paddingY * 2);
 
-        let planeWidth = logicalTextureWidth / this.annotationLabelPixelsPerUnit;
-        let planeHeight = logicalTextureHeight / this.annotationLabelPixelsPerUnit;
+        let displayPlaneWidth = logicalTextureWidth / this.annotationLabelPixelsPerUnit;
+        let displayPlaneHeight = logicalTextureHeight / this.annotationLabelPixelsPerUnit;
         const fitScale = Math.min(
             1,
-            this.annotationLabelMaxWidth / Math.max(planeWidth, 1),
-            this.annotationLabelMaxHeight / Math.max(planeHeight, 1),
+            this.annotationLabelMaxWidth / Math.max(displayPlaneWidth, 1),
+            this.annotationLabelMaxHeight / Math.max(displayPlaneHeight, 1),
         );
 
         if (fitScale < 1) {
@@ -1046,12 +1074,23 @@ export class IfcLoader {
             const resizedTextHeightPx = drawLineHeightPx * Math.max(1, lines.length);
             logicalTextureWidth = Math.ceil(resizedTextWidthPx + paddingX * 2);
             logicalTextureHeight = Math.ceil(resizedTextHeightPx + paddingY * 2);
-            planeWidth = logicalTextureWidth / this.annotationLabelPixelsPerUnit;
-            planeHeight = logicalTextureHeight / this.annotationLabelPixelsPerUnit;
+            contentTextWidthPx = resizedTextWidthPx;
+            contentTextHeightPx = resizedTextHeightPx;
+            displayPlaneWidth = logicalTextureWidth / this.annotationLabelPixelsPerUnit;
+            displayPlaneHeight = logicalTextureHeight / this.annotationLabelPixelsPerUnit;
         }
 
-        planeWidth = Math.min(this.annotationLabelMaxWidth, Math.max(this.annotationLabelMinWidth, planeWidth));
-        planeHeight = Math.min(this.annotationLabelMaxHeight, Math.max(this.annotationLabelMinHeight, planeHeight));
+        displayPlaneWidth = Math.min(this.annotationLabelMaxWidth, Math.max(this.annotationLabelMinWidth, displayPlaneWidth));
+        displayPlaneHeight = Math.min(this.annotationLabelMaxHeight, Math.max(this.annotationLabelMinHeight, displayPlaneHeight));
+        // 遮挡检测只看真实文字区域，不把展示层的留白算进去。
+        const occlusionPlaneWidth = Math.max(
+            this.annotationLabelOcclusionMinSize,
+            (contentTextWidthPx + occlusionPaddingPx * 2) / this.annotationLabelPixelsPerUnit,
+        );
+        const occlusionPlaneHeight = Math.max(
+            this.annotationLabelOcclusionMinSize,
+            (contentTextHeightPx + occlusionPaddingPx * 2) / this.annotationLabelPixelsPerUnit,
+        );
 
         const textureWidth = Math.max(2, Math.ceil(logicalTextureWidth * renderScale));
         const textureHeight = Math.max(2, Math.ceil(logicalTextureHeight * renderScale));
@@ -1077,7 +1116,7 @@ export class IfcLoader {
         context.clearRect(0, 0, canvasWidth, canvasHeight);
         context.setTransform(renderScale, 0, 0, renderScale, 0, 0);
         context.font = `${fontWeight} ${drawFontSizePx}px ${this.annotationFontFamily}, sans-serif`;
-        context.fillStyle = this.annotationAccentColorHex;
+        context.fillStyle = '#ffffff';
         context.textAlign = alignment;
         context.textBaseline = 'middle';
 
@@ -1093,11 +1132,54 @@ export class IfcLoader {
         });
         texture.update(true);
 
+        const occlusionProxy = BABYLON.MeshBuilder.CreatePlane(
+            `annotation-text-proxy-${annotation.expressID}-${textItem.expressID}`,
+            {
+                width: occlusionPlaneWidth,
+                height: occlusionPlaneHeight,
+                sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+            },
+            this.scene
+        );
+        occlusionProxy.parent = this.model;
+        occlusionProxy.position = new BABYLON.Vector3(
+            textItem.position[0] ?? 0,
+            textItem.position[1] ?? 0,
+            textItem.position[2] ?? 0,
+        );
+        const occlusionAlphaIndex = 1_000_000;
+        occlusionProxy.renderingGroupId = 0;
+        occlusionProxy.alphaIndex = occlusionAlphaIndex;
+        occlusionProxy.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+        occlusionProxy.isPickable = false;
+        occlusionProxy.receiveShadows = false;
+        occlusionProxy.metadata = {
+            isAnnotationMesh: true,
+            isAnnotationTextOcclusionProxy: true,
+            annotationKind: 'text',
+            originalExpressID: annotation.expressID,
+            originalTextExpressID: textItem.expressID,
+        };
+
+        const occlusionMaterial = new BABYLON.StandardMaterial(
+            `annotation-text-occlusion-material-${annotation.expressID}-${textItem.expressID}`,
+            this.scene
+        );
+        occlusionMaterial.disableColorWrite = true;
+        occlusionMaterial.disableDepthWrite = true;
+        occlusionMaterial.backFaceCulling = false;
+        occlusionMaterial.disableLighting = true;
+        occlusionMaterial.alpha = 0;
+        occlusionMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        occlusionProxy.material = occlusionMaterial;
+        this.applyAnnotationTextOcclusionBehavior(occlusionProxy);
+        this.annotationMeshes.push(occlusionProxy);
+
         const plane = BABYLON.MeshBuilder.CreatePlane(
             `annotation-text-${annotation.expressID}-${textItem.expressID}`,
             {
-                width: planeWidth,
-                height: planeHeight,
+                width: displayPlaneWidth,
+                height: displayPlaneHeight,
                 sideOrientation: BABYLON.Mesh.DOUBLESIDE,
             },
             this.scene
@@ -1108,6 +1190,7 @@ export class IfcLoader {
             textItem.position[1] ?? 0,
             textItem.position[2] ?? 0,
         );
+        plane.renderingGroupId = this.annotationTextRenderingGroupId;
         plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
         plane.isPickable = false;
         plane.receiveShadows = false;
@@ -1123,19 +1206,59 @@ export class IfcLoader {
             this.scene
         );
         material.diffuseColor = BABYLON.Color3.White();
-        material.emissiveColor = BABYLON.Color3.White();
+        material.emissiveColor = BABYLON.Color3.FromHexString(this.annotationTextColorHex);
         material.specularColor = BABYLON.Color3.Black();
         material.backFaceCulling = false;
         material.disableLighting = true;
-        material.useEmissiveAsIllumination = true;
+        material.useEmissiveAsIllumination = false;
         material.alpha = 1;
         material.useAlphaFromDiffuseTexture = true;
         material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
         material.diffuseTexture = texture;
-        material.emissiveTexture = texture;
+        material.emissiveTexture = null;
+        material.disableDepthWrite = true;
+        material.depthFunction = this.annotationTextDepthFunction;
         plane.material = material;
+        this.applyAnnotationTextOverlayBehavior(plane);
+        this.registerAnnotationTextVisibilityLink(occlusionProxy, plane);
 
         return plane;
+    }
+
+    private applyAnnotationTextOcclusionBehavior(mesh: BABYLON.AbstractMesh): void {
+        mesh.occlusionType = this.annotationTextOcclusionType;
+        mesh.occlusionQueryAlgorithmType = this.annotationTextOcclusionAlgorithmType;
+        mesh.occlusionRetryCount = this.annotationTextOcclusionRetryCount;
+
+        if (mesh.material) {
+            mesh.material.disableColorWrite = true;
+            mesh.material.disableDepthWrite = true;
+            mesh.material.depthFunction = BABYLON.Engine.LEQUAL;
+        }
+    }
+
+    private applyAnnotationTextOverlayBehavior(mesh: BABYLON.AbstractMesh): void {
+        mesh.occlusionType = BABYLON.AbstractMesh.OCCLUSION_TYPE_NONE;
+
+        if (mesh.material) {
+            mesh.material.disableDepthWrite = true;
+            mesh.material.depthFunction = this.annotationTextDepthFunction;
+        }
+    }
+
+    private registerAnnotationTextVisibilityLink(proxy: BABYLON.AbstractMesh, display: BABYLON.AbstractMesh): void {
+        this.annotationTextVisibilityLinks.push({ proxy, display });
+
+        if (!this.annotationTextVisibilityObserver) {
+            this.annotationTextVisibilityObserver = this.scene.onBeforeRenderObservable.add(() => {
+                for (const link of this.annotationTextVisibilityLinks) {
+                    const shouldShow = !link.proxy.isOccluded;
+                    if (link.display.isVisible !== shouldShow) {
+                        link.display.isVisible = shouldShow;
+                    }
+                }
+            });
+        }
     }
 
     private getAnnotationTextAlignment(boxAlignment?: string): 'left' | 'center' | 'right' {

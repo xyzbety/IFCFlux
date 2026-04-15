@@ -34,6 +34,15 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
   const ifcTypeID = [103090709, 4031249490, 4097777520, 3124254112]
   let tempTreeData = [] as any
   const dataMap = {} as any
+  const ifcExpressIds: string[] = []
+  const ifcExpressIdSet = new Set<string>()
+  const pushIfcExpressId = (expressId: string) => {
+    if (ifcExpressIdSet.has(expressId)) {
+      return
+    }
+    ifcExpressIdSet.add(expressId)
+    ifcExpressIds.push(expressId)
+  }
   // 获取关联关系
   for (let key in properties) {
     const property = properties[key]
@@ -70,7 +79,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
   if (Object.keys(relations).length === 0) {
     return {
       tree: [],
-      ifcExpressIds: Object.keys(dataMap),
+      ifcExpressIds,
       sites,
     }
   }
@@ -95,6 +104,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         type: projectTypeInfo.en,
         typeShow: projectTypeInfo.cn,
       } as TreeNode
+      pushIfcExpressId(id)
       dataMap[id] = item
       tempTreeData.push(item)
     }
@@ -111,7 +121,11 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
       if (!property) {
         return
       }
+      pushIfcExpressId(expressId)
       const childTypeInfo = IfcTypes[property.type] ?? { en: '', cn: '' }
+      if (childTypeInfo.en === 'IfcAnnotation') {
+        return
+      }
       if (!entities.includes(childTypeInfo.en) && property.type === 'IfcSite') {
         return
       }
@@ -166,7 +180,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
   tree[0]['treeLength'] = treeLength;
   // 处理 ifcproject 下的ifc site
   if (tree[0].type === 'IFCPROJECT') {
-    tree[0].children = tree[0].children?.map((item) => {
+    tree[0].children = tree[0].children?.map((item: any) => {
       if (item.type === 'IFCSITE') {
         sites.push(item.expressId)
         const siteNode = Object.assign({}, item)
@@ -176,7 +190,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
         // 当存在构件时
         if (entities.includes(item.type)) {
           if (siteNode.children) {
-            siteNode.children = siteNode.children.map((i) => {
+            siteNode.children = siteNode.children.map((i: any) => {
               i.parentId = siteNode.expressId
               return i
             })
@@ -197,7 +211,7 @@ export const getSpatialTree = (props: Props): null | DataReturn => {
   console.log('用时', new Date().getTime() - startTime, 'ms')
   return {
     tree,
-    ifcExpressIds: Object.keys(dataMap),
+    ifcExpressIds,
     sites,
   }
 

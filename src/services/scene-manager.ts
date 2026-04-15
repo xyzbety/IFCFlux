@@ -1010,6 +1010,66 @@ export class SceneManager {
       this.effectManager!.edgeColor = BABYLON.Color4.FromHexString(rgbToHex(data.value));
       this.effectManager!.edgeRender(this.selectedMeshId);
     }
+    if (data.type === 'annotationVisible') {
+      this.applyAnnotationVisibility(Boolean(data.value));
+    }
+    if (data.type === 'annotationColor') {
+      this.applyAnnotationColor(data.value);
+    }
+  }
+
+  private isAnnotationMesh(mesh: BABYLON.AbstractMesh | null | undefined): boolean {
+    return Boolean(mesh && (mesh.metadata?.isAnnotationMesh || mesh.name?.startsWith('annotation-')));
+  }
+
+  private resolveAnnotationColorHex(value: string): string {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return '#00ff00';
+    }
+    if (normalized.startsWith('#')) {
+      return normalized;
+    }
+    return rgbToHex(normalized);
+  }
+
+  private applyAnnotationVisibility(visible: boolean): void {
+    if (!this.scene) return;
+
+    for (const mesh of this.scene.meshes) {
+      if (!this.isAnnotationMesh(mesh)) {
+        continue;
+      }
+
+      mesh.setEnabled(visible);
+      mesh.isVisible = visible;
+    }
+  }
+
+  private applyAnnotationColor(value: string): void {
+    if (!this.scene) return;
+
+    const annotationColor = BABYLON.Color3.FromHexString(this.resolveAnnotationColorHex(value));
+
+    for (const mesh of this.scene.meshes) {
+      if (!this.isAnnotationMesh(mesh) || mesh.metadata?.isAnnotationTextOcclusionProxy) {
+        continue;
+      }
+
+      if (mesh.metadata?.annotationKind === 'line') {
+        const greasedLineMaterial = (mesh as any).greasedLineMaterial;
+        if (greasedLineMaterial?.setColor) {
+          greasedLineMaterial.setColor(annotationColor);
+        } else if ((mesh as any).color) {
+          (mesh as any).color = annotationColor;
+        }
+        continue;
+      }
+
+      if (mesh.metadata?.annotationKind === 'text' && mesh.material) {
+        (mesh.material as BABYLON.StandardMaterial).emissiveColor = annotationColor;
+      }
+    }
   }
 
   public async exportSceneData(type: 'glb' | 'db' | 'json', isTauriEnv: boolean) {
@@ -1091,6 +1151,14 @@ export class SceneManager {
     if (handleEdgeColor.value) {
       this.effectManager!.edgeColor = BABYLON.Color4.FromHexString(rgbToHex(handleEdgeColor.value));
       this.effectManager!.edgeRender();
+    }
+    const handleAnnotationCheckbox = document.getElementById("annotationCheckbox") as HTMLInputElement;
+    if (handleAnnotationCheckbox) {
+      this.applyAnnotationVisibility(handleAnnotationCheckbox.checked);
+    }
+    const handleAnnotationColor = document.getElementById("annotationColorPicker") as HTMLInputElement;
+    if (handleAnnotationColor && handleAnnotationColor.value) {
+      this.applyAnnotationColor(handleAnnotationColor.value);
     }
   }
   /**
