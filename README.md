@@ -10,19 +10,13 @@
 
   **IFC 查看工具**: 针对复杂IFC模型在普通硬件上的实时查看难题，提出基于GPU-Driven的渐进式渲染管线，将几何、语义与空间索引解耦为三级缓存，实现GB级模型的快速加载，并提供丰富的剖切、测量、爆炸及属性查询等交互体验。让项目各参与方无需专业设计软件即可快捷浏览模型，消除信息滞后与专业壁垒。
 
-<img width="5369" height="2934" alt="ifc viewer" src="https://github.com/xyzbety/IFCFlux/blob/main/public/docs/viewer.jpg" />
-
 - **IFC Checker**: Built on the IFC-MVD standard, the tool parses machine-readable IDS rule-sets and automatically audits every entity in the model for attribute existence, value type, and permissible range. Three quantitative metrics—missing-rate, type-deviation-rate, and out-of-bounds-rate—are reported, giving an objective quality score and a verifiable data set that can later feed machine-learning-based automated drawing-review algorithms.
 
   **IFC 检查工具**: 基于IFC-MVD标准构建可解析的IDS规则集，对模型中全部构件实体执行属性存在性、值类型及值域的自动遍历验证，输出缺失率、类型偏差率与超限率三项量化指标，为模型质量评估提供量化指标与可验证数据集，并进一步支撑后续机器学习自动审图算法训练。
 
-<img width="5369" height="2934" alt="ifc checker" src="https://github.com/xyzbety/IFCFlux/blob/main/public/docs/checker.jpg" />
-
 - **IFC Converter**: Adopting a “model–data separation” strategy, the converter splits IFC entities into geometry and semantics, exporting them as glTF and a relational database respectively while preserving component IDs. The geometry stream feeds the GPU rendering pipeline directly, while the semantic stream supports SQL-level flexible queries. Visualization and data-analytics tasks can now evolve independently, delivering a “convert once, reuse everywhere” extensible data paradigm for the entire project life-cycle.
 
   **IFC 转换工具**: 采用数模分离策略，将IFC实体按几何与语义解耦，分别导出GLTF与关系数据库，并保持构件ID对应；几何流直接驱动GPU渲染管线，语义流支持SQL级灵活查询，实现可视化与数据分析任务独立迭代，为工程全阶段提供“一次转换、多端复用”的可扩展数据范式。
-
-<img width="5369" height="2934" alt="ifc converter" src="https://github.com/xyzbety/IFCFlux/blob/main/public/docs/converter.jpg" />
 
 ## 📦 Technology Stack | 技术栈
 
@@ -84,13 +78,13 @@
 
 ### 📋 Prerequisites | 前置要求
 
-- Node.js 18.0.0 or higher
+- Node.js 22.0.0 or higher
 
-  Node.js 18.0.0 或更高版本
+  Node.js 22.0.0 或更高版本
   
-- Rust 1.70.0 or higher (optional, for Tauri desktop app builds)
+- Rust 1.80.0 or higher (optional, for Tauri desktop app builds)
 
-  Rust 1.70.0 或更高版本 (可选，用于Tauri桌面应用构建)
+  Rust 1.80.0 或更高版本 (可选，用于Tauri桌面应用构建)
   
 - pnpm 8.0.0 or higher
 
@@ -154,13 +148,10 @@ IFCFlux/
 ├── tsconfig.node.json      # Node.js环境的TypeScript配置
 ├── vite.config.ts          # Vite构建工具配置
 ├── public/                 # 静态资源目录
-│   ├── extractor.worker.js # Web Worker脚本
 │   ├── favicon.png         # 网站图标
 │   ├── logo.png            # 应用Logo
-│   ├── duckdb/             # DuckDB相关文件
 │   ├── fonts/              # 字体文件
 │   ├── icons/              # SVG图标
-│   └── 由 Vite 映射 web-ifc wasm/worker 资源
 ├── src/                    # 前端源代码目录
 │   ├── App.vue             # 主应用组件
 │   ├── main.ts             # 应用入口文件
