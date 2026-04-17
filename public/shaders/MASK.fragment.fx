@@ -7,7 +7,7 @@
 uniform vec4 vClipPlane;
 #endif
 
-varying vec3 vWorldPosition;
+in vec3 vWorldPosition;
 
 void main(void) 
 {

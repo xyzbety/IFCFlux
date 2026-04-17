@@ -2,7 +2,7 @@
     precision mediump float;
 #endif
 
-varying vec2 vUV;
+in vec2 vUV;
 
 uniform sampler2D textureMaskSampler;
 uniform sampler2D textureSimpleSampler;
@@ -19,11 +19,11 @@ void main(void)
     float threshold = 0.4;
 
     // 先只读取 mask 中心（避免不必要的 FG 采样）
-    float centerMask = texture2D(textureMaskSampler, vUV).r;
+    float centerMask = texture(textureMaskSampler, vUV).r;
 
     // 如果不在模型内部，直接输出前景（延后取 FG 也仅取一次）
     if (centerMask <= threshold) {
-        gl_FragColor = texture2D(textureSimpleSampler, vUV);
+        gl_FragColor = texture(textureSimpleSampler, vUV);
         return;
     }
 
@@ -51,7 +51,7 @@ void main(void)
         float scale = float(r);
         for (int i = 0; i < 8; ++i) {
             vec2 sampleUV = clamp(vUV + offsets[i] * scale, 0.0, 1.0);
-            float m = texture2D(textureMaskSampler, sampleUV).r;
+            float m = texture(textureMaskSampler, sampleUV).r;
             if (m <= threshold) {
                 isEdge = true;
                 break;
@@ -61,7 +61,7 @@ void main(void)
     }
 
     // 现在再采样 FG（只一次）
-    vec4 FG = texture2D(textureSimpleSampler, vUV);
+    vec4 FG = texture(textureSimpleSampler, vUV);
 
     if (isEdge) {
         // 边缘区域显示边框颜色

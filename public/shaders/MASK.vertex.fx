@@ -3,7 +3,7 @@
 #endif
     
 // Attributes
-    attribute vec3 position;
+    in vec3 position;
     
 // Uniforms
     uniform mat4 worldViewProjection;
@@ -11,7 +11,7 @@
 
 // Varyings
 #ifdef CLIPPLANE
-varying vec3 vWorldPosition;
+out vec3 vWorldPosition;
 #endif
     
 void main(void) 

@@ -61,12 +61,12 @@ export class Measure {
         BABYLON.Effect.ShadersStore["customVertexShader"] = `
             precision highp float;
 
-            attribute vec3 position;
-            attribute vec2 uv;
+            in vec3 position;
+            in vec2 uv;
 
             uniform mat4 worldViewProjection;
 
-            varying vec2 vUV;
+            out vec2 vUV;
             void main() {
                 vUV = uv;
                 gl_Position = worldViewProjection * vec4( position, 1.0);
@@ -74,7 +74,7 @@ export class Measure {
             }`;
 
         BABYLON.Effect.ShadersStore["customFragmentShader"] = `
-            varying vec2 vUV;
+            in vec2 vUV;
 
             void main() {
                 vec3 bgColor = vec3(1.0, 1.0, 1.0);  // 白色背景

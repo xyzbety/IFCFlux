@@ -2,7 +2,7 @@
     precision mediump float;
 #endif
     
-varying vec2 vUV;
+in vec2 vUV;
     
 uniform sampler2D textureMaskSampler;
 uniform int HorizontalBlurr;
@@ -17,7 +17,7 @@ void main(void)
     float weight[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
 
  
-    vec4 BG = texture2D(textureMaskSampler, vUV);
+    vec4 BG = texture(textureMaskSampler, vUV);
     
     vec3 result = (BG.rgb) * weight[0];
 
@@ -25,16 +25,16 @@ void main(void)
     {
         for(int i = 1; i < 5; ++i)
         {
-            result += texture2D(textureMaskSampler, vUV + vec2(texel_screen_size_x * (float(i)), 0.0)).rgb * weight[i];
-            result += texture2D(textureMaskSampler, vUV - vec2(texel_screen_size_x * (float(i)), 0.0)).rgb * weight[i];
+            result += texture(textureMaskSampler, vUV + vec2(texel_screen_size_x * (float(i)), 0.0)).rgb * weight[i];
+            result += texture(textureMaskSampler, vUV - vec2(texel_screen_size_x * (float(i)), 0.0)).rgb * weight[i];
         }
     }
     if(VerticalBlurr == 1)
     {
         for(int i = 1; i < 5; ++i)
         {
-            result += texture2D(textureMaskSampler, vUV + vec2(0.0,texel_screen_size_y * (float(i)))).rgb * weight[i];
-            result += texture2D(textureMaskSampler, vUV - vec2(0.0,texel_screen_size_y * (float(i)))).rgb * weight[i];
+            result += texture(textureMaskSampler, vUV + vec2(0.0,texel_screen_size_y * (float(i)))).rgb * weight[i];
+            result += texture(textureMaskSampler, vUV - vec2(0.0,texel_screen_size_y * (float(i)))).rgb * weight[i];
         }
     }
     gl_FragColor = vec4(result, 1.0);
