@@ -36,6 +36,8 @@ export class RibbonEventManager {
     // 初始化配置（替代原来的构造函数参数）
     public initialize(options: RibbonEventsOptions): void {
         this.options = options;
+        this.eventMap.clear();
+        this.initializeEventMap();
         this.initializeSingleEvents();
     }
 
@@ -78,9 +80,9 @@ export class RibbonEventManager {
 
             // 检查事件
             {
-                labels: ["基础数据", "规划报建", "施工图审查", "智慧工地监管", "竣工验收"],
+                labels: ["基础数据", "规划报建", "施工图审查", "招投标", "智慧工地监管", "竣工验收"],
                 type: "inspect-click",
-                params: [1, 2, 3, 4, 5]
+                params: [1, 2, 3, 6, 4, 5]
             },
 
             // 数据导出事件

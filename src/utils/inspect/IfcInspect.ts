@@ -3,6 +3,7 @@ import hifc2 from './rules/HIFC规划报建.json';
 import hifc3 from './rules/HIFC施工图审查.json';
 import hifc4 from './rules/HIFC智慧工地监管.json';
 import hifc5 from './rules/HIFC竣工验收.json';
+import hifc6 from './rules/HIFC招投标.json';
 import { IfcTypes } from './ifcTypeMap'
 
 /**
@@ -38,6 +39,7 @@ const ifcPset2: Record<number, IfcMapping> = {
   3: (hifc3 as any)['data_sheet'] as IfcMapping,
   4: (hifc4 as any)['data_sheet'] as IfcMapping,
   5: (hifc5 as any)['data_sheet'] as IfcMapping,
+  6: (hifc6 as any)['data_sheet'] as IfcMapping,
 };
 
 /**
@@ -56,6 +58,7 @@ export class IfcInspect {
   constructor(url: string | File, type: number = 1) {
     this.url = url;
     this.ifcPset = ifcPset2[type];
+    console.log('IfcInspect constructor, type:', type, 'ifcPset:', this.ifcPset ? 'exists' : 'undefined', 'entities:', this.ifcPset ? Object.keys(this.ifcPset) : []);
     this.init();
   }
 
@@ -106,38 +109,53 @@ export class IfcInspect {
    * - 完成后"让出一帧"给 UI 渲染，再写入 ifcData
    */
   private async run(): Promise<void> {
-    if (!this.file || !this.ifcPset) return;
+    if (!this.file || !this.ifcPset) {
+      this.ifcData = { metadata: { name: '', version: 0 }, data: {} };
+      return;
+    }
 
     this.processing = true;
     const t0 = performance.now();
 
     this.worker = new Worker(new URL('./extractor.worker.ts', import.meta.url), { type: 'module' });
 
-    const result = await new Promise<IfcInspectResult>((resolve) => {
-      this.worker!.postMessage({
-        name: 'start',
-        file: this.file as File,
-        mapping: this.ifcPset as IfcMapping,
-        ifcTypes: IfcTypes,
-      });
+    try {
+      const result = await new Promise<IfcInspectResult>((resolve, reject) => {
+        this.worker!.postMessage({
+          name: 'start',
+          file: this.file as File,
+          mapping: this.ifcPset as IfcMapping,
+          ifcTypes: IfcTypes,
+        });
 
-      this.worker!.onmessage = (e: MessageEvent<any>) => {
-        if (e.data && e.data.complete) {
+        this.worker!.onmessage = (e: MessageEvent<any>) => {
+          if (e.data && e.data.complete) {
+            this.worker?.terminate();
+            this.worker = null;
+            resolve(e.data.result as IfcInspectResult);
+          }
+        };
+
+        this.worker!.onerror = (e: ErrorEvent) => {
+          console.error('Worker error:', e.message);
           this.worker?.terminate();
           this.worker = null;
-          resolve(e.data.result as IfcInspectResult);
-        }
-      };
-    });
+          reject(new Error(e.message));
+        };
+      });
 
-    const t1 = performance.now();
-    console.log(`解析完成，耗时 ${((t1 - t0) / 1000).toFixed(2)} 秒`);
+      const t1 = performance.now();
+      console.log(`解析完成，耗时 ${((t1 - t0) / 1000).toFixed(2)} 秒`);
 
-    // 让出一帧给 UI 渲染
-    await this.yieldToNextFrame();
+      await this.yieldToNextFrame();
 
-    this.processing = false;
-    this.ifcData = result;
+      this.processing = false;
+      this.ifcData = result;
+    } catch (error) {
+      console.error('检查失败:', error);
+      this.processing = false;
+      this.ifcData = { metadata: { name: '', version: 0 }, data: {} };
+    }
   }
 
   /**

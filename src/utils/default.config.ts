@@ -396,6 +396,14 @@ export default {
           allowedSizes: ['normal']
         },
         {
+          label: '招投标',
+          icon: 'bidding material-icons',
+          type: 'button',
+          cssClass: 'flat',
+          size: 'normal',
+          allowedSizes: ['normal']
+        },
+        {
           label: '智慧工地监管',
           icon: 'smart_site_supervision material-icons',
           type: 'button',
