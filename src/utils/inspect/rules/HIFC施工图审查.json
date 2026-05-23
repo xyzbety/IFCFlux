@@ -1,5 +1,6 @@
 {
   "name": "湖北省BIM基础数据交换标准 施工图审查MVD",
+  "date": "2026-5-21",
   "version": "送审稿",
   "data_sheet": {
     "IfcAlarm": {
@@ -20,11 +21,18 @@
       }
     },
     "IfcAudioVisualAppliance": {
-      "Pset_显示设备信息属性集": { "外壳防护等级": "IfcLabel" }
+      "Pset_显示设备信息属性集": {
+        "外壳防护等级": "IfcLabel"
+      }
     },
     "IfcBeam": {
-      "Pset_产品规格属性集": { "重量": "IfcReal", "体积": "IfcReal" },
-      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_产品规格属性集": {
+        "重量": "IfcReal",
+        "体积": "IfcReal"
+      },
+      "Pset_位置特征属性集": {
+        "构件位置信息": "IfcText"
+      },
       "Pset_梁信息属性集": {
         "长度": "IfcReal",
         "高度": "IfcReal",
@@ -67,7 +75,11 @@
         "是否变频": "IfcBoolean"
       }
     },
-    "IfcCoil": { "Pset_风机盘管信息属性集": { "水阻": "IfcReal" } },
+    "IfcCoil": {
+      "Pset_风机盘管信息属性集": {
+        "水阻": "IfcReal"
+      }
+    },
     "IfcColumn": {
       "Pset_产品规格属性集": {
         "重量": "IfcReal",
@@ -127,7 +139,9 @@
         "高度": "IfcReal",
         "宽度": "IfcReal"
       },
-      "Pset_集线器信息属性集": { "底距地高度": "IfcReal" }
+      "Pset_集线器信息属性集": {
+        "底距地高度": "IfcReal"
+      }
     },
     "IfcController": {
       "Pset_监测设备通用属性集": {
@@ -145,7 +159,10 @@
         "终点坐标Y": "IfcReal",
         "终点坐标Z": "IfcReal"
       },
-      "Pset_密封特性属性集": { "水密性能": "IfcLabel", "气密性能": "IfcLabel" },
+      "Pset_密封特性属性集": {
+        "水密性能": "IfcLabel",
+        "气密性能": "IfcLabel"
+      },
       "Pset_幕墙信息属性集": {
         "是否为外墙": "IfcBoolean",
         "高度": "IfcReal",
@@ -160,7 +177,9 @@
         "幕墙特征": "IfcLabel",
         "幕墙功能": "IfcLabel"
       },
-      "Pset_燃烧特性属性集": { "耐火等级": "IfcLabel" },
+      "Pset_燃烧特性属性集": {
+        "耐火等级": "IfcLabel"
+      },
       "Pset_玻璃幕墙信息属性集": {
         "窗参数说明": "IfcText",
         "可见光反射比": "IfcReal",
@@ -177,8 +196,14 @@
       }
     },
     "IfcDoor": {
-      "Pset_出入口信息属性集": { "边长": "IfcReal", "直径": "IfcReal" },
-      "Pset_密封特性属性集": { "水密性能": "IfcLabel", "气密性能": "IfcLabel" },
+      "Pset_出入口信息属性集": {
+        "边长": "IfcReal",
+        "直径": "IfcReal"
+      },
+      "Pset_密封特性属性集": {
+        "水密性能": "IfcLabel",
+        "气密性能": "IfcLabel"
+      },
       "Pset_燃烧特性属性集": {
         "耐火极限": "IfcReal",
         "防火性能": "IfcLabel",
@@ -188,7 +213,10 @@
         "耐火等级": "IfcLabel",
         "燃烧性能": "IfcText"
       },
-      "Pset_特种门信息属性集": { "通过宽度": "IfcReal", "通过高度": "IfcReal" },
+      "Pset_特种门信息属性集": {
+        "通过宽度": "IfcReal",
+        "通过高度": "IfcReal"
+      },
       "Pset_门信息属性集": {
         "是否为外门": "IfcBoolean",
         "是否为安全出口": "IfcBoolean",
@@ -248,10 +276,15 @@
       }
     },
     "IfcElectricGenerator": {
-      "Pset_发电机信息属性集": { "型号规格": "IfcLabel" }
+      "Pset_发电机信息属性集": {
+        "型号规格": "IfcLabel"
+      }
     },
     "IfcElectricTimeControl": {
-      "Pset_电气时间控制器信息属性集": { "宽度": "IfcReal", "高度": "IfcReal" }
+      "Pset_电气时间控制器信息属性集": {
+        "宽度": "IfcReal",
+        "高度": "IfcReal"
+      }
     },
     "IfcFan": {
       "Pset_风机信息属性集": {
@@ -264,7 +297,9 @@
       }
     },
     "IfcFireSuppressionTerminal": {
-      "Pset_水泵接合器信息属性集": { "标高": "IfcReal" },
+      "Pset_水泵接合器信息属性集": {
+        "标高": "IfcReal"
+      },
       "Pset_消火栓信息属性集": {
         "标高": "IfcReal",
         "长度": "IfcReal",
@@ -303,7 +338,9 @@
       }
     },
     "IfcFooting": {
-      "Pset_承台信息属性集": { "承台下桩数量": "IfcInteger" },
+      "Pset_承台信息属性集": {
+        "承台下桩数量": "IfcInteger"
+      },
       "Pset_柱墩信息属性集": {
         "柱墩尺寸": "IfcReal",
         "混凝土强度等级": "IfcLabel",
@@ -406,7 +443,9 @@
         "支管1直径": "IfcReal",
         "支管2直径": "IfcReal"
       },
-      "Pset_水管弯头信息属性集": { "公称直径": "IfcReal" }
+      "Pset_水管弯头信息属性集": {
+        "公称直径": "IfcReal"
+      }
     },
     "IfcPipeSegment": {
       "Pset_水管段信息属性集": {
@@ -424,10 +463,15 @@
       }
     },
     "IfcPump": {
-      "Pset_泵信息属性集": { "扬程": "IfcReal", "水泵型号": "IfcLabel" }
+      "Pset_泵信息属性集": {
+        "扬程": "IfcReal",
+        "水泵型号": "IfcLabel"
+      }
     },
     "IfcRailing": {
-      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_位置特征属性集": {
+        "构件位置信息": "IfcText"
+      },
       "Pset_扶栏信息属性集": {
         "高度": "IfcReal",
         "至完成面高度": "IfcReal",
@@ -435,10 +479,14 @@
         "防攀爬措施": "IfcText",
         "有无防攀滑措施": "IfcBoolean"
       },
-      "Pset_耐久性属性集": { "设计使用年限": "IfcDuration" }
+      "Pset_耐久性属性集": {
+        "设计使用年限": "IfcDuration"
+      }
     },
     "IfcRamp": {
-      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_位置特征属性集": {
+        "构件位置信息": "IfcText"
+      },
       "Pset_坡道信息属性集": {
         "坡道净宽": "IfcReal",
         "坡道宽度": "IfcReal",
@@ -453,7 +501,9 @@
       }
     },
     "IfcRoof": {
-      "Pset_位置特征属性集": { "构件位置信息": "IfcText" },
+      "Pset_位置特征属性集": {
+        "构件位置信息": "IfcText"
+      },
       "Pset_屋顶信息属性集": {
         "屋面保温层厚度": "IfcReal",
         "尖端构件锚固措施": "IfcText",
@@ -621,7 +671,9 @@
       }
     },
     "IfcStackTerminal": {
-      "Pset_立管末端设备信息属性集": { "深度": "IfcReal" }
+      "Pset_立管末端设备信息属性集": {
+        "深度": "IfcReal"
+      }
     },
     "IfcStair": {
       "Pset_楼梯信息属性集": {
@@ -657,7 +709,9 @@
         "防坠落措施": "IfcText",
         "功能": "IfcLabel"
       },
-      "Pset_燃烧特性属性集": { "防火性能等级": "IfcLabel" },
+      "Pset_燃烧特性属性集": {
+        "防火性能等级": "IfcLabel"
+      },
       "Pset_耐久性属性集": {
         "结构耐久性": "IfcLabel",
         "结构耐久性要求": "IfcText",
@@ -726,14 +780,19 @@
       }
     },
     "IfcUnitaryEquipment": {
-      "Pset_空调机组/新风机组信息属性集": { "机外静压": "IfcReal" }
+      "Pset_空调机组/新风机组信息属性集": {
+        "机外静压": "IfcReal"
+      }
     },
     "IfcValve": {
       "Pset_分、集水器信息属性集": {
         "管口直径": "IfcReal",
         "筒体直径": "IfcReal"
       },
-      "Pset_水阀信息属性集": { "直径": "IfcReal", "工作压力": "IfcReal" }
+      "Pset_水阀信息属性集": {
+        "直径": "IfcReal",
+        "工作压力": "IfcReal"
+      }
     },
     "IfcWall": {
       "Pset_位置特征属性集": {
@@ -760,13 +819,24 @@
       }
     },
     "IfcWasteTerminal": {
-      "Pset_地漏信息属性集": { "标高": "IfcReal", "材料": "IfcText" },
-      "Pset_存水弯信息属性集": { "水封深度": "IfcReal" }
+      "Pset_地漏信息属性集": {
+        "标高": "IfcReal",
+        "材料": "IfcText"
+      },
+      "Pset_存水弯信息属性集": {
+        "水封深度": "IfcReal"
+      }
     },
     "IfcWindow": {
-      "Pset_声学特性属性集": { "声学性能": "IfcLabel" },
-      "Pset_密封特性属性集": { "气密性能": "IfcLabel" },
-      "Pset_燃烧特性属性集": { "耐火极限": "IfcReal" },
+      "Pset_声学特性属性集": {
+        "声学性能": "IfcLabel"
+      },
+      "Pset_密封特性属性集": {
+        "气密性能": "IfcLabel"
+      },
+      "Pset_燃烧特性属性集": {
+        "耐火极限": "IfcReal"
+      },
       "Pset_窗体材料节能信息属性集": {
         "窗可见透射比": "IfcReal",
         "可开启面积比": "IfcReal",
@@ -790,7 +860,9 @@
         "开启方向": "IfcLabel",
         "材质": "IfcText"
       },
-      "Pset_耐久性属性集": { "设计使用年限": "IfcDuration" }
+      "Pset_耐久性属性集": {
+        "设计使用年限": "IfcDuration"
+      }
     }
   }
 }

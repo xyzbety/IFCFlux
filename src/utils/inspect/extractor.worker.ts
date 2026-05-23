@@ -3,12 +3,22 @@
 
 self.onmessage = async (e) => {
     const name = e.data.name
+    console.log('Worker received message:', name, 'entities:', Object.keys(e.data.mapping || {}));
     if (name == 'start') {
-        const result = await ifcsgExtractor(e.data.file, e.data.mapping, e.data.ifcTypes)
-        self.postMessage({
-            complete: true,
-            result: result
-        })
+        try {
+            const result = await ifcsgExtractor(e.data.file, e.data.mapping, e.data.ifcTypes)
+            console.log('Worker completed, result:', result?.metadata?.name);
+            self.postMessage({
+                complete: true,
+                result: result
+            })
+        } catch (error) {
+            console.error('Worker error:', error);
+            self.postMessage({
+                complete: true,
+                result: { metadata: { name: 'Error', version: 0 }, data: {} }
+            })
+        }
     }
 }
 
@@ -60,10 +70,12 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
         });
 
         function processline(line) {
-            if (regexEnt.test(line)) {
+if (regexEnt.test(line)) {
                 const match = line.match(regexEntityCatpture) || []
                 if (match.length) {
-                    //scehema = #(id)=(entity),(guid),geometry,(name),(description),(objecttype),placement,shape,(tag),(userdefined)
+                    if (match[2] === 'IFCPROJECT' || match[2] === 'IFCSITE' || match[2] === 'IFCBUILDING' || match[2] === 'IFCBUILDINGSTOREY') {
+                        console.log('Standard match for spatial entity:', match[2], 'guid:', match[3], 'name:', match[4]);
+                    }
                     entityMap.set(match[1], {
                         Entity: match[2],
                         Guid: match[3],
@@ -74,18 +86,20 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
                         PredefinedType: match[8] == null || match[8] == '$' ? null : String(match[8]).replace(/\./g, "")
                     })
                 } else {
-                    const exceptionString = `IFCBUILDINGSYSTEM`
-                    //scehema = #(id)=(entity),(guid),geometry,(name),(description),(objecttype),??,??
-                    const exceptionCapture = `(.*)=[\\s]?(${exceptionString})\\([^;](.*?)'[^;]+?,(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),(\w+|'.*?'|[$]),`
+                    const exceptionString = `IFCBUILDINGSYSTEM|IFCPROCEDURE|IFCPROJECT|IFCSITE|IFCBUILDING|IFCBUILDINGSTOREY`
+                    const exceptionCapture = `(.*)=[\\s]?(${exceptionString})\\([^;]*?'([^;]+?)'[^;]*?,([^;]*?),([^;]*?),([^;]*?),`
                     const match = line.match(exceptionCapture) || []
                     if (match.length) {
+                        console.log('Exception match:', match[2], match[1], match[3]);
                         entityMap.set(match[1], {
                             Entity: match[2],
                             Guid: match[3],
-                            Name: match[4].replace(/\'/g, ""),
-                            Description: match[5].replace(/\'/g, ""),
-                            ObjectType: match[6].replace(/\'/g, ""),
+                            Name: match[4] == '$' ? null : String(match[4]).replace(/'/g, ""),
+                            Description: match[5] == '$' ? null : String(match[5]).replace(/'/g, ""),
+                            ObjectType: match[6] == '$' ? null : String(match[6]).replace(/'/g, ""),
                         })
+                    } else {
+                        console.log('Exception no match for:', line.substring(0, 100));
                     }
                 }
                 entityCount++
@@ -289,7 +303,6 @@ async function ifcsgExtractor(file, mapping, ifcTypes) {
 
         if (!psets) {
             logs.psets.push(`${key},${obj.Entity}`)
-            continue;
         }
 
         ifcResult.push(obj)

@@ -126,15 +126,20 @@ watch(
             if (data && typeof data === 'object') {
                 // 将英文键替换为中文（只保存键的引用，不创建新对象）
                 descriptions.value = Object.keys(data).map(key => IfcTypeLabelMap[key] || key);
+                loading.value = false;
                 if (descriptions.value.length > 0) {
-                    loading.value = false;
                     handleListClick(descriptions.value[0]);
+                } else {
+                    tableData.value = [];
+                    selectedKey.value = null;
+                    currentDataObj.value = null;
                 }
             } else {
                 descriptions.value = [];
                 tableData.value = [];
                 selectedKey.value = null;
                 currentDataObj.value = null;
+                loading.value = false;
             }
             searchText.value = '';
             console.log("数据已更新");

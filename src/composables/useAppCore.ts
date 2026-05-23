@@ -214,7 +214,7 @@ function createAppCore() {
 
     const handleInspectClick = async (event: number) => {
         if (!sceneManager.scene) return;
-        const map = { 1: "基础数据", 2: "规划报建", 3: "施工图审查", 4: "智慧工地监管", 5: "竣工验收" } as const;
+        const map = { 1: "基础数据", 2: "规划报建", 3: "施工图审查", 6: "招投标", 4: "智慧工地监管", 5: "竣工验收" } as const;
         inspectType.value = map[event as keyof typeof map];
         switchToMode(LM.INSPECT);
         if (modelStore.file) modelManager.setupInspectDataListener(modelStore.file, event);

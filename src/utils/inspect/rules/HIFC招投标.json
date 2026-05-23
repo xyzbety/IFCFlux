@@ -1,0 +1,70 @@
+{
+    "name": "湖北省BIM基础数据交换标准 招投标MVD",
+    "date": "2026-5-21",
+    "version": "应用数据补充",
+    "data_sheet": {
+        "IfcProject": {
+            "Pset_施工BIM投标信息属性集": {
+                "投标人名称": "IfcText",
+                "投标人代码": "IfcText",
+                "投标单位项目负责人": "IfcText",
+                "投标资料附件标识码": "IfcText"
+            },
+            "Pset_施工BIM招标信息属性集": {
+                "标段标识码": "IfcText",
+                "是否应用BIM技术": "IfcBoolean",
+                "BIM应用范围": "IfcLabel",
+                "BIM人员技能证书等级": "IfcLabel",
+                "BIM招标模型附件标识码": "IfcText"
+            },
+            "Pset_施工BIM标书信息属性集": {
+                "标书名称": "IfcText",
+                "创建人": "IfcText",
+                "施工BIM标书格式": "IfcText",
+                "标书编制软件版本号": "IfcText",
+                "标书编制软件供应商": "IfcText",
+                "导出时间": "IfcText",
+                "导出大小": "IfcText"
+            },
+            "Pset_设计BIM投标信息属性集": {
+                "标段标识码": "IfcText",
+                "投标人名称": "IfcText",
+                "投标人代码": "IfcText",
+                "投标单位项目负责人": "IfcText",
+                "投标资料标识码": "IfcText"
+            },
+            "Pset_设计BIM招标信息属性集": {
+                "标段标识码": "IfcText",
+                "是否应用BIM技术": "IfcBoolean",
+                "BIM应用范围": "IfcLabel",
+                "BIM人员技能证书等级": "IfcLabel"
+            },
+            "Pset_设计BIM标书信息属性集": {
+                "标书名称": "IfcText",
+                "创建人": "IfcText",
+                "设计BIM标书格式": "IfcText",
+                "标书编制软件版本号": "IfcText",
+                "标书编制软件供应商": "IfcText",
+                "导出时间": "IfcText",
+                "导出大小": "IfcText"
+            },
+            "Pset_设计施工总承包BIM招标信息属性集": {
+                "标段标识码": "IfcText",
+                "是否应用BIM技术": "IfcBoolean",
+                "BIM应用范围": "IfcLabel",
+                "BIM人员技能证书等级": "IfcLabel",
+                "投标人名称": "IfcText",
+                "投标人代码": "IfcText",
+                "投标单位项目负责人": "IfcText",
+                "投标资料标识码": "IfcText",
+                "标书名称": "IfcText",
+                "创建人": "IfcText",
+                "设计施工总承包BIM标书格式": "IfcText",
+                "标书编制软件版本号": "IfcText",
+                "标书编制软件供应商": "IfcText",
+                "导出时间": "IfcText",
+                "导出大小": "IfcText"
+            }
+        }
+    }
+}

@@ -1,15 +1,19 @@
 {
     "name": "湖北省BIM基础数据交换标准 规划报建MVD",
-    "version": "送审稿",
+    "date": "2026-5-21",
+    "version": "应用数据补充",
     "data_sheet": {
         "IfcBuilding": {
             "Pset_建筑技术信息属性集": {
                 "耐火等级": "IfcLabel",
+                "建筑类型": "IfcLabel",
                 "地上建筑层数": "IfcInteger",
                 "地下建筑层数": "IfcInteger",
                 "建筑高度": "IfcReal",
                 "建筑占地面积": "IfcReal",
                 "建筑面积": "IfcReal",
+                "登记用途": "IfcLabel",
+                "建筑用途": "IfcLabel",
                 "抗震性能等级": "IfcLabel",
                 "建筑体积": "IfcReal",
                 "人数": "IfcInteger",
@@ -20,7 +24,34 @@
                 "登记用途名称": "IfcLabel",
                 "建筑用途名称": "IfcLabel",
                 "抗震设防类别": "IfcLabel",
-                "安全等级": "IfcLabel"
+                "安全等级": "IfcLabel",
+                "建筑类别": "IfcLabel",
+                "建筑与设施用途分类": "IfcLabel",
+                "容积率": "IfcReal",
+                "绿地率": "IfcReal",
+                "停车位数量": "IfcInteger",
+                "投影面积": "IfcReal",
+                "建筑编号": "IfcLabel",
+                "规划高度": "IfcReal",
+                "地坪标高": "IfcReal",
+                "户数": "IfcInteger",
+                "保障房户数": "IfcInteger",
+                "消防高度": "IfcReal",
+                "檐口高度": "IfcReal",
+                "屋脊高度": "IfcReal",
+                "海拔高度": "IfcReal",
+                "建筑状态": "IfcLabel",
+                "临时永久": "IfcLabel",
+                "结构类型": "IfcLabel",
+                "形状": "IfcLabel",
+                "山墙开窗": "IfcLabel",
+                "民用建筑": "IfcBoolean",
+                "装配式奖励面积": "IfcReal"
+            },
+            "Pset_绿色建筑信息属性集": {
+                "是否有自动监控管理功能": "IfcBoolean",
+                "是否具有完善的操作规程和应急预案": "IfcBoolean",
+                "是否具有智能化服务系统": "IfcBoolean"
             }
         },
         "IfcBuildingStorey": {
@@ -37,17 +68,8 @@
                 "备注": "IfcText",
                 "楼层名称": "IfcLabel",
                 "楼层编号": "IfcLabel",
-                "楼层属性信息": "IfcText"
-            }
-        },
-        "IfcDoor": {
-            "Pset_门信息属性集": {
-                "开启方向": "IfcLabel"
-            }
-        },
-        "IfcDuctSegment": {
-            "Pset_风管段信息属性集": {
-                "隔热层厚度": "IfcReal"
+                "楼层属性信息": "IfcText",
+                "建筑基底": "IfcBoolean"
             }
         },
         "IfcOrganization": {
@@ -80,43 +102,10 @@
             }
         },
         "IfcProject": {
-            "Pset_报建信息属性集": {
-                "手机号码": "IfcLabel",
-                "编号": "IfcLabel",
-                "姓": "IfcText",
-                "名": "IfcText",
-                "邮箱地址": "IfcText",
-                "公司": "IfcText",
-                "公司性质": "IfcText",
-                "部门": "IfcText",
-                "国家": "IfcText",
-                "城镇": "IfcText",
-                "街道": "IfcText",
-                "通信地址": "IfcText",
-                "国家编码": "IfcText",
-                "邮政编码": "IfcText"
-            },
-            "Pset_地籍信息属性集": {
-                "宗地数量": "IfcInteger",
-                "宗地用途": "IfcLabel",
-                "宗地编号": "IfcLabel",
-                "宗地信息": "IfcText",
-                "宗地质量等级": "IfcLabel",
-                "宗地权力": "IfcText",
-                "宗地权利人": "IfcText",
-                "建筑物编码": "IfcText"
-            },
-            "Pset_登记信息属性集": {
-                "建设性质": "IfcLabel",
-                "总建筑面积": "IfcReal",
-                "建筑物编码": "IfcText",
-                "现状名称": "IfcLabel",
-                "审批名称": "IfcLabel",
-                "详细地址": "IfcText",
-                "不动产地址": "IfcText",
-                "建成时间": "IfcDateTime",
-                "建筑状态": "IfcText",
-                "建设性质代码": "IfcText"
+            "Pset_Manifest": {
+                "阶段": "IfcLabel",
+                "应用模型精度": "IfcLabel",
+                "实际模型精度": "IfcLabel"
             },
             "Pset_区划信息属性集": {
                 "所属省级行政区": "IfcText",
@@ -133,9 +122,35 @@
                 "所属小区": "IfcText",
                 "备注": "IfcText"
             },
+            "Pset_地籍信息属性集": {
+                "宗地数量": "IfcInteger",
+                "宗地用途": "IfcLabel",
+                "宗地编号": "IfcLabel",
+                "宗地信息": "IfcText",
+                "宗地质量等级": "IfcLabel",
+                "宗地权力": "IfcText",
+                "宗地权利人": "IfcText",
+                "建筑物编码": "IfcText"
+            },
+            "Pset_报建信息属性集": {
+                "手机号码": "IfcLabel",
+                "编号": "IfcLabel",
+                "姓": "IfcText",
+                "名": "IfcText",
+                "邮箱地址": "IfcText",
+                "公司": "IfcText",
+                "公司性质": "IfcText",
+                "部门": "IfcText",
+                "国家": "IfcText",
+                "城镇": "IfcText",
+                "街道": "IfcText",
+                "通信地址": "IfcText",
+                "国家编码": "IfcText",
+                "邮政编码": "IfcText"
+            },
             "Pset_申报信息属性集": {
-                "基点坐标X": "IfcReal",
-                "基点坐标Y": "IfcReal",
+                "基点坐标 X": "IfcReal",
+                "基点坐标 Y": "IfcReal",
                 "基点高程": "IfcReal",
                 "备注": "IfcText",
                 "项目编号": "IfcLabel",
@@ -153,9 +168,56 @@
                 "高程系名称": "IfcLabel",
                 "经度": "IfcReal",
                 "纬度": "IfcReal"
+            },
+            "Pset_登记信息属性集": {
+                "建设性质": "IfcLabel",
+                "总建筑面积": "IfcReal",
+                "建筑物编码": "IfcText",
+                "现状名称": "IfcLabel",
+                "审批名称": "IfcLabel",
+                "详细地址": "IfcText",
+                "不动产地址": "IfcText",
+                "建成时间": "IfcDateTime",
+                "建筑状态": "IfcText",
+                "建设性质代码": "IfcText"
+            },
+            "Pset_项目控制指标信息属性集": {
+                "建筑密度": "IfcText",
+                "容积率": "IfcText",
+                "绿地率": "IfcText",
+                "建筑限高": "IfcReal",
+                "海拔限高": "IfcReal",
+                "机动车位": "IfcReal",
+                "非机动车车位": "IfcReal",
+                "配置套值": "IFcText",
+                "非机动车类型": "IfcLabel",
+                "非机动车折算系数": "IfcReal"
+            }
+        },
+        "IfcRoof": {
+            "Pset_屋顶信息属性集": {
+                "屋顶类型": "IfcLabel",
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal"
             }
         },
         "IfcSite": {
+            "Pset_人防区域信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_儿童老年人活动场地信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_其它用地信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText",
+                "用地类型": "IfcLabel"
+            },
             "Pset_场地信息属性集": {
                 "长度": "IfcReal",
                 "宽度": "IfcReal",
@@ -168,27 +230,194 @@
                 "绿地率": "IfcReal",
                 "地块编号": "IfcLabel",
                 "城市用地分类和使用": "IfcText"
+            },
+            "Pset_堆场信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_居民健身场地信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_总平构件信息属性集": {
+                "构件类型": "IfcLabel",
+                "投影面积": "IfcReal",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "备注": "IfcText",
+                "建筑密度": "IfcReal"
+            },
+            "Pset_服务设施信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_构筑物信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_消防分区信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_消防回车场信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_消防场地信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText",
+                "所属建筑编号": "IfcLabel"
+            },
+            "Pset_绿地信息属性集": {
+                "投影面积": "IfcReal",
+                "绿地类型": "IfcLabel",
+                "折算系数": "IfcReal"
+            },
+            "Pset_规划净用地信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText",
+                "版本": "IfcText"
+            },
+            "Pset_规划总用地信息属性集": {
+                "投影面积": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_规划控制线信息属性集": {
+                "名称": "IfcText",
+                "编号": "IfcLabel",
+                "红线类型": "IfcLabel"
+            },
+            "Pset_边界分段线信息属性集": {
+                "边界线编号": "IfcLabel",
+                "边界类型": "IfcLabel",
+                "界外类型": "IfcLabel"
+            },
+            "Pset_道路中心线信息属性集": {
+                "道路类型": "IfcLabel",
+                "道路宽度": "IfcReal",
+                "名称": "IfcText"
+            },
+            "Pset_道路红线信息属性集": {
+                "名称": "IfcText",
+                "道路类型": "IfcLabel",
+                "红线宽度": "IfcReal"
+            },
+            "Pset_道路转角视距红线信息属性集": {
+                "名称": "IfcText",
+                "道路宽度": "IfcReal"
+            },
+            "Pset_道路边界线信息属性集": {
+                "区内道路类型": "IfcLabel",
+                "道路宽度": "IfcReal"
+            }
+        },
+        "IfcSlab": {
+            "Pset_其它构件信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "备注": "IfcText",
+                "间距审查": "IfcBoolean",
+                "退让审查": "IfcBoolean"
+            },
+            "Pset_架空信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal"
+            },
+            "Pset_楼顶间信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal"
+            },
+            "Pset_空调板信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "间距审查": "IfcBoolean",
+                "退让审查": "IfcBoolean"
+            },
+            "Pset_结构板信息属性集": {
+                "水平投影面积": "IfcReal"
+            },
+            "Pset_阳台信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "间距审查": "IfcBoolean",
+                "退让审查": "IfcBoolean",
+                "长度": "IfcReal",
+                "进深": "IfcReal",
+                "高度": "IfcReal",
+                "是否有顶": "IfcBoolean",
+                "是否为露台": "IfcBoolean",
+                "是否封闭": "IfcBoolean",
+                "标高": "IfcReal"
+            },
+            "Pset_雨篷信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "间距审查": "IfcBoolean",
+                "退让审查": "IfcBoolean"
+            },
+            "Pset_飘窗信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "间距审查": "IfcBoolean",
+                "退让审查": "IfcBoolean"
             }
         },
         "IfcSpace": {
-            "Pset_建筑空间信息属性集": {
-                "空间形成方式": "IfcLabel",
-                "高度": "IfcReal",
-                "净面积": "IfcReal",
-                "总建筑面积": "IfcReal",
-                "空间使用特征": "IfcLabel"
-            },
             "Pset_停车位信息属性集": {
                 "是否为室外停车场": "IfcBoolean",
                 "停车位类别": "IfcLabel",
                 "停车位位置信息": "IfcText",
-                "备注": "IfcText"
+                "停车位类型": "IfcLabel",
+                "备注": "IfcText",
+                "层数": "IfcInteger",
+                "车位数": "IfcInteger",
+                "充电车位": "IfcBoolean",
+                "公建车位": "IfcBoolean",
+                "折算系数": "IfcReal"
             },
             "Pset_居住建筑空间信息属性集": {
                 "人数": "IfcInteger"
+            },
+            "Pset_建筑空间信息属性集": {
+                "空间功能": "IfcLabel",
+                "功能": "IfcLabel",
+                "高度": "IfcReal",
+                "净面积": "IfcReal",
+                "总建筑面积": "IfcReal",
+                "空间使用特征": "IfcLabel"
             }
         },
         "IfcSpatialZone": {
+            "Pset_停车场信息属性集": {
+                "机动车位数量": "IfcInteger",
+                "非机动车位数量": "IfcInteger",
+                "无障碍车位数量": "IfcInteger",
+                "车场类型": "IfcLabel",
+                "是否为充电车场": "IfcBoolean",
+                "投影面积": "IfcReal",
+                "公建车位": "IfcBoolean"
+            },
             "Pset_建筑区域信息属性集": {
                 "主功能类别": "IfcLabel",
                 "子功能类别": "IfcLabel",
@@ -206,16 +435,52 @@
                 "楼层数量": "IfcInteger",
                 "是否为疏散分区": "IfcBoolean",
                 "区域人数": "IfcInteger",
+                "户型名": "IfcLabel",
+                "户型标识": "IfcLabel",
+                "居室个数": "IfcInteger",
                 "区域长度": "IfcReal",
                 "区域宽度": "IfcReal",
+                "功能名称": "IfcLabel",
                 "轮廓线": "IfcText",
                 "疏散区域": "IfcText",
                 "区域位置": "IfcText"
+            }
+        },
+        "IfcStairFlight": {
+            "Pset_楼梯段信息属性集": {
+                "水平投影面积": "IfcReal",
+                "是否为室外楼梯": "IfcBoolean",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "间距审查": "IfcBoolean",
+                "退让审查": "IfcBoolean"
+            }
+        },
+        "IfcWall": {
+            "Pset_保温层信息属性集": {
+                "投影面积": "IfcReal",
+                "公建大类": "IfcLabel",
+                "公建小类": "IfcLabel",
+                "计算系数": "IfcReal",
+                "计容系数": "IfcReal",
+                "间距审查": "IfcLabel",
+                "退让审查": "IfcLabel"
             },
-            "Pset_停车场信息属性集": {
-                "机动车位数量": "IfcInteger",
-                "非机动车位数量": "IfcInteger",
-                "无障碍车位数量": "IfcInteger"
+            "Pset_墙信息属性集": {
+                "高度": "IfcReal",
+                "是否为女儿墙": "IfcBoolean"
+            }
+        },
+        "IfcWindow": {
+            "Pset_窗信息属性集": {
+                "标高": "IfcReal",
+                "底高度": "IfcReal",
+                "窗台高": "IfcReal",
+                "高度": "IfcReal",
+                "宽度": "IfcReal",
+                "户型显示名": "IfcText"
             }
         }
     }
